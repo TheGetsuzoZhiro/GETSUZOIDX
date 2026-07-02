@@ -1,0 +1,17 @@
+{
+  "name": "getsuzo-idx",
+  "version": "1.0.0",
+  "description": "BURSA IDX",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "latest",
+    "express": "latest",
+    "moment": "latest",
+    "moment-timezone": "latest",
+    "mongoose": "latest",
+    "web-push": "^3.6.7"
+  }
+}
