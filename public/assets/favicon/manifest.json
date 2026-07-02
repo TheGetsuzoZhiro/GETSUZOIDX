@@ -1,1 +1,38 @@
-
+{
+  "id": "/",
+  "scope": "/",
+  "name": "GetSuzoIDX",
+  "short_name": "GetSuzoIDX",
+  "description": "Platform analisis teknikal profesional untuk trading saham Indonesia.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#030303",
+  "background_color": "#000000",
+  "icons": [
+    {
+      "src": "/assets/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+  {
+    "purpose": "maskable",
+    "sizes": "588x588",
+    "src": "/assets/favicon/maskable_icon.png",
+    "type": "image/png"
+  },
+  {
+    "purpose": "maskable",
+    "sizes": "512x512",
+    "src": "/assets/favicon/maskable_icon_x512.png",
+    "type": "image/png"
+  }
+  ]
+}
