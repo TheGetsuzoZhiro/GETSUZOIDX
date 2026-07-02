@@ -4366,32 +4366,27 @@ document.addEventListener("DOMContentLoaded", () => {
   initTabs();
 
   const pushBtn = document.getElementById("enablePushBtn");
-  if (pushBtn) {
-    pushBtn.addEventListener("click", async () => {
-      // Cek apakah sudah aktif
-      if (localStorage.getItem("pushActive") === "true") {
-        alert("✅ Notifikasi sudah aktif.");
-        return;
-      }
+if (pushBtn) {
+  pushBtn.addEventListener("click", async () => {
+    // Cek apakah sudah aktif
+    if (localStorage.getItem("pushActive") === "true") {
+      alert("✅ Notifikasi sudah aktif.");
+      return;
+    }
 
-      const success = await subscribeToPush();
-      if (success) {
-        localStorage.setItem("pushActive", "true");
-        alert(
-          "✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.",
-        );
-        pushBtn.style.borderColor = "#10b981";
-        pushBtn.style.borderWidth = "2px";
-        pushBtn.style.borderStyle = "solid";
-        pushBtn.style.borderRadius = "4px";
-        pushBtn.title = "Notifikasi Aktif";
-      } else {
-        alert(
-          "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
-        );
-      }
-    });
-  }
+    const success = await subscribeToPush();
+    if (success) {
+      localStorage.setItem("pushActive", "true");
+      alert(
+        "✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.",
+      );
+    } else {
+      alert(
+        "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
+      );
+    }
+  });
+}
 
   const signalsParent = document.getElementById("signalsParent");
   const subMenu = document.getElementById("signalSubMenu");
