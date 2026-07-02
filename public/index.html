@@ -1,1 +1,944 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#030303" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
 
+    <!-- ========== SEO META TAGS ========== -->
+    <title>GetSuzoIDX</title>
+    <meta
+      name="description"
+      content="GetSuzoIDX adalah platform analisis teknikal profesional untuk trading saham Indonesia. Dapatkan sinyal real-time, laporan otomatis, dan strategi swing trading berbasis RSI, EMA, dan Bollinger Bands."
+    />
+    <meta
+      name="keywords"
+      content="Getsuzo IDX, sinyal saham, analisis teknikal, trading saham Indonesia, IDX, RSI, EMA, swing trading, rekomendasi saham"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://getsuzo-idx.onrender.com/" />
+
+    <!-- Open Graph / Social Media -->
+    <meta
+      property="og:title"
+      content="GetSuzoIDX – Sinyal Saham Real-time & Analisis Teknikal IDX"
+    />
+    <meta
+      property="og:description"
+      content="Platform analisis teknikal profesional untuk trading saham Indonesia. Sinyal real-time, laporan otomatis, dan strategi swing trading."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://getsuzo-idx.onrender.com/" />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
+    />
+    <meta property="og:site_name" content="GetSuzoIDX" />
+    <meta property="og:locale" content="id_ID" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="GetSuzoIDX – Sinyal Saham Real-time & Analisis Teknikal IDX"
+    />
+    <meta
+      name="twitter:description"
+      content="Platform analisis teknikal profesional untuk trading saham Indonesia. Sinyal real-time, laporan otomatis, dan strategi swing trading."
+    />
+    <meta
+      name="twitter:image"
+      content="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
+    />
+
+    <!-- Additional SEO -->
+    <meta name="author" content="GetSuzoIDX Team" />
+    <!-- ========== END SEO ========== -->
+
+    <link rel="manifest" href="/assets/favicon/manifest.json" />
+
+    <!-- Favicon desktop -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/assets/favicon/favicon-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/assets/favicon/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="48x48"
+      href="/assets/favicon/favicon-48x48.png"
+    />
+    <link rel="shortcut icon" href="/assets/favicon/favicon.ico" />
+
+    <!-- Apple Touch Icon (iOS) -->
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/assets/favicon/apple-touch-icon.png"
+    />
+
+    <!-- Windows Tiles (opsional) -->
+    <meta name="msapplication-TileColor" content="#030303" />
+    <meta
+      name="msapplication-config"
+      content="/assets/favicon/browserconfig.xml"
+    />
+    <!-- =================================================================== -->
+
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+      /* ============================================================
+         NOTIFICATION BANNER - PREMIUM GLASSMORPHISM WITH PULSE
+         ============================================================ */
+      .notif-banner {
+        position: relative;
+        display: none; /* dikontrol oleh JS */
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 0.75rem 1.25rem 1.25rem 1.25rem;
+        padding: 0.85rem 1.25rem;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px) saturate(1.2);
+        -webkit-backdrop-filter: blur(12px) saturate(1.2);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        z-index: 50;
+        flex-wrap: wrap;
+      }
+      .notif-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -10%;
+        width: 60%;
+        height: 200%;
+        background: radial-gradient(ellipse at 30% 20%, rgba(139, 92, 246, 0.06), transparent 70%);
+        pointer-events: none;
+        border-radius: 50%;
+        filter: blur(40px);
+        z-index: 0;
+      }
+      .notif-banner::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 10%;
+        width: 80%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+        opacity: 0.6;
+      }
+      .notif-banner-content {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        flex: 1 1 60%;
+        min-width: 200px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ===== IKON DENGAN EFEK DENYUT ===== */
+      .notif-banner-icon {
+        flex-shrink: 0;
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        background: rgba(139, 92, 246, 0.08);
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: #c4b5fd;
+        transition: all 0.3s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(139, 92, 246, 0.05);
+        position: relative;
+      }
+      /* Pulse rings */
+      .notif-banner-icon .pulse-ring {
+        position: absolute;
+        inset: -4px;
+        border-radius: 16px;
+        border: 1.5px solid rgba(139, 92, 246, 0.2);
+        animation: pulse-ring 2s ease-out infinite;
+        pointer-events: none;
+      }
+      .notif-banner-icon .pulse-ring:nth-child(2) {
+        animation-delay: 0.6s;
+      }
+      @keyframes pulse-ring {
+        0% {
+          transform: scale(1);
+          opacity: 0.6;
+        }
+        100% {
+          transform: scale(1.45);
+          opacity: 0;
+        }
+      }
+      /* Ikon berdenyut */
+      .notif-banner-icon i {
+        animation: pulse-icon 2s ease-in-out infinite;
+        filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.25));
+      }
+      @keyframes pulse-icon {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.12);
+        }
+      }
+
+      /* Teks */
+      .notif-banner-message {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+      }
+      .notif-banner-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #f1f1f1;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      /* BADGE - ikon FA + teks, tanpa emoji */
+      .notif-banner-title .badge-new {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.5rem;
+        font-weight: 600;
+        background: rgba(139, 92, 246, 0.2);
+        color: #c4b5fd;
+        padding: 0.1rem 0.6rem 0.1rem 0.5rem;
+        border-radius: 20px;
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      .notif-banner-title .badge-new i {
+        font-size: 0.5rem;
+        color: #a78bfa;
+      }
+
+      .notif-banner-desc {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 400;
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.55);
+        line-height: 1.4;
+        margin: 0;
+        padding-right: 0.5rem;
+      }
+      .notif-banner-desc strong {
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 500;
+      }
+
+      .notif-banner-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+      }
+      .notif-banner-btn {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 0.45rem 1.2rem;
+        border: none;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        color: #f1f1f1;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: all 0.25s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        white-space: nowrap;
+        letter-spacing: 0.2px;
+      }
+      .notif-banner-btn i {
+        font-size: 0.75rem;
+        opacity: 0.7;
+      }
+      .notif-banner-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+      .notif-banner-btn:active {
+        transform: scale(0.97);
+      }
+      .notif-banner-close {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.25);
+        font-size: 1.1rem;
+        padding: 0.2rem 0.3rem;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s;
+        line-height: 1;
+      }
+      .notif-banner-close:hover {
+        color: rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      /* status warna */
+      .status-open { color: #4caf50; }
+      .status-closed { color: #f44336; }
+      .status-holiday { color: #ff9800; }
+
+      /* Responsif */
+      @media (max-width: 768px) {
+        .notif-banner {
+          margin: 0.5rem 0.75rem 1rem 0.75rem;
+          padding: 0.7rem 1rem;
+          border-radius: 14px;
+          gap: 0.6rem;
+        }
+        .notif-banner-content { gap: 0.6rem; flex: 1 1 100%; }
+        .notif-banner-icon { width: 38px; height: 38px; font-size: 1rem; }
+        .notif-banner-title { font-size: 0.85rem; }
+        .notif-banner-title .badge-new { font-size: 0.45rem; padding: 0.05rem 0.5rem 0.05rem 0.4rem; }
+        .notif-banner-title .badge-new i { font-size: 0.45rem; }
+        .notif-banner-desc { font-size: 0.7rem; }
+        .notif-banner-actions { width: 100%; justify-content: flex-end; margin-top: 0.15rem; }
+        .notif-banner-btn { font-size: 0.75rem; padding: 0.35rem 0.9rem; }
+        .notif-banner-close { font-size: 1rem; }
+      }
+      @media (max-width: 480px) {
+        .notif-banner { padding: 0.6rem 0.7rem; margin: 0.3rem 0.5rem 0.8rem 0.5rem; }
+        .notif-banner-icon { width: 32px; height: 32px; font-size: 0.85rem; }
+        .notif-banner-title { font-size: 0.75rem; }
+        .notif-banner-desc { font-size: 0.6rem; }
+        .notif-banner-btn { font-size: 0.65rem; padding: 0.25rem 0.7rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="particles-container" id="particles"></div>
+
+    <div class="app-wrapper">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-glow"></div>
+
+        <div class="brand-section">
+          <div class="logo-wrapper">
+            <img
+              src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
+              alt="Getsuzo"
+              class="brand-logo"
+            />
+            <div class="logo-ring"></div>
+          </div>
+          <div class="brand-info">
+            <h2 class="brand-name">GETSUZO</h2>
+            <span class="brand-tag">IDX SIGNAL PRO</span>
+          </div>
+        </div>
+
+        <nav class="navigation">
+          <button class="nav-link active" data-tab="home">
+            <div class="nav-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </div>
+            <span class="nav-text">Beranda</span>
+          </button>
+          <button class="nav-link" data-tab="daily">
+            <div class="nav-icon">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 17L9 11L13 15L21 7" />
+                <path d="M21 7H15" />
+                <path d="M21 7V13" />
+              </svg>
+            </div>
+            <span class="nav-text">Performance</span>
+          </button>
+
+          <!-- Sinyal Aktif dengan dropdown -->
+          <div class="nav-dropdown">
+            <button class="nav-link" data-tab="signals" id="signalsParent">
+              <div class="nav-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+              </div>
+              <span class="nav-text">Sinyal Aktif</span>
+              <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </button>
+            <ul class="nav-sub" id="signalSubMenu">
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="signals-today"
+                  href="#signals-today"
+                >
+                  <i class="fas fa-fire"></i> Today's Signals
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="signals-running"
+                  href="#signals-running"
+                >
+                  <i class="fas fa-play"></i> Running
+                </a>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <a
+            href="https://instagram.com/raditx7"
+            target="_blank"
+            class="user-card"
+          >
+            <div class="user-avatar">
+              <img
+                src="https://i.ibb.co.com/xt8MYhfK/songkyohyeon-R-Download.jpg"
+                alt="Avatar"
+              />
+              <div class="status-pulse"></div>
+            </div>
+            <div class="user-details">
+              <span class="username">@raditexsoo</span>
+              <span class="user-role">
+                Developer
+                <i
+                  class="fas fa-laptop-code"
+                  style="font-size: 0.7rem; margin-left: 0.2rem"
+                ></i>
+              </span>
+            </div>
+          </a>
+          <div class="system-status">
+            <div class="status-dot live"></div>
+            <span class="status-text">System Online</span>
+          </div>
+          <time class="timestamp" id="last-update">--:--</time>
+        </div>
+      </aside>
+
+      <main class="content-area">
+        <header class="top-bar">
+          <div class="mobile-header-left">
+            <button class="menu-toggle" id="menuToggle">
+              <span></span><span></span><span></span>
+            </button>
+            <div class="mobile-brand">
+              <img
+                src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
+                alt="Getsuzo"
+              />
+              <span>GETSUZO IDX</span>
+            </div>
+          </div>
+
+          <div class="page-header desktop-only">
+            <h1 class="page-title">Dashboard Overview</h1>
+            <p class="page-subtitle">Real-time monitoring & analysis</p>
+          </div>
+
+          <div class="header-actions">
+            <div class="market-status" id="marketStatus">
+              <span class="dot"></span>
+              <span class="market-text">Market Closed</span>
+            </div>
+            <button class="notification-btn" id="enablePushBtn">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span class="notif-badge"></span>
+            </button>
+          </div>
+        </header>
+
+        <div class="content-wrapper" id="pullToRefresh">
+          <div class="pull-indicator">
+            <svg
+              class="spinner-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            <span>Pull to Refresh</span>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- NOTIFICATION BANNER - PREMIUM DENGAN EFEK DENYUT & IKON MODERN -->
+          <!-- ============================================================= -->
+          <div id="notifBanner" class="notif-banner" role="alert" aria-label="Aktifkan notifikasi">
+            <div class="notif-banner-content">
+              <div class="notif-banner-icon">
+                <span class="pulse-ring"></span>
+                <span class="pulse-ring"></span>
+                <i class="fas fa-bell"></i>
+              </div>
+              <div class="notif-banner-message">
+                <span class="notif-banner-title">
+                  Aktifkan Notifikasi
+                  <span class="badge-new">
+                    <i class="fas fa-bolt"></i> Real-time
+                  </span>
+                </span>
+                <p class="notif-banner-desc">
+                  Jangan sampai ketinggalan sinyal <strong>Take Profit</strong> atau <strong>Stop Loss</strong>.
+                  Dapatkan notifikasi instan setiap kali ada pergerakan penting.
+                </p>
+              </div>
+            </div>
+            <div class="notif-banner-actions">
+              <button class="notif-banner-btn" id="notifBannerBtn">
+                <i class="fas fa-bell-plus"></i> Aktifkan Sekarang
+              </button>
+              <button class="notif-banner-close" id="notifBannerClose" aria-label="Tutup banner">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <section id="home" class="view active">
+            <div class="hero-banner">
+              <div class="hero-content">
+                <div class="hero-badge">
+                  <span class="badge-dot"></span><span>LIVE MONITORING</span>
+                </div>
+                <h2 class="hero-title">Selamat Datang di Getsuzo IDX</h2>
+                <p class="hero-description">
+                  Platform analisis teknikal profesional untuk trading saham
+                  Indonesia. Dilengkapi dengan sinyal real-time, laporan
+                  otomatis, dan strategi swing trading berbasis indikator RSI,
+                  EMA, dan Bollinger Bands.
+                </p>
+
+                <div class="feature-grid">
+                  <div class="feature-item">
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Sinyal Real-time</h4>
+                      <p>Notifikasi entry & exit point</p>
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M12 20V10" />
+                        <path d="M18 20V4" />
+                        <path d="M6 20v-4" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Analisis Mendalam</h4>
+                      <p>Laporan harian hingga bulanan</p>
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v6l4 2" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Auto Update</h4>
+                      <p>Data terupdate setiap 2 menit</p>
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Risk Management</h4>
+                      <p>Kalkulasi posisi & proteksi aset</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hero Stats -->
+              <div class="hero-stats">
+                <div class="stat-box">
+                  <div class="stat-number" id="totalSignals">0</div>
+                  <div class="stat-label">Total Sinyal</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box">
+                  <div class="stat-number" id="systemStatus">Active</div>
+                  <div class="stat-label">Market Status</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box">
+                  <div class="stat-number" id="clockDisplay">00:00</div>
+                  <div class="stat-label">Waktu IBFX</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+              <div class="chart-card full-width">
+                <div class="chart-header-row">
+                  <h3 class="chart-title">Equity Curve (Pertumbuhan Modal)</h3>
+                  <div class="chart-legend-custom">
+                    <span class="legend-item"
+                      ><span class="dot green"></span> Profit</span
+                    >
+                    <span class="legend-item"
+                      ><span class="dot red"></span> Drawdown</span
+                    >
+                  </div>
+                </div>
+                <div class="chart-container">
+                  <canvas id="equityChart"></canvas>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <h3 class="chart-title">Win Rate Performance</h3>
+                <div class="chart-container small-chart">
+                  <canvas id="winRateChart"></canvas>
+                </div>
+                <div class="metric-footer">
+                  <div class="metric-item">
+                    <span class="metric-label">Avg R:R</span
+                    ><span class="metric-value" id="avgRR">-</span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Profit Factor</span
+                    ><span class="metric-value" id="profitFactor">-</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <h3 class="chart-title">Signal Distribution</h3>
+                <div class="chart-container small-chart">
+                  <canvas id="signalChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="daily" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading daily reports...</p>
+            </div>
+          </section>
+          <section id="weekly" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading weekly reports...</p>
+            </div>
+          </section>
+          <section id="monthly" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading monthly reports...</p>
+            </div>
+          </section>
+          <section id="signals" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading active signals...</p>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <!-- ===== NOTIFICATION PANEL ===== -->
+    <div class="notif-panel-overlay" id="notifPanelOverlay"></div>
+    <div class="notif-panel" id="notifPanel">
+      <div class="notif-panel-header">
+        <div class="notif-panel-title">
+          <i class="fas fa-bell"></i>
+          <span>Notifications</span>
+          <span class="notif-count" id="notifCount">0</span>
+        </div>
+        <button class="notif-panel-close" id="notifPanelClose">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="notif-panel-body" id="notifPanelBody">
+        <div class="notif-empty">
+          <i class="fas fa-bell-slash"></i>
+          <p>No notifications yet</p>
+        </div>
+      </div>
+      <div class="notif-panel-footer">
+        <button class="notif-clear-btn" id="notifClearBtn">
+          <i class="fas fa-trash-alt"></i> Clear All
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== SCRIPT ===== -->
+    <script>
+      // Fungsi update market status & system status
+      async function updateMarketStatus() {
+        try {
+          const res = await fetch("/api/market-status");
+          const data = await res.json();
+          const statusEl = document.getElementById("marketStatus");
+          const dot = statusEl.querySelector(".dot");
+          const text = statusEl.querySelector(".market-text");
+
+          if (data.isOpen) {
+            dot.className = "dot open";
+            text.textContent = "Market Open";
+          } else {
+            dot.className = "dot closed";
+            let statusText = data.statusText || "Market Closed";
+            text.textContent = statusText;
+          }
+        } catch (e) {
+          console.warn("Gagal update status pasar", e);
+        }
+      }
+
+      async function updateSystemStatus() {
+        try {
+          const res = await fetch("/api/market-status");
+          const data = await res.json();
+          const statusEl = document.getElementById("systemStatus");
+          let displayText =
+            data.statusText || (data.isOpen ? "Market Open" : "Market Closed");
+          statusEl.textContent = displayText;
+          if (data.isOpen) {
+            statusEl.className = "stat-number status-open";
+          } else if (data.statusClass === "holiday" || data.holidayName) {
+            statusEl.className = "stat-number status-holiday";
+          } else {
+            statusEl.className = "stat-number status-closed";
+          }
+          const clockEl = document.getElementById("clockDisplay");
+          if (data.currentTime) {
+            clockEl.textContent = data.currentTime;
+          }
+        } catch (e) {
+          console.warn("Gagal update status sistem", e);
+        }
+      }
+
+      updateMarketStatus();
+      updateSystemStatus();
+      setInterval(() => {
+        updateMarketStatus();
+        updateSystemStatus();
+      }, 30000);
+
+      // =============================================================
+      // NOTIFICATION BANNER CONTROLLER - terintegrasi dengan script.js
+      // =============================================================
+      (function() {
+        'use strict';
+
+        const banner = document.getElementById('notifBanner');
+        if (!banner) return;
+
+        const closeBtn = document.getElementById('notifBannerClose');
+        const bannerBtn = document.getElementById('notifBannerBtn');
+
+        function updateBannerVisibility() {
+          if (!('Notification' in window)) {
+            banner.style.display = 'none';
+            return;
+          }
+
+          const permission = Notification.permission;
+          const dismissed = localStorage.getItem('notifBannerDismissed') === 'true';
+
+          if (permission === 'granted' || permission === 'denied') {
+            banner.style.display = 'none';
+            if (permission === 'granted') localStorage.removeItem('notifBannerDismissed');
+            return;
+          }
+
+          // permission === 'default'
+          if (dismissed) {
+            banner.style.display = 'none';
+          } else {
+            banner.style.display = 'flex';
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(-6px)';
+            requestAnimationFrame(() => {
+              banner.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+              banner.style.opacity = '1';
+              banner.style.transform = 'translateY(0)';
+            });
+          }
+        }
+
+        // Tombol banner mengklik tombol header yang sudah punya listener di script.js
+        if (bannerBtn) {
+          bannerBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const headerBtn = document.getElementById('enablePushBtn');
+            if (headerBtn) {
+              headerBtn.click();
+            } else {
+              // fallback
+              if (typeof requestNotificationPermission === 'function') {
+                requestNotificationPermission();
+              } else if ('Notification' in window) {
+                Notification.requestPermission().then(function(perm) {
+                  if (perm === 'granted') {
+                    banner.style.display = 'none';
+                    localStorage.removeItem('notifBannerDismissed');
+                  } else {
+                    banner.style.display = 'none';
+                    localStorage.setItem('notifBannerDismissed', 'true');
+                  }
+                });
+              }
+            }
+            setTimeout(updateBannerVisibility, 1500);
+          });
+        }
+
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            banner.style.display = 'none';
+            localStorage.setItem('notifBannerDismissed', 'true');
+          });
+        }
+
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) updateBannerVisibility();
+        });
+
+        setInterval(updateBannerVisibility, 8000);
+        updateBannerVisibility();
+      })();
+    </script>
+
+    <!-- File script.js asli (sudah ada) -->
+    <script src="script.js"></script>
+  </body>
+</html>
