@@ -473,27 +473,32 @@ function getDateRangeFromFilterState() {
 let returnChartInstance = null;
 
 function renderDailyReturnChartFromSignals(signals) {
-  const ctx = document.getElementById("dailyReturnChart");
-  if (!ctx) return;
+  // Menggunakan elemen pembungkus (wrapper) agar canvas bisa dibuat ulang dengan aman
+  const wrapper = document.getElementById("dailyReturnChartWrapper");
+  if (!wrapper) return;
+
   if (returnChartInstance) {
     returnChartInstance.destroy();
     returnChartInstance = null;
   }
 
+  // Filter sinyal yang berstatus TP, SL, atau STOP LOSS
   const closed = signals
     .filter(
       (s) => s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS",
     )
     .sort((a, b) => (a.closeDate || "").localeCompare(b.closeDate || ""));
 
+  // Jika benar-benar tidak ada data pada rentang waktu terpilih
   if (!closed.length) {
-    const parent = ctx.parentElement;
-    if (parent) {
-      parent.innerHTML =
-        '<div style="text-align:center;color:var(--text-secondary);padding:1.5rem;font-size:0.9rem;">Tidak ada data untuk ditampilkan.</div>';
-    }
+    wrapper.innerHTML =
+      '<div style="text-align:center;color:var(--text-secondary);padding:4rem 1.5rem;font-size:0.9rem;">Tidak ada data untuk ditampilkan.</div>';
     return;
   }
+
+  // Jika data tersedia, pastikan elemen canvas dibentuk kembali di dalam DOM
+  wrapper.innerHTML = '<canvas id="dailyReturnChart"></canvas>';
+  const ctx = document.getElementById("dailyReturnChart");
 
   const labels = closed.map((s, idx) => `T${idx + 1}`);
   let cumulative = 0;
@@ -505,6 +510,12 @@ function renderDailyReturnChartFromSignals(signals) {
   const labelsWithStart = ["Start", ...labels];
   const dataWithStart = [0, ...dataPoints];
 
+  // ===== CONFIG WARNA DINAMIS BERDASARKAN RETURN KUMULATIF AKHIR =====
+  const finalValue = cumulative;
+  const isPositive = finalValue >= 0;
+  const chartColor = isPositive ? "#10b981" : "#ef4444"; // Hijau jika positif (+), Merah jika negatif (-)
+  const chartBg = isPositive ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)";
+
   returnChartInstance = new Chart(ctx, {
     type: "line",
     data: {
@@ -513,18 +524,15 @@ function renderDailyReturnChartFromSignals(signals) {
         {
           label: "Cumulative Return %",
           data: dataWithStart,
-          borderColor: "#8b5cf6",
-          backgroundColor: "rgba(139,92,246,0.1)",
+          borderColor: chartColor,
+          backgroundColor: chartBg,
           borderWidth: 2.5,
           fill: true,
           tension: 0.3,
-          // ===== MODIFIKASI DI SINI =====
-          // Hilangkan bulatan hijau/merah
           pointRadius: 0,
-          // Tapi tetap tampilkan titik kecil saat di-hover/disentuh
           pointHoverRadius: 6,
           pointHoverBackgroundColor: "#ffffff",
-          pointHoverBorderColor: "#8b5cf6",
+          pointHoverBorderColor: chartColor,
           pointHoverBorderWidth: 2,
         },
       ],
@@ -532,8 +540,6 @@ function renderDailyReturnChartFromSignals(signals) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      // ===== AKTIFKAN INTERAKSI =====
-      // Mode 'index' + intersect false agar tooltip mengikuti jari/cursor
       interaction: {
         intersect: false,
         mode: "index",
@@ -542,16 +548,17 @@ function renderDailyReturnChartFromSignals(signals) {
         legend: { display: false },
         tooltip: {
           enabled: true,
-          backgroundColor: "rgba(0,0,0,0.85)",
+          backgroundColor: "rgba(0,0,0,0.9)",
           titleColor: "#ffffff",
-          bodyColor: "#c084fc",
-          borderColor: "rgba(139,92,246,0.4)",
+          bodyColor: chartColor,
+          borderColor: chartColor + "44",
           borderWidth: 1,
           cornerRadius: 10,
           padding: 12,
           callbacks: {
             label: function (context) {
-              return "Return: " + context.parsed.y.toFixed(2) + "%";
+              const val = context.parsed.y;
+              return "Return: " + (val >= 0 ? "+" : "") + val.toFixed(2) + "%";
             },
           },
         },
@@ -562,7 +569,7 @@ function renderDailyReturnChartFromSignals(signals) {
           ticks: {
             color: "#71717a",
             callback: function (value) {
-              return value.toFixed(2) + "%";
+              return (value >= 0 ? "+" : "") + value.toFixed(2) + "%";
             },
           },
         },
@@ -762,11 +769,11 @@ function renderDaily() {
             </div>
 
             <div class="pro-card" style="margin-bottom:1.5rem;">
-              <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
-              <div style="height:180px;">
-                <canvas id="dailyReturnChart"></canvas>
-              </div>
-            </div>
+  <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
+  <div style="height:180px;" id="dailyReturnChartWrapper">
+    <canvas id="dailyReturnChart"></canvas>
+  </div>
+</div>
 
             <div class="pro-grid-2" style="margin-bottom:1.5rem;">
               <div class="pro-card">
