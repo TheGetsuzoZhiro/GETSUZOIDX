@@ -1648,9 +1648,9 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
     confIcon = `<i class="fa-regular fa-circle-check" style="color:#a1a1aa; font-size:14px; margin-right:4px;"></i>`;
   } else if (score >= 3) {
     confColor = "#f97316";
-    confLabel = "LOW";
-    confTier = "Low";
-    confDesc = "Faktor pendukung minim. Butuh konfirmasi tambahan.";
+    confLabel = "RISK";
+    confTier = "Risk";
+    confDesc = "Tidak memenuhi standar minimum — difilter otomatis oleh engine.";
     confIcon = `<i class="fa-regular fa-circle" style="color:#f97316; font-size:14px; margin-right:4px;"></i>`;
   } else {
     confColor = "#ef4444";
@@ -2637,9 +2637,9 @@ async function showSignalDetail(index) {
     confIcon = `<i class="fa-regular fa-circle" style="color:#f97316; font-size:14px; margin-right:4px;"></i>`;
   } else {
     confColor = "#ef4444";
-    confLabel = "RISK";
-    confTier = "Risk";
-    confDesc = "Tidak memenuhi standar minimum — difilter otomatis oleh engine.";
+    confLabel = "SKIP";
+    confTier = "Skip";
+    confDesc = "Tidak memenuhi standar minimum — difilter otomatis.";
     confIcon = `<i class="fa-regular fa-circle-xmark" style="color:#ef4444; font-size:14px; margin-right:4px;"></i>`;
   }
 
@@ -3466,9 +3466,8 @@ function updateTotalSignals(running, closed) {
 }
 
 function checkSignalChanges(running, closed) {
-  // 1. HAPUS '|| ""' agar sistem bisa mendeteksi nilai null (akses pertama/cache kosong)
-  const prevRunningIds = localStorage.getItem("lastRunningIds");
-  const prevClosedIds = localStorage.getItem("lastClosedIds");
+  const prevRunningIds = localStorage.getItem("lastRunningIds") || "";
+  const prevClosedIds = localStorage.getItem("lastClosedIds") || "";
 
   const currentRunningIds = running
     .map((s) => `${s.stockCode}-${s.signalDate}`)
@@ -3479,21 +3478,6 @@ function checkSignalChanges(running, closed) {
     .sort()
     .join(",");
 
-  // ==========================================
-  // 🛑 BLOK WAJIB: PENCEGAH SPAM MASA LALU (AMNESIA CACHE)
-  // ==========================================
-  if (prevRunningIds === null || prevClosedIds === null) {
-    console.log(
-      "Sinkronisasi awal. Mencegah spam notifikasi TP dari masa lalu.",
-    );
-    // Simpan data ke memori secara diam-diam
-    localStorage.setItem("lastRunningIds", currentRunningIds);
-    localStorage.setItem("lastClosedIds", currentClosedIds);
-    // Hentikan fungsi sampai di sini! Jangan eksekusi push apapun.
-    return;
-  }
-
-  // Jika bukan akses pertama, ubah string memori ke bentuk array
   const prevRunningArr = prevRunningIds ? prevRunningIds.split(",") : [];
   const currentRunningArr = currentRunningIds
     ? currentRunningIds.split(",")
@@ -3543,11 +3527,19 @@ function checkSignalChanges(running, closed) {
       // Cek apakah sistem SUDAH pernah mengirim Push Notif untuk sesi ini pada hari ini
       const fullCacheKey = `notif_${cacheKey}_${today}`;
       if (localStorage.getItem(fullCacheKey) === "true") {
+        // Jika sudah, hentikan eksekusi di sini agar tidak spam di HP pengguna
         return;
       }
 
       // Jika belum, tandai bahwa sesi ini sudah terkirim hari ini
       localStorage.setItem(fullCacheKey, "true");
+
+      // Kirim tembakan Push Notif latar belakang
+      fetch("/api/send-push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body }),
+      }).catch((err) => console.warn("Gagal kirim push:", err));
     }
 
     // Eksekusi per kelompok
@@ -3595,6 +3587,12 @@ function checkSignalChanges(running, closed) {
 
         const title = `✅ TP: ${s.stockCode}`;
         const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}% (Entry ${fmtPriceNoRp(entry)} ➔ Exit ${fmtPriceNoRp(exit)})`;
+
+        fetch("/api/send-push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body }),
+        }).catch((err) => console.warn("Gagal kirim push TP:", err));
       }
       // ❌ SL TIDAK DIKIRIM PUSH SAMA SEKALI
     });
@@ -4291,6 +4289,7 @@ function createParticles() {
   document.head.appendChild(style);
 }
 
+// ============ WEB PUSH CLIENT ==========
 const VAPID_PUBLIC_KEY =
   "BCGyIOUseFBON2YXTAk-rcvncZ65jkbKqb2ShjOuvZhP08HLvaJJis5Bsx8ybuVVcZbXZow5GRrl9ykSiV0Y3B0";
 
@@ -4305,16 +4304,6 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
-function updatePushButtonUI() {
-  const pushBtn = document.getElementById("enablePushBtn");
-  if (!pushBtn) return;
-
-  if (Notification.permission === "granted") {
-    localStorage.setItem("pushActive", "true");
-    pushBtn.title = "Notifikasi Aktif";
-  }
-}
-
 async function subscribeToPush() {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     console.warn("⚠️ Push not supported in this browser.");
@@ -4322,17 +4311,24 @@ async function subscribeToPush() {
   }
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    // 1. Daftarkan service worker
+    const registration = await navigator.serviceWorker.register("/sw.js");
 
+    // Trik khusus iOS: Pastikan service worker benar-benar siap
+    await navigator.serviceWorker.ready;
+
+    // 2. Minta izin notifikasi
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       console.warn("⚠️ Notifikasi ditolak pengguna.");
       return false;
     }
 
+    // 3. Cek apakah sudah subscribe di browser
     let subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
+      // Jika belum, buat subscription baru
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
@@ -4342,6 +4338,7 @@ async function subscribeToPush() {
       console.log("✅ Menggunakan subscription lama dari browser.");
     }
 
+    // 4. WAJIB KIRIM KE SERVER APAPUN YANG TERJADI (Agar tersimpan di MongoDB)
     const response = await fetch("/api/save-subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4361,56 +4358,6 @@ async function subscribeToPush() {
   }
 }
 
-async function sinkronisasiPushNotification() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.log("Push notification tidak didukung di browser ini.");
-    return;
-  }
-
-  try {
-    if (Notification.permission === "granted") {
-      console.log(
-        "🔄 Izin sudah AKTIF di HP. Memeriksa validasi token ke MongoDB...",
-      );
-
-      const registration = await navigator.serviceWorker.ready;
-      let subscription = await registration.pushManager.getSubscription();
-
-      // JIKA TOKEN HILANG (kasus diinstal ulang seperti yang Anda alami)
-      if (!subscription) {
-        console.log(
-          "⚠️ Token di HP kosong (efek install ulang). Membuat token baru secara diam-diam...",
-        );
-
-        // KOREKSI: Menggunakan variabel global VAPID_PUBLIC_KEY agar rapi
-        const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedKey,
-        });
-      }
-
-      await fetch("/api/save-subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(subscription),
-      });
-
-      console.log("✅ Token berhasil disinkronkan kembali ke MongoDB!");
-
-      // KOREKSI: Pastikan UI tombol disesuaikan menjadi hijau
-      updatePushButtonUI();
-    } else {
-      console.log(
-        "ℹ️ User belum mengizinkan notifikasi atau status masih 'default/denied'.",
-      );
-    }
-  } catch (error) {
-    console.error("❌ Gagal sinkronisasi push token:", error.message);
-  }
-}
-
 // ========== INIT ==========
 document.addEventListener("DOMContentLoaded", () => {
   loadNotifications();
@@ -4418,16 +4365,11 @@ document.addEventListener("DOMContentLoaded", () => {
   createParticles();
   initTabs();
 
-  // KOREKSI: Jalankan fungsi pengecekan tombol saat aplikasi pertama dibuka
-  updatePushButtonUI();
-
   const pushBtn = document.getElementById("enablePushBtn");
   if (pushBtn) {
     pushBtn.addEventListener("click", async () => {
-      if (
-        localStorage.getItem("pushActive") === "true" &&
-        Notification.permission === "granted"
-      ) {
+      // Cek apakah sudah aktif
+      if (localStorage.getItem("pushActive") === "true") {
         alert("✅ Notifikasi sudah aktif.");
         return;
       }
@@ -4438,7 +4380,11 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(
           "✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.",
         );
-        updatePushButtonUI(); // Update UI tombol menjadi hijau
+        pushBtn.style.borderColor = "#10b981";
+        pushBtn.style.borderWidth = "2px";
+        pushBtn.style.borderStyle = "solid";
+        pushBtn.style.borderRadius = "4px";
+        pushBtn.title = "Notifikasi Aktif";
       } else {
         alert(
           "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
@@ -4529,21 +4475,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((registration) => {
-        console.log(
-          "ServiceWorker berhasil didaftarkan dengan scope: ",
-          registration.scope,
-        );
-
-        // Panggil sinkronisasi tepat setelah Service Worker berhasil/siap
-        sinkronisasiPushNotification();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('ServiceWorker berhasil didaftarkan dengan scope: ', registration.scope);
       })
-      .catch((error) => {
-        console.log("ServiceWorker gagal didaftarkan: ", error);
+      .catch(error => {
+        console.log('ServiceWorker gagal didaftarkan: ', error);
       });
   });
 }
