@@ -67,29 +67,29 @@
 
     <!-- Favicon desktop -->
     <link
-      rel="icon"
       type="image/png"
       sizes="16x16"
+      rel="icon"
       href="/assets/favicon/favicon-16x16.png"
     />
     <link
-      rel="icon"
       type="image/png"
       sizes="32x32"
+      rel="icon"
       href="/assets/favicon/favicon-32x32.png"
     />
     <link
-      rel="icon"
       type="image/png"
       sizes="48x48"
+      rel="icon"
       href="/assets/favicon/favicon-48x48.png"
     />
     <link rel="shortcut icon" href="/assets/favicon/favicon.ico" />
 
     <!-- Apple Touch Icon (iOS) -->
     <link
-      rel="apple-touch-icon"
       sizes="180x180"
+      rel="apple-touch-icon"
       href="/assets/favicon/apple-touch-icon.png"
     />
 
@@ -112,7 +112,7 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- STYLE KHUSUS INSTALASI PWA (TIDAK AKAN MENGGANGGU STYLE UTAMA CODES) -->
+    <!-- STYLE KHUSUS INSTALASI PWA & FIX OVERLAPPING NOTCH -->
     <style>
       :root {
         --terminal-glowing: rgba(255, 255, 255, 0.95);
@@ -123,6 +123,22 @@
         --neon-glow: rgba(255, 255, 255, 0.15);
       }
 
+      /* =================================================================== */
+      /* FIX SYSTEM OVERLAP (ANTI-POTONG UNTUK TOP BAR & SCREEN UTAMA)       */
+      /* =================================================================== */
+      .top-bar {
+        padding-top: calc(14px + env(safe-area-inset-top, 0px)) !important;
+        height: auto !important;
+        min-height: calc(64px + env(safe-area-inset-top, 0px)) !important;
+        box-sizing: border-box !important;
+      }
+      
+      /* Mengantisipasi jika content-wrapper Anda tertutup top-bar bergaya fixed */
+      .content-wrapper {
+        padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+      }
+
+      /* Skrin kunci PWA juga disesuaikan agar rapi di semua tipe notch smartphone */
       .pwa-lock-container {
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
@@ -138,7 +154,7 @@
         -webkit-overflow-scrolling: touch;
         font-family: 'Space Grotesk', sans-serif;
         color: #ffffff;
-        padding: 32px 16px;
+        padding: calc(32px + env(safe-area-inset-top, 0px)) 16px 32px 16px;
         box-sizing: border-box;
         display: block;
       }
@@ -1073,7 +1089,7 @@
               tab.addEventListener('click', function() {
                 const target = this.getAttribute('data-platform');
                 tabs.forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.platform-pane').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('.platform-pane').forEach(p => p.className = 'platform-pane');
                 
                 this.classList.add('active');
                 const targetPane = document.getElementById(`pane-${target}`);
