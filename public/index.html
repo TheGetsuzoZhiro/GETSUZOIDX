@@ -124,21 +124,31 @@
       }
 
       /* =================================================================== */
-      /* FIX SYSTEM OVERLAP (ANTI-POTONG UNTUK TOP BAR & SCREEN UTAMA)       */
+      /* FIX GAP & OVERLAP SYSTEM BAR (BERDASARKAN REKREASI KODE ORIGINAL)    */
       /* =================================================================== */
+      
+      /* 1. Mencegah Top Bar Terlalu Tinggi */
       .top-bar {
-        padding-top: calc(14px + env(safe-area-inset-top, 0px)) !important;
+        padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
         height: auto !important;
-        min-height: calc(64px + env(safe-area-inset-top, 0px)) !important;
+        min-height: calc(54px + env(safe-area-inset-top, 0px)) !important;
         box-sizing: border-box !important;
       }
       
-      /* Mengantisipasi jika content-wrapper Anda tertutup top-bar bergaya fixed */
+      /* 2. Menghapus Gap Hitam Berlebih yang dikeluhkan pada image_2.png */
       .content-wrapper {
-        padding-top: calc(10px + env(safe-area-inset-top, 0px)) !important;
+        padding-top: 4px !important; /* Membuat isi body sangat dekat kembali ke header */
       }
 
-      /* Skrin kunci PWA juga disesuaikan agar rapi di semua tipe notch smartphone */
+      /* 3. Perbaikan Bug Sidebar Melesat ke Atas pada image_3.png */
+      .sidebar {
+        padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important;
+        box-sizing: border-box !important;
+      }
+
+      /* =================================================================== */
+      /* PWA SYSTEM UTILITIES                                                */
+      /* =================================================================== */
       .pwa-lock-container {
         position: fixed;
         top: 0; left: 0; right: 0; bottom: 0;
@@ -897,7 +907,6 @@
 
     <!-- ===== SCRIPTS LOGIC HANDLING ===== -->
     <script>
-      // Fungsi update market status & system status original bawaan
       async function updateMarketStatus() {
         try {
           const res = await fetch("/api/market-status");
@@ -950,9 +959,6 @@
         updateSystemStatus();
       }, 30000);
 
-      // =============================================================
-      // NOTIFICATION BANNER CONTROLLER - terintegrasi dengan script.js
-      // =============================================================
       (function() {
         'use strict';
 
@@ -1057,7 +1063,6 @@
             if (appWrapper) appWrapper.style.setProperty('display', 'none', 'important');
           }
 
-          // Live Telemetry Engine Ticker
           setInterval(() => {
             const ticker = document.getElementById('live-latency-ticker');
             if (ticker) {
@@ -1105,7 +1110,6 @@
           });
         }
 
-        // 1. Tangkap Sinyal PWA dari Browser Resmi
         window.addEventListener('beforeinstallprompt', (e) => {
           e.preventDefault();
           deferredPrompt = e; 
@@ -1116,7 +1120,6 @@
           }
         });
 
-        // 2. Eksekusi Trigger Pemicu saat Tombol Diklik
         if (installBtn) {
           installBtn.addEventListener('click', async () => {
             if (!deferredPrompt) {
@@ -1132,7 +1135,6 @@
           });
         }
 
-        // 3. Deteksi Sukses Pasang -> Buka Dashboard Utama
         window.addEventListener('appinstalled', () => {
           deferredPrompt = null;
           const lockScreen = document.getElementById('pwa-lock-screen');
@@ -1141,7 +1143,6 @@
           if (appWrapper) appWrapper.style.setProperty('display', 'flex', 'important');
         });
 
-        // 4. SMART FALLBACK ENGINE: Antisipasi jika di luar Chrome/Safari
         setTimeout(() => {
           if (!deferredPrompt && installBtn && installBtn.hasAttribute('disabled')) {
             installBtn.removeAttribute('disabled');
