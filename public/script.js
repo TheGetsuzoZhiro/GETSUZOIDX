@@ -1228,7 +1228,7 @@ function renderStrategyFlowForSignal(s) {
         </div>
         ${stepCircle(step1Active, "Entry", `SL ${slLabel}`, "1", step1State)}
         ${stepCircle(step2Active, "Take Profit", `TP ${tpLabel}`, "2", step2State)}
-        ${stepCircle(step3Active, "Trailing Stop", "3% dari High", "3", step3State)}
+        ${stepCircle(step3Active, "Trailing Stop", "TS 3%", "3", step3State)}
       </div>
       
       <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem;">
