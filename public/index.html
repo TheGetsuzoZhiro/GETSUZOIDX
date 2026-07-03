@@ -13,6 +13,7 @@
       content="black-translucent"
     />
 
+    <!-- ========== SEO META TAGS ========== -->
     <title>GetSuzoIDX</title>
     <meta
       name="description"
@@ -25,6 +26,7 @@
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://getsuzo-idx.onrender.com/" />
 
+    <!-- Open Graph / Social Media -->
     <meta
       property="og:title"
       content="GetSuzoIDX – Sinyal Saham Real-time & Analisis Teknikal IDX"
@@ -42,6 +44,7 @@
     <meta property="og:site_name" content="GetSuzoIDX" />
     <meta property="og:locale" content="id_ID" />
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
@@ -55,24 +58,61 @@
       name="twitter:image"
       content="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
     />
+
+    <!-- Additional SEO -->
     <meta name="author" content="GetSuzoIDX Team" />
+    <!-- ========== END SEO ========== -->
+
     <link rel="manifest" href="/assets/favicon/manifest.json" />
 
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png" />
-    <link class="fav-icon" rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon/favicon-48x48.png" />
+    <!-- Favicon desktop -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/assets/favicon/favicon-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/assets/favicon/favicon-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="48x48"
+      href="/assets/favicon/favicon-48x48.png"
+    />
     <link rel="shortcut icon" href="/assets/favicon/favicon.ico" />
 
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png" />
+    <!-- Apple Touch Icon (iOS) -->
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/assets/favicon/apple-touch-icon.png"
+    />
 
+    <!-- Windows Tiles (opsional) -->
     <meta name="msapplication-TileColor" content="#030303" />
-    <meta name="msapplication-config" content="/assets/favicon/browserconfig.xml" />
+    <meta
+      name="msapplication-config"
+      content="/assets/favicon/browserconfig.xml"
+    />
+    <!-- =================================================================== -->
 
     <link rel="stylesheet" href="style.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- STYLE KHUSUS INSTALASI PWA (TIDAK AKAN MENGGANGGU STYLE UTAMA CODES) -->
     <style>
       :root {
         --terminal-glowing: rgba(255, 255, 255, 0.95);
@@ -292,6 +332,7 @@
   <body>
     <div class="particles-container" id="particles"></div>
 
+    <!-- ===== SKRIN DEPLOYMENT LAYAR KUNCI PWA ===== -->
     <div id="pwa-lock-screen" class="pwa-lock-container" style="display: flex;">
       <div class="lock-card">
         <div class="corner-tag top-l"></div>
@@ -405,12 +446,19 @@
       </div>
     </div>
 
+    <!-- APP WRAPPER ORIGINAL DENGAN DISPLAY NONE DEFAULT SAAT BELUM DIINSTALL -->
     <div class="app-wrapper" style="display: none;">
+      <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-glow"></div>
+
         <div class="brand-section">
           <div class="logo-wrapper">
-            <img src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png" alt="Getsuzo" class="brand-logo" />
+            <img
+              src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
+              alt="Getsuzo"
+              class="brand-logo"
+            />
             <div class="logo-ring"></div>
           </div>
           <div class="brand-info">
@@ -422,7 +470,12 @@
         <nav class="navigation">
           <button class="nav-link active" data-tab="home">
             <div class="nav-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
@@ -431,7 +484,14 @@
           </button>
           <button class="nav-link" data-tab="daily">
             <div class="nav-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <path d="M3 17L9 11L13 15L21 7" />
                 <path d="M21 7H15" />
                 <path d="M21 7V13" />
@@ -440,10 +500,16 @@
             <span class="nav-text">Performance</span>
           </button>
 
+          <!-- Sinyal Aktif dengan dropdown -->
           <div class="nav-dropdown">
             <button class="nav-link" data-tab="signals" id="signalsParent">
               <div class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
                 </svg>
               </div>
@@ -452,12 +518,20 @@
             </button>
             <ul class="nav-sub" id="signalSubMenu">
               <li>
-                <a class="nav-sub-link" data-tab="signals-today" href="#signals-today">
+                <a
+                  class="nav-sub-link"
+                  data-tab="signals-today"
+                  href="#signals-today"
+                >
                   <i class="fas fa-fire"></i> Today's Signals
                 </a>
               </li>
               <li>
-                <a class="nav-sub-link" data-tab="signals-running" href="#signals-running">
+                <a
+                  class="nav-sub-link"
+                  data-tab="signals-running"
+                  href="#signals-running"
+                >
                   <i class="fas fa-play"></i> Running
                 </a>
               </li>
@@ -466,14 +540,27 @@
         </nav>
 
         <div class="sidebar-bottom">
-          <a href="https://instagram.com/raditx7" target="_blank" class="user-card">
+          <a
+            href="https://instagram.com/raditx7"
+            target="_blank"
+            class="user-card"
+          >
             <div class="user-avatar">
-              <img src="https://i.ibb.co.com/xt8MYhfK/songkyohyeon-R-Download.jpg" alt="Avatar" />
+              <img
+                src="https://i.ibb.co.com/xt8MYhfK/songkyohyeon-R-Download.jpg"
+                alt="Avatar"
+              />
               <div class="status-pulse"></div>
             </div>
             <div class="user-details">
               <span class="username">@raditexsoo</span>
-              <span class="user-role">Developer <i class="fas fa-laptop-code" style="font-size: 0.7rem; margin-left: 0.2rem"></i></span>
+              <span class="user-role">
+                Developer
+                <i
+                  class="fas fa-laptop-code"
+                  style="font-size: 0.7rem; margin-left: 0.2rem"
+                ></i>
+              </span>
             </div>
           </a>
           <div class="system-status">
@@ -491,7 +578,10 @@
               <span></span><span></span><span></span>
             </button>
             <div class="mobile-brand">
-              <img src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png" alt="Getsuzo" />
+              <img
+                src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
+                alt="Getsuzo"
+              />
               <span>GETSUZO IDX</span>
             </div>
           </div>
@@ -507,7 +597,12 @@
               <span class="market-text">Market Closed</span>
             </div>
             <button class="notification-btn" id="enablePushBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
@@ -518,82 +613,275 @@
 
         <div class="content-wrapper" id="pullToRefresh">
           <div class="pull-indicator">
-            <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg
+              class="spinner-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             </svg>
             <span>Pull to Refresh</span>
           </div>
 
-          <div id="notifBanner" class="notif-banner" role="alert">
+          <!-- ============================================================= -->
+          <!-- NOTIFICATION BANNER - PREMIUM DENGAN EFEK DENYUT & IKON MODERN -->
+          <!-- ============================================================= -->
+          <div id="notifBanner" class="notif-banner" role="alert" aria-label="Aktifkan notifikasi">
             <div class="notif-banner-content">
               <div class="notif-banner-icon">
-                <span class="pulse-ring"></span><span class="pulse-ring"></span>
+                <span class="pulse-ring"></span>
+                <span class="pulse-ring"></span>
                 <i class="fas fa-bell"></i>
               </div>
               <div class="notif-banner-message">
-                <span class="notif-banner-title">Aktifkan Notifikasi <span class="badge-new"><i class="fas fa-bolt"></i> Real-time</span></span>
-                <p class="notif-banner-desc">Jangan sampai ketinggalan sinyal <strong>Take Profit</strong> atau <strong>Stop Loss</strong>.</p>
+                <span class="notif-banner-title">
+                  Aktifkan Notifikasi
+                  <span class="badge-new">
+                    <i class="fas fa-bolt"></i> Real-time
+                  </span>
+                </span>
+                <p class="notif-banner-desc">
+                  Jangan sampai ketinggalan sinyal <strong>Take Profit</strong> atau <strong>Stop Loss</strong>.
+                  Dapatkan notifikasi instan setiap kali ada pergerakan penting.
+                </p>
               </div>
             </div>
             <div class="notif-banner-actions">
-              <button class="notif-banner-btn" id="notifBannerBtn"><i class="fas fa-bell-plus"></i> Aktifkan Sekarang</button>
-              <button class="notif-banner-close" id="notifBannerClose"><i class="fas fa-times"></i></button>
+              <button class="notif-banner-btn" id="notifBannerBtn">
+                <i class="fas fa-bell-plus"></i> Aktifkan Sekarang
+              </button>
+              <button class="notif-banner-close" id="notifBannerClose" aria-label="Tutup banner">
+                <i class="fas fa-times"></i>
+              </button>
             </div>
           </div>
 
           <section id="home" class="view active">
             <div class="hero-banner">
               <div class="hero-content">
-                <div class="hero-badge"><span class="badge-dot"></span><span>LIVE MONITORING</span></div>
+                <div class="hero-badge">
+                  <span class="badge-dot"></span><span>LIVE MONITORING</span>
+                </div>
                 <h2 class="hero-title">Selamat Datang di Getsuzo IDX</h2>
-                <p class="hero-description">Platform analisis teknikal profesional untuk trading saham Indonesia.</p>
+                <p class="hero-description">
+                  Platform analisis teknikal profesional untuk trading saham
+                  Indonesia. Dilengkapi dengan sinyal real-time, laporan
+                  otomatis, dan strategi swing trading berbasis indikator RSI,
+                  EMA, dan Bollinger Bands.
+                </p>
 
+                <!-- 4 ITEM DASHBOARD ORIGINAL UTUH DAN SESUAI KODE AWAL -->
                 <div class="feature-grid">
                   <div class="feature-item">
-                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg></div>
-                    <div class="feature-text"><h4>Sinyal Real-time</h4><p>Notifikasi entry & exit point</p></div>
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Sinyal Real-time</h4>
+                      <p>Notifikasi entry & exit point</p>
+                    </div>
                   </div>
                   <div class="feature-item">
-                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" /></svg></div>
-                    <div class="feature-text"><h4>Analisis Mendalam</h4><p>Laporan harian hingga bulanan</p></div>
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M12 20V10" />
+                        <path d="M18 20V4" />
+                        <path d="M6 20v-4" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Analisis Mendalam</h4>
+                      <p>Laporan harian hingga bulanan</p>
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v6l4 2" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Auto Update</h4>
+                      <p>Data terupdate setiap 2 menit</p>
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-icon">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                      </svg>
+                    </div>
+                    <div class="feature-text">
+                      <h4>Risk Management</h4>
+                      <p>Kalkulasi posisi & proteksi aset</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
+              <!-- Hero Stats -->
               <div class="hero-stats">
-                <div class="stat-box"><div class="stat-number" id="totalSignals">0</div><div class="stat-label">Total Sinyal</div></div>
+                <div class="stat-box">
+                  <div class="stat-number" id="totalSignals">0</div>
+                  <div class="stat-label">Total Sinyal</div>
+                </div>
                 <div class="stat-divider"></div>
-                <div class="stat-box"><div class="stat-number" id="systemStatus">Active</div><div class="stat-label">Market Status</div></div>
+                <div class="stat-box">
+                  <div class="stat-number" id="systemStatus">Active</div>
+                  <div class="stat-label">Market Status</div>
+                </div>
                 <div class="stat-divider"></div>
-                <div class="stat-box"><div class="stat-number" id="clockDisplay">00:00</div><div class="stat-label">Waktu IBFX</div></div>
+                <div class="stat-box">
+                  <div class="stat-number" id="clockDisplay">00:00</div>
+                  <div class="stat-label">Waktu IBFX</div>
+                </div>
               </div>
             </div>
 
+            <!-- 3 CHART COMPONENT ORIGINAL UTUH -->
             <div class="charts-grid">
               <div class="chart-card full-width">
                 <div class="chart-header-row">
                   <h3 class="chart-title">Equity Curve (Pertumbuhan Modal)</h3>
+                  <div class="chart-legend-custom">
+                    <span class="legend-item"
+                      ><span class="dot green"></span> Profit</span
+                    >
+                    <span class="legend-item"
+                      ><span class="dot red"></span> Drawdown</span
+                    >
+                  </div>
                 </div>
-                <div class="chart-container"><canvas id="equityChart"></canvas></div>
+                <div class="chart-container">
+                  <canvas id="equityChart"></canvas>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <h3 class="chart-title">Win Rate Performance</h3>
+                <div class="chart-container small-chart">
+                  <canvas id="winRateChart"></canvas>
+                </div>
+                <div class="metric-footer">
+                  <div class="metric-item">
+                    <span class="metric-label">Avg R:R</span
+                    ><span class="metric-value" id="avgRR">-</span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Profit Factor</span
+                    ><span class="metric-value" id="profitFactor">-</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <h3 class="chart-title">Signal Distribution</h3>
+                <div class="chart-container small-chart">
+                  <canvas id="signalChart"></canvas>
+                </div>
               </div>
             </div>
           </section>
 
-          <section id="daily" class="view"><div class="loading-state"><p>Loading...</p></div></section>
+          <!-- VIEW SECTIONS BAWAN ORIGINAL UTUH -->
+          <section id="daily" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading daily reports...</p>
+            </div>
+          </section>
+          <section id="weekly" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading weekly reports...</p>
+            </div>
+          </section>
+          <section id="monthly" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading monthly reports...</p>
+            </div>
+          </section>
+          <section id="signals" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading active signals...</p>
+            </div>
+          </section>
         </div>
       </main>
     </div>
 
+    <!-- ===== NOTIFICATION PANEL ===== -->
     <div class="notif-panel-overlay" id="notifPanelOverlay"></div>
     <div class="notif-panel" id="notifPanel">
       <div class="notif-panel-header">
-        <div class="notif-panel-title"><i class="fas fa-bell"></i> <span>Notifications</span></div>
-        <button id="notifPanelClose"><i class="fas fa-times"></i></button>
+        <div class="notif-panel-title">
+          <i class="fas fa-bell"></i>
+          <span>Notifications</span>
+          <span class="notif-count" id="notifCount">0</span>
+        </div>
+        <button class="notif-panel-close" id="notifPanelClose">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <div class="notif-panel-body" id="notifPanelBody"></div>
+      <div class="notif-panel-body" id="notifPanelBody">
+        <div class="notif-empty">
+          <i class="fas fa-bell-slash"></i>
+          <p>No notifications yet</p>
+        </div>
+      </div>
+      <div class="notif-panel-footer">
+        <button class="notif-clear-btn" id="notifClearBtn">
+          <i class="fas fa-trash-alt"></i> Clear All
+        </button>
+      </div>
     </div>
 
+    <!-- ===== SCRIPTS LOGIC HANDLING ===== -->
     <script>
+      // Fungsi update market status & system status original bawaan
       async function updateMarketStatus() {
         try {
           const res = await fetch("/api/market-status");
@@ -601,14 +889,135 @@
           const statusEl = document.getElementById("marketStatus");
           const dot = statusEl.querySelector(".dot");
           const text = statusEl.querySelector(".market-text");
-          if (data.isOpen) { dot.className = "dot open"; text.textContent = "Market Open"; } 
-          else { dot.className = "dot closed"; text.textContent = data.statusText || "Market Closed"; }
-        } catch (e) { console.warn(e); }
+
+          if (data.isOpen) {
+            dot.className = "dot open";
+            text.textContent = "Market Open";
+          } else {
+            dot.className = "dot closed";
+            let statusText = data.statusText || "Market Closed";
+            text.textContent = statusText;
+          }
+        } catch (e) {
+          console.warn("Gagal update status pasar", e);
+        }
       }
+
+      async function updateSystemStatus() {
+        try {
+          const res = await fetch("/api/market-status");
+          const data = await res.json();
+          const statusEl = document.getElementById("systemStatus");
+          let displayText =
+            data.statusText || (data.isOpen ? "Market Open" : "Market Closed");
+          statusEl.textContent = displayText;
+          if (data.isOpen) {
+            statusEl.className = "stat-number status-open";
+          } else if (data.statusClass === "holiday" || data.holidayName) {
+            statusEl.className = "stat-number status-holiday";
+          } else {
+            statusEl.className = "stat-number status-closed";
+          }
+          const clockEl = document.getElementById("clockDisplay");
+          if (data.currentTime) {
+            clockEl.textContent = data.currentTime;
+          }
+        } catch (e) {
+          console.warn("Gagal update status sistem", e);
+        }
+      }
+
       updateMarketStatus();
-      setInterval(updateMarketStatus, 30000);
+      updateSystemStatus();
+      setInterval(() => {
+        updateMarketStatus();
+        updateSystemStatus();
+      }, 30000);
+
+      // =============================================================
+      // NOTIFICATION BANNER CONTROLLER - terintegrasi dengan script.js
+      // =============================================================
+      (function() {
+        'use strict';
+
+        const banner = document.getElementById('notifBanner');
+        if (!banner) return;
+
+        const closeBtn = document.getElementById('notifBannerClose');
+        const bannerBtn = document.getElementById('notifBannerBtn');
+
+        function updateBannerVisibility() {
+          if (!('Notification' in window)) {
+            banner.style.display = 'none';
+            return;
+          }
+
+          const permission = Notification.permission;
+          const dismissed = localStorage.getItem('notifBannerDismissed') === 'true';
+
+          if (permission === 'granted' || permission === 'denied') {
+            banner.style.display = 'none';
+            if (permission === 'granted') localStorage.removeItem('notifBannerDismissed');
+            return;
+          }
+
+          if (dismissed) {
+            banner.style.display = 'none';
+          } else {
+            banner.style.display = 'flex';
+            banner.style.opacity = '0';
+            banner.style.transform = 'translateY(-6px)';
+            requestAnimationFrame(() => {
+              banner.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+              banner.style.opacity = '1';
+              banner.style.transform = 'translateY(0)';
+            });
+          }
+        }
+
+        if (bannerBtn) {
+          bannerBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const headerBtn = document.getElementById('enablePushBtn');
+            if (headerBtn) {
+              headerBtn.click();
+            } else {
+              if (typeof requestNotificationPermission === 'function') {
+                requestNotificationPermission();
+              } else if ('Notification' in window) {
+                Notification.requestPermission().then(function(perm) {
+                  if (perm === 'granted') {
+                    banner.style.display = 'none';
+                    localStorage.removeItem('notifBannerDismissed');
+                  } else {
+                    banner.style.display = 'none';
+                    localStorage.setItem('notifBannerDismissed', 'true');
+                  }
+                });
+              }
+            }
+            setTimeout(updateBannerVisibility, 1500);
+          });
+        }
+
+        if (closeBtn) {
+          closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            banner.style.display = 'none';
+            localStorage.setItem('notifBannerDismissed', 'true');
+          });
+        }
+
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) updateBannerVisibility();
+        });
+
+        setInterval(updateBannerVisibility, 8000);
+        updateBannerVisibility();
+      })();
     </script>
 
+    <!-- ===== DETEKSI, INTEGRASI & AUTOMATION PWA INSTALLATION SYSTEM ===== -->
     <script>
       (function() {
         'use strict';
@@ -680,10 +1089,10 @@
           });
         }
 
-        // 1. Tangkap Sinyal Instalasi PWA dari Browser Resmi (Chrome/Edge/Samsung Browser)
+        // 1. Tangkap Sinyal PWA dari Browser Resmi
         window.addEventListener('beforeinstallprompt', (e) => {
           e.preventDefault();
-          deferredPrompt = e; // Simpan event prompt
+          deferredPrompt = e; 
           
           if (installBtn) {
             installBtn.removeAttribute('disabled');
@@ -707,7 +1116,7 @@
           });
         }
 
-        // 3. Deteksi Sukses Pasang -> Auto Buka Dashboard Utama
+        // 3. Deteksi Sukses Pasang -> Buka Dashboard Utama
         window.addEventListener('appinstalled', () => {
           deferredPrompt = null;
           const lockScreen = document.getElementById('pwa-lock-screen');
@@ -716,7 +1125,7 @@
           if (appWrapper) appWrapper.style.setProperty('display', 'flex', 'important');
         });
 
-        // 4. SMART FALLBACK ENGINE: Antisipasi Jika Dibuka via In-App Browser Lain / VPN Webview
+        // 4. SMART FALLBACK ENGINE: Antisipasi jika di luar Chrome/Safari
         setTimeout(() => {
           if (!deferredPrompt && installBtn && installBtn.hasAttribute('disabled')) {
             installBtn.removeAttribute('disabled');
@@ -735,6 +1144,7 @@
       })();
     </script>
 
+    <!-- File script.js asli -->
     <script src="script.js"></script>
   </body>
 </html>
