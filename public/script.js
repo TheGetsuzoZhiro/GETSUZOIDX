@@ -1405,7 +1405,7 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
       
       ${stepCircle(isStep1Active, "Entry", "SL -2%", "1", step1State)}
       ${stepCircle(isStep2Active, "Take Profit", "Lock 2%", "2")}
-      ${stepCircle(isStep3Active, "Trailing Stop", "Trailing Stop 1%", "3", step3State)}
+      ${stepCircle(isStep3Active, "Trailing Stop", "Trailing Stop 2%", "3", step3State)}
     </div>
     <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem;">
       <span style="display:flex; align-items:center; gap:0.2rem;">
@@ -1418,7 +1418,7 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
       <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Stop Loss awal <strong>-2%</strong> dari Entry.</span></div>
       <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Jika TP 2% tercapai, SL pindah ke <strong>Lock 2%</strong> (minimal profit 2%).</span></div>
-      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Setelah Lock, trailing 1% dengan <strong>minimum 2% profit</strong>.</span></div>
+      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Setelah Lock, trailing 2% dengan <strong>minimum 2% profit</strong>.</span></div>
     </div>
   `;
 
@@ -1459,7 +1459,7 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
   } else if (s.breakEven) {
     trailingDisplay = `
       <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.65rem 0.6rem; border:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; justify-content:center;">
-        <div style="color:var(--text-secondary); font-size:0.6rem; margin-bottom:0.3rem;"><i class="fa-solid fa-chart-line" style="margin-right:0.2rem;"></i>Trailing Stop (min 2%)</div>
+        <div style="color:var(--text-secondary); font-size:0.6rem; margin-bottom:0.3rem;"><i class="fa-solid fa-chart-line" style="margin-right:0.2rem;"></i>Trailing Stop (2%)</div>
         <div style="font-weight:600; color:var(--success); font-size:0.85rem;">${fmtPrice(s.sl)}</div>
       </div>
     `;
