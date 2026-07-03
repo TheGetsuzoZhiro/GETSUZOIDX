@@ -1228,7 +1228,7 @@ function renderStrategyFlowForSignal(s) {
         </div>
         ${stepCircle(step1Active, "Entry", `SL ${slLabel}`, "1", step1State)}
         ${stepCircle(step2Active, "Take Profit", `TP ${tpLabel}`, "2", step2State)}
-        ${stepCircle(step3Active, "Trailing Stop", "3% dari puncak", "3", step3State)}
+        ${stepCircle(step3Active, "Trailing Stop", "3% dari High", "3", step3State)}
       </div>
       
       <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem;">
@@ -1337,7 +1337,7 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
   const bgColor = getColorFromCode(s.stockCode);
   const logoHtml = `<span class="detail-logo-text"><img src="${logoUrl}" alt="${s.stockCode}" style="width:50px; height:64px; object-fit:contain; border:none; background:transparent; display:block;" onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"><span style="display:none; width:64px; height:64px; line-height:64px; text-align:center; background:${bgColor}; color:#fff; font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace;">${s.stockCode.substring(0, 2)}</span></span>`;
 
-  const breakEvenStatus = s.breakEven ? "Locked" : "Belum TP";
+  const breakEvenStatus = s.breakEven ? "Locked" : "Belum";
   const breakEvenIcon = s.breakEven ? "fa-check-circle" : "fa-xmark-circle";
   const breakEvenColor = s.breakEven ? "#10b981" : "#f59e0b";
 
