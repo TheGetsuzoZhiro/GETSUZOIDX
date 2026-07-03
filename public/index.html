@@ -1,7 +1,14 @@
 <!doctype html>
 <html lang="id">
   <head>
+    <!-- ============================================================= -->
+    <!-- CRITICAL PROTOCOL: ANTI-CACHE & REAL-TIME AUTO UPDATE ENGINE  -->
+    <!-- ============================================================= -->
     <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
@@ -13,6 +20,7 @@
       content="black-translucent"
     />
 
+    <!-- ========== SEO META TAGS ========== -->
     <title>GetSuzoIDX</title>
     <meta
       name="description"
@@ -25,6 +33,7 @@
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://getsuzo-idx.onrender.com/" />
 
+    <!-- Open Graph / Social Media -->
     <meta
       property="og:title"
       content="GetSuzoIDX – Sinyal Saham Real-time & Analisis Teknikal IDX"
@@ -42,6 +51,7 @@
     <meta property="og:site_name" content="GetSuzoIDX" />
     <meta property="og:locale" content="id_ID" />
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
@@ -56,23 +66,44 @@
       content="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
     />
     <meta name="author" content="GetSuzoIDX Team" />
+    <!-- ========== END SEO ========== -->
+
     <link rel="manifest" href="/assets/favicon/manifest.json" />
 
+    <!-- Favicon desktop -->
     <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png" />
     <link class="fav-icon" rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon/favicon-48x48.png" />
     <link rel="shortcut icon" href="/assets/favicon/favicon.ico" />
 
+    <!-- Apple Touch Icon (iOS) -->
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon/apple-touch-icon.png" />
 
+    <!-- Windows Tiles -->
     <meta name="msapplication-TileColor" content="#030303" />
     <meta name="msapplication-config" content="/assets/favicon/browserconfig.xml" />
 
-    <link rel="stylesheet" href="style.css" />
+    <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- ============================================================= -->
+    <!-- DYNAMIC CACHE BUSTING LOGIC FOR STYLESHEET                     -->
+    <!-- ============================================================= -->
+    <script>
+      (function() {
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        // Menyuntikkan milidetik waktu nyata agar browser mendownload CSS segar dari Render
+        cssLink.href = 'style.css?cache_bypass=' + Date.now();
+        document.head.appendChild(cssLink);
+      })();
+    </script>
+
+    <!-- ============================================================= -->
+    <!-- HIGH-FIDELITY CYBERPUNK INTERACTIVE LOCK ENGINE ARCHITECTURE  -->
+    <!-- ============================================================= -->
     <style>
       :root {
         --terminal-glowing: rgba(255, 255, 255, 0.95);
@@ -254,7 +285,7 @@
         width: 100%; background: transparent; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2);
         padding: 14px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
         font-family: 'Space Grotesk', sans-serif; transition: all 0.2s ease;
-        display: flex; align-items: center; justify-content: center; gap: 10px; box-sizing: border-box;
+        display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: border-box;
       }
       .cyber-btn-primary:hover:not(:disabled) { background: #ffffff; color: #030303; border-color: #ffffff; }
       .cyber-btn-primary:disabled { background: rgba(255, 255, 255, 0.02); color: rgba(255, 255, 255, 0.3); cursor: not-allowed; border-color: rgba(255, 255, 255, 0.1); }
@@ -292,6 +323,9 @@
   <body>
     <div class="particles-container" id="particles"></div>
 
+    <!-- ============================================================= -->
+    <!-- PWA PROTOCOL CONSOLE OVERLAY (FIXED SAFE SCROLL SHELL)       -->
+    <!-- ============================================================= -->
     <div id="pwa-lock-screen" class="pwa-lock-container" style="display: flex;">
       <div class="lock-card">
         <div class="corner-tag top-l"></div>
@@ -359,6 +393,7 @@
         </div>
 
         <div class="platform-content-wrapper">
+          <!-- PANE SYSTEM: ANDROID / PC -->
           <div id="pane-android" class="platform-pane active">
             <div class="tech-box">
               <div class="tech-line"><span>PIPELINE ENVIRONMENT:</span> <span class="status-ready">STANDALONE APP ENVELOPE</span></div>
@@ -370,6 +405,7 @@
             </button>
           </div>
 
+          <!-- PANE SYSTEM: IOS / IPHONE -->
           <div id="pane-ios" class="platform-pane">
             <p class="pane-text-ios">Regulasi Sandbox Apple mewajibkan pemasangan manual melalui gerbang arsitektur berikut:</p>
             <div class="ios-steps">
@@ -405,6 +441,9 @@
       </div>
     </div>
 
+    <!-- ============================================================= -->
+    <!-- MAIN APPLICATION CONTAINER (HIDDEN UNTIL DEPLOYED VIA PWA)  -->
+    <!-- ============================================================= -->
     <div class="app-wrapper" style="display: none;">
       <aside class="sidebar">
         <div class="sidebar-glow"></div>
@@ -524,6 +563,7 @@
             <span>Pull to Refresh</span>
           </div>
 
+          <!-- Notification Banner -->
           <div id="notifBanner" class="notif-banner" role="alert">
             <div class="notif-banner-content">
               <div class="notif-banner-icon">
@@ -593,6 +633,7 @@
       <div class="notif-panel-body" id="notifPanelBody"></div>
     </div>
 
+    <!-- ===== MARKET INTEGRATION FEED ===== -->
     <script>
       async function updateMarketStatus() {
         try {
@@ -609,6 +650,9 @@
       setInterval(updateMarketStatus, 30000);
     </script>
 
+    <!-- ============================================================= -->
+    <!-- INLINE LIFECYCLE ENGINE: PWA AUTOMATION & SYSTEM INTERCEPTOR  -->
+    <!-- ============================================================= -->
     <script>
       (function() {
         'use strict';
@@ -680,10 +724,10 @@
           });
         }
 
-        // 1. Tangkap Sinyal Instalasi PWA dari Browser Resmi (Chrome/Edge/Samsung Browser)
+        // Tangkap Sinyal Instalasi PWA dari Browser Resmi
         window.addEventListener('beforeinstallprompt', (e) => {
           e.preventDefault();
-          deferredPrompt = e; // Simpan event prompt
+          deferredPrompt = e;
           
           if (installBtn) {
             installBtn.removeAttribute('disabled');
@@ -691,12 +735,9 @@
           }
         });
 
-        // 2. Eksekusi Trigger Pemicu saat Tombol Diklik
         if (installBtn) {
           installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) {
-              return;
-            }
+            if (!deferredPrompt) return;
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             console.log(`User choice outcome: ${outcome}`);
@@ -707,7 +748,6 @@
           });
         }
 
-        // 3. Deteksi Sukses Pasang -> Auto Buka Dashboard Utama
         window.addEventListener('appinstalled', () => {
           deferredPrompt = null;
           const lockScreen = document.getElementById('pwa-lock-screen');
@@ -716,7 +756,7 @@
           if (appWrapper) appWrapper.style.setProperty('display', 'flex', 'important');
         });
 
-        // 4. SMART FALLBACK ENGINE: Antisipasi Jika Dibuka via In-App Browser Lain / VPN Webview
+        // SMART FALLBACK ENGINE: Antisipasi Jika Dibuka via In-App Browser Lain / VPN Webview
         setTimeout(() => {
           if (!deferredPrompt && installBtn && installBtn.hasAttribute('disabled')) {
             installBtn.removeAttribute('disabled');
@@ -725,7 +765,7 @@
             
             installBtn.addEventListener('click', () => {
               if (!deferredPrompt) {
-                alert("Petunjuk Sistem:\n\nTombol berputar tadi karena Anda tidak mengakses melalui Google Chrome/Browser resmi bawaan HP, atau PWA sudah terpasang.\n\nJika menggunakan Android, ketuk tombol Titik Tiga (⋮) di pojok kanan atas browser Anda saat ini, lalu pilih 'Buka di Chrome' atau 'Tambahkan ke Layar Utama'.");
+                alert("Petunjuk Sistem:\n\nUntuk performa optimal tanpa gembok cache, disarankan membuka web ini melalui Google Chrome murni atau Browser bawaan perangkat Anda utama.\n\nJika di Android, ketuk ikon Titik Tiga (⋮) di ujung kanan atas lalu pilih opsi 'Buka di Chrome'.");
               }
             });
           }
@@ -735,6 +775,16 @@
       })();
     </script>
 
-    <script src="script.js"></script>
+    <!-- ============================================================= -->
+    <!-- DYNAMIC CACHE BUSTING LOGIC FOR JAVASCRIPT                     -->
+    <!-- ============================================================= -->
+    <script>
+      (function() {
+        const jsScript = document.createElement('script');
+        // Menyuntikkan parameter waktu agar browser mengunduh script.js terbaru dari Render
+        jsScript.src = 'script.js?cache_bypass=' + Date.now();
+        document.body.appendChild(jsScript);
+      })();
+    </script>
   </body>
 </html>
