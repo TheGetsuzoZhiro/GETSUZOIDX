@@ -124,7 +124,7 @@
       }
 
       /* =================================================================== */
-      /* FIX GAP & OVERLAP SYSTEM BAR (BERDASARKAN REKREASI KODE ORIGINAL)    */
+      /* FIX GAP & OVERLAP SYSTEM BAR                                        */
       /* =================================================================== */
       
       /* 1. Mencegah Top Bar Terlalu Tinggi */
@@ -135,12 +135,12 @@
         box-sizing: border-box !important;
       }
       
-      /* 2. Menghapus Gap Hitam Berlebih yang dikeluhkan pada image_2.png */
+      /* 2. Menghasilkan Jarak Proporsional (Fix layout menempel pada image_4.png) */
       .content-wrapper {
-        padding-top: 4px !important; /* Membuat isi body sangat dekat kembali ke header */
+        padding-top: 20px !important; /* Memberikan ruang udara yang ideal dari batas header */
       }
 
-      /* 3. Perbaikan Bug Sidebar Melesat ke Atas pada image_3.png */
+      /* 3. Perbaikan Bug Sidebar Melesat ke Atas */
       .sidebar {
         padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important;
         box-sizing: border-box !important;
@@ -472,7 +472,7 @@
       </div>
     </div>
 
-    <!-- APP WRAPPER ORIGINAL DENGAN DISPLAY NONE DEFAULT SAAT BELUM DIINSTALL -->
+    <!-- APP WRAPPER ORIGINAL -->
     <div class="app-wrapper" style="display: none;">
       <!-- Sidebar -->
       <aside class="sidebar">
@@ -651,9 +651,7 @@
             <span>Pull to Refresh</span>
           </div>
 
-          <!-- ============================================================= -->
-          <!-- NOTIFICATION BANNER - PREMIUM DENGAN EFEK DENYUT & IKON MODERN -->
-          <!-- ============================================================= -->
+          <!-- NOTIFICATION BANNER -->
           <div id="notifBanner" class="notif-banner" role="alert" aria-label="Aktifkan notifikasi">
             <div class="notif-banner-content">
               <div class="notif-banner-icon">
@@ -698,7 +696,7 @@
                   EMA, dan Bollinger Bands.
                 </p>
 
-                <!-- 4 ITEM DASHBOARD ORIGINAL UTUH DAN SESUAI KODE AWAL -->
+                <!-- FEATURE GRID ORIGINAL -->
                 <div class="feature-grid">
                   <div class="feature-item">
                     <div class="feature-icon">
@@ -789,7 +787,7 @@
               </div>
             </div>
 
-            <!-- 3 CHART COMPONENT ORIGINAL UTUH -->
+            <!-- CHARTS GRID -->
             <div class="charts-grid">
               <div class="chart-card full-width">
                 <div class="chart-header-row">
@@ -834,7 +832,7 @@
             </div>
           </section>
 
-          <!-- VIEW SECTIONS BAWAN ORIGINAL UTUH -->
+          <!-- VIEW SECTIONS BAWAN ORIGINAL -->
           <section id="daily" class="view">
             <div class="loading-state">
               <div class="loader">
@@ -1039,7 +1037,7 @@
       })();
     </script>
 
-    <!-- ===== DETEKSI, INTEGRASI & AUTOMATION PWA INSTALLATION SYSTEM ===== -->
+    <!-- ===== PWA SYSTEM DETECTOR ===== -->
     <script>
       (function() {
         'use strict';
