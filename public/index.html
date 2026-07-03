@@ -2,7 +2,7 @@
 <html lang="id">
   <head>
     <!-- ============================================================= -->
-    <!-- CRITICAL PROTOCOL: ANTI-CACHE & REAL-TIME AUTO UPDATE ENGINE  -->
+    <!-- ANTI-CACHE HEADERS (Aman & Membantu Network-First SW)         -->
     <!-- ============================================================= -->
     <meta charset="UTF-8" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -89,17 +89,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- ============================================================= -->
-    <!-- DYNAMIC CACHE BUSTING LOGIC FOR STYLESHEET                     -->
+    <!-- CLEAN CSS CALL (Sinkron dengan sw.js v2)                      -->
     <!-- ============================================================= -->
-    <script>
-      (function() {
-        const cssLink = document.createElement('link');
-        cssLink.rel = 'stylesheet';
-        // Menyuntikkan milidetik waktu nyata agar browser mendownload CSS segar dari Render
-        cssLink.href = 'style.css?cache_bypass=' + Date.now();
-        document.head.appendChild(cssLink);
-      })();
-    </script>
+    <link rel="stylesheet" href="style.css?v=2" />
 
     <!-- ============================================================= -->
     <!-- HIGH-FIDELITY CYBERPUNK INTERACTIVE LOCK ENGINE ARCHITECTURE  -->
@@ -776,15 +768,8 @@
     </script>
 
     <!-- ============================================================= -->
-    <!-- DYNAMIC CACHE BUSTING LOGIC FOR JAVASCRIPT                     -->
+    <!-- CLEAN JAVASCRIPT CALL (Sinkron dengan sw.js v2)               -->
     <!-- ============================================================= -->
-    <script>
-      (function() {
-        const jsScript = document.createElement('script');
-        // Menyuntikkan parameter waktu agar browser mengunduh script.js terbaru dari Render
-        jsScript.src = 'script.js?cache_bypass=' + Date.now();
-        document.body.appendChild(jsScript);
-      })();
-    </script>
+    <script src="script.js?v=2"></script>
   </body>
 </html>
