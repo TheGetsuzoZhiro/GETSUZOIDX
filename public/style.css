@@ -4094,3 +4094,250 @@ body {
     padding: 0.6rem 1rem;
   }
 }
+
+.notif-banner {
+        position: relative;
+        display: none; /* dikontrol oleh JS */
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 0.75rem 1.25rem 1.25rem 1.25rem;
+        padding: 0.85rem 1.25rem;
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px) saturate(1.2);
+        -webkit-backdrop-filter: blur(12px) saturate(1.2);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 16px;
+        box-shadow: 
+          0 8px 32px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        z-index: 50;
+        flex-wrap: wrap;
+      }
+      .notif-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -10%;
+        width: 60%;
+        height: 200%;
+        background: radial-gradient(ellipse at 30% 20%, rgba(139, 92, 246, 0.06), transparent 70%);
+        pointer-events: none;
+        border-radius: 50%;
+        filter: blur(40px);
+        z-index: 0;
+      }
+      .notif-banner::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 10%;
+        width: 80%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+        opacity: 0.6;
+      }
+      .notif-banner-content {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        flex: 1 1 60%;
+        min-width: 200px;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* ===== IKON DENGAN EFEK DENYUT ===== */
+      .notif-banner-icon {
+        flex-shrink: 0;
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        background: rgba(139, 92, 246, 0.08);
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: #c4b5fd;
+        transition: all 0.3s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(139, 92, 246, 0.05);
+        position: relative;
+      }
+      /* Pulse rings */
+      .notif-banner-icon .pulse-ring {
+        position: absolute;
+        inset: -4px;
+        border-radius: 16px;
+        border: 1.5px solid rgba(139, 92, 246, 0.2);
+        animation: pulse-ring 2s ease-out infinite;
+        pointer-events: none;
+      }
+      .notif-banner-icon .pulse-ring:nth-child(2) {
+        animation-delay: 0.6s;
+      }
+      @keyframes pulse-ring {
+        0% {
+          transform: scale(1);
+          opacity: 0.6;
+        }
+        100% {
+          transform: scale(1.45);
+          opacity: 0;
+        }
+      }
+      /* Ikon berdenyut */
+      .notif-banner-icon i {
+        animation: pulse-icon 2s ease-in-out infinite;
+        filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.25));
+      }
+      @keyframes pulse-icon {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.12);
+        }
+      }
+
+      /* Teks */
+      .notif-banner-message {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+      }
+      .notif-banner-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #f1f1f1;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      /* BADGE - ikon FA + teks, tanpa emoji */
+      .notif-banner-title .badge-new {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.5rem;
+        font-weight: 600;
+        background: rgba(139, 92, 246, 0.2);
+        color: #c4b5fd;
+        padding: 0.1rem 0.6rem 0.1rem 0.5rem;
+        border-radius: 20px;
+        border: 1px solid rgba(139, 92, 246, 0.15);
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+      .notif-banner-title .badge-new i {
+        font-size: 0.5rem;
+        color: #a78bfa;
+      }
+
+      .notif-banner-desc {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 400;
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.55);
+        line-height: 1.4;
+        margin: 0;
+        padding-right: 0.5rem;
+      }
+      .notif-banner-desc strong {
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 500;
+      }
+
+      .notif-banner-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+      }
+      .notif-banner-btn {
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 0.45rem 1.2rem;
+        border: none;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        color: #f1f1f1;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        transition: all 0.25s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        white-space: nowrap;
+        letter-spacing: 0.2px;
+      }
+      .notif-banner-btn i {
+        font-size: 0.75rem;
+        opacity: 0.7;
+      }
+      .notif-banner-btn:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+      .notif-banner-btn:active {
+        transform: scale(0.97);
+      }
+      .notif-banner-close {
+        background: transparent;
+        border: none;
+        color: rgba(255, 255, 255, 0.25);
+        font-size: 1.1rem;
+        padding: 0.2rem 0.3rem;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.2s;
+        line-height: 1;
+      }
+      .notif-banner-close:hover {
+        color: rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      /* status warna */
+      .status-open { color: #4caf50; }
+      .status-closed { color: #f44336; }
+      .status-holiday { color: #ff9800; }
+
+      /* Responsif */
+      @media (max-width: 768px) {
+        .notif-banner {
+          margin: 0.5rem 0.75rem 1rem 0.75rem;
+          padding: 0.7rem 1rem;
+          border-radius: 14px;
+          gap: 0.6rem;
+        }
+        .notif-banner-content { gap: 0.6rem; flex: 1 1 100%; }
+        .notif-banner-icon { width: 38px; height: 38px; font-size: 1rem; }
+        .notif-banner-title { font-size: 0.85rem; }
+        .notif-banner-title .badge-new { font-size: 0.45rem; padding: 0.05rem 0.5rem 0.05rem 0.4rem; }
+        .notif-banner-title .badge-new i { font-size: 0.45rem; }
+        .notif-banner-desc { font-size: 0.7rem; }
+        .notif-banner-actions { width: 100%; justify-content: flex-end; margin-top: 0.15rem; }
+        .notif-banner-btn { font-size: 0.75rem; padding: 0.35rem 0.9rem; }
+        .notif-banner-close { font-size: 1rem; }
+      }
+      @media (max-width: 480px) {
+        .notif-banner { padding: 0.6rem 0.7rem; margin: 0.3rem 0.5rem 0.8rem 0.5rem; }
+        .notif-banner-icon { width: 32px; height: 32px; font-size: 0.85rem; }
+        .notif-banner-title { font-size: 0.75rem; }
+        .notif-banner-desc { font-size: 0.6rem; }
+        .notif-banner-btn { font-size: 0.65rem; padding: 0.25rem 0.7rem; }
+      }
