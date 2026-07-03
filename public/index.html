@@ -83,15 +83,10 @@
         --neon-glow: rgba(255, 255, 255, 0.15);
       }
 
-      /* SOLUSI FIX: Shell Pelindung Utama Menggunakan Absolute Scroll Base */
       .pwa-lock-container {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        width: 100%;
-        height: 100%;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100%; height: 100%;
         background-color: var(--bg-cyber-dark);
         background-image: 
           radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 60%),
@@ -99,16 +94,15 @@
           linear-gradient(90deg, rgba(255, 255, 255, 0.003) 1px, transparent 1px);
         background-size: 100% 100%, 30px 30px, 30px 30px;
         z-index: 999999;
-        overflow-y: scroll; /* Mengizinkan scroll bawaan hardware secara natural */
-        -webkit-overflow-scrolling: touch; /* Momentum scroll super lancar iOS */
+        overflow-y: scroll;
+        -webkit-overflow-scrolling: touch;
         font-family: 'Space Grotesk', sans-serif;
         color: #ffffff;
         padding: 32px 16px;
         box-sizing: border-box;
-        display: block; /* Menghindari bug flex-collapsing pada beberapa versi webview */
+        display: block;
       }
 
-      /* SOLUSI FIX: Pengaturan Box Model Kartu Tanpa Elemen Pendukung Macet */
       .lock-card {
         background: var(--card-inner-bg);
         border: 1px solid var(--border-glass);
@@ -119,21 +113,18 @@
         box-shadow: 0 40px 90px rgba(0, 0, 0, 0.92);
         position: relative;
         z-index: 10;
-        /* margin top & bottom memberikan ruang gulir agar bagian bawah tidak terpotong oleh tab browser mobile */
         margin: 20px auto 100px auto; 
         overflow: hidden;
         box-sizing: border-box;
-        -webkit-transform: translateZ(0); /* Memicu akselerasi GPU tanpa merusak layar */
+        -webkit-transform: translateZ(0);
       }
 
-      /* Efek Grid Overlay Digital */
       .lock-card::before {
         content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         background: linear-gradient(rgba(255,255,255,0.003) 50%, transparent 50%);
         background-size: 100% 4px; z-index: -1; pointer-events: none;
       }
 
-      /* Sudut Taktis Kokoh */
       .corner-tag {
         position: absolute; width: 14px; height: 14px; border-color: rgba(255, 255, 255, 0.35); border-style: solid; pointer-events: none; z-index: 12;
       }
@@ -142,7 +133,6 @@
       .bot-l { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
       .bot-r { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
 
-      /* SOLUSI FIX: Pemindai Laser Menggunakan Skala Dinamis (Anti-Bocor Batas Kartu) */
       .laser-scanner-line {
         position: absolute; top: 0; left: 0; width: 100%; height: 3px;
         background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
@@ -156,7 +146,6 @@
         100% { transform: translateY(580px); opacity: 0; }
       }
 
-      /* Brand Header Component */
       .lock-brand { margin-bottom: 28px; text-align: center; }
       .lock-logo-wrapper { position: relative; width: 76px; height: 76px; margin: 0 auto 18px; }
       .lock-logo { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 12px var(--neon-glow)); }
@@ -189,7 +178,6 @@
         display: inline-flex; align-items: center; gap: 6px; letter-spacing: 1px;
       }
 
-      /* Technical App Function Pipeline Flow */
       .pipeline-flow-container {
         background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.05);
         border-radius: 4px; padding: 16px 14px; margin: 22px 0; position: relative;
@@ -218,7 +206,6 @@
       .node-label { font-size: 0.65rem; font-family: 'JetBrains Mono', monospace; color: var(--terminal-dim); text-align: center; }
       .flow-node.active .node-label { color: #fff; font-weight: 500; }
 
-      /* Telemetry Mini Live Widget Component */
       .telemetry-widget { display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px; margin-bottom: 22px; text-align: left; }
       .telemetry-box { background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04); padding: 12px; border-radius: 4px; }
       .telemetry-label { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--terminal-dim); margin-bottom: 6px; letter-spacing: 0.5px; }
@@ -236,7 +223,6 @@
       .sparkline-bar:nth-child(6) { animation-delay: 0.25s; }
       @keyframes barPulse { 0% { transform: scaleY(0.3); opacity: 0.3; } 100% { transform: scaleY(1.2); opacity: 1; } }
 
-      /* Platform Tab Controller Component */
       .platform-tabs {
         display: flex; background: rgba(255, 255, 255, 0.02); padding: 4px; border-radius: 6px;
         border: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 22px;
@@ -254,7 +240,6 @@
       .platform-pane.active { display: block; animation: paneFade 0.3s ease-out forwards; }
       @keyframes paneFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-      /* Android Console Box */
       .tech-box {
         background: #000000; border: 1px solid rgba(255, 255, 255, 0.06); padding: 12px; border-radius: 4px;
         margin-bottom: 18px; font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; position: relative; overflow: hidden;
@@ -265,7 +250,6 @@
 
       .pane-text, .pane-text-ios { font-size: 0.86rem; line-height: 1.6; color: rgba(255, 255, 255, 0.5); margin-bottom: 20px; }
 
-      /* Tactical Primary Interactive Core Action Button */
       .cyber-btn-primary {
         width: 100%; background: transparent; color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2);
         padding: 14px; border-radius: 4px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
@@ -273,9 +257,8 @@
         display: flex; align-items: center; justify-content: center; gap: 10px; box-sizing: border-box;
       }
       .cyber-btn-primary:hover:not(:disabled) { background: #ffffff; color: #030303; border-color: #ffffff; }
-      .cyber-btn-primary:disabled { background: rgba(255, 255, 255, 0.02); color: rgba(255, 255, 255, 0.2); cursor: not-allowed; border-color: rgba(255, 255, 255, 0.02); }
+      .cyber-btn-primary:disabled { background: rgba(255, 255, 255, 0.02); color: rgba(255, 255, 255, 0.3); cursor: not-allowed; border-color: rgba(255, 255, 255, 0.1); }
 
-      /* STEP ENGINE FOR INTERACTIVE IOS USER */
       .ios-steps { display: flex; flex-direction: column; gap: 12px; }
       .step-item {
         display: flex; gap: 14px; align-items: flex-start; background: rgba(255, 255, 255, 0.01);
@@ -297,7 +280,6 @@
       }
       .tutorial-link:hover { background: rgba(255, 255, 255, 0.05); border-color: #ffffff; border-style: solid; }
 
-      /* Copyright Dev Brand */
       .lock-footer-code {
         margin-top: 30px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
         color: rgba(255, 255, 255, 0.25); letter-spacing: 1.5px; text-align: center;
@@ -631,6 +613,9 @@
       (function() {
         'use strict';
         
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('btn-install-android');
+        
         function enforceSecurityLock() {
           const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
           const isIOSStandalone = window.navigator.standalone === true;
@@ -694,6 +679,57 @@
             });
           });
         }
+
+        // 1. Tangkap Sinyal Instalasi PWA dari Browser Resmi (Chrome/Edge/Samsung Browser)
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e; // Simpan event prompt
+          
+          if (installBtn) {
+            installBtn.removeAttribute('disabled');
+            installBtn.innerHTML = '<i class="fas fa-download"></i> PASANG KONSOL PWA';
+          }
+        });
+
+        // 2. Eksekusi Trigger Pemicu saat Tombol Diklik
+        if (installBtn) {
+          installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+              return;
+            }
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User choice outcome: ${outcome}`);
+            deferredPrompt = null;
+            
+            installBtn.setAttribute('disabled', 'true');
+            installBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Memasang...';
+          });
+        }
+
+        // 3. Deteksi Sukses Pasang -> Auto Buka Dashboard Utama
+        window.addEventListener('appinstalled', () => {
+          deferredPrompt = null;
+          const lockScreen = document.getElementById('pwa-lock-screen');
+          const appWrapper = document.querySelector('.app-wrapper');
+          if (lockScreen) lockScreen.style.setProperty('display', 'none', 'important');
+          if (appWrapper) appWrapper.style.setProperty('display', 'flex', 'important');
+        });
+
+        // 4. SMART FALLBACK ENGINE: Antisipasi Jika Dibuka via In-App Browser Lain / VPN Webview
+        setTimeout(() => {
+          if (!deferredPrompt && installBtn && installBtn.hasAttribute('disabled')) {
+            installBtn.removeAttribute('disabled');
+            installBtn.innerHTML = '<i class="fas fa-arrow-up-right-from-square"></i> Buka via Chrome / Browser Utama';
+            installBtn.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+            
+            installBtn.addEventListener('click', () => {
+              if (!deferredPrompt) {
+                alert("Petunjuk Sistem:\n\nTombol berputar tadi karena Anda tidak mengakses melalui Google Chrome/Browser resmi bawaan HP, atau PWA sudah terpasang.\n\nJika menggunakan Android, ketuk tombol Titik Tiga (⋮) di pojok kanan atas browser Anda saat ini, lalu pilih 'Buka di Chrome' atau 'Tambahkan ke Layar Utama'.");
+              }
+            });
+          }
+        }, 4000);
 
         enforceSecurityLock();
       })();
