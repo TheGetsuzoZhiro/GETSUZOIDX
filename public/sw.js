@@ -1,21 +1,22 @@
 // ============ KONFIGURASI CACHE ============
-const CACHE_NAME = 'getsuzo-cache-v1';
+// TIPS: Setiap kali Anda selesai push kode baru ke Render, ubah 'v1' menjadi 'v2', 'v3', dst.
+// Ini akan memaksa HP client langsung membuang semua sisa kode lama.
+const CACHE_NAME = 'getsuzo-cache-v2'; 
+
 const urlsToCache = [
   '/',
   '/index.html',
   '/style.css',
   '/script.js'
-  // Kamu bisa menambahkan file aset lain di sini seperti gambar logo jika perlu
 ];
 
 // ============ INSTALL & CACHE ============
 self.addEventListener("install", (event) => {
   console.log("[SW] Installed");
   
-  // Memaksa Service Worker baru untuk langsung aktif tanpa menunggu
+  // Memaksa Service Worker baru untuk langsung aktif tanpa menunggu tab ditutup
   self.skipWaiting();
 
-  // Menyimpan file dasar ke dalam cache
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -25,28 +26,65 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// ============ ACTIVATE ============
+// ============ ACTIVATE (TAMBAHAN: AUTO DELETE CACHE LAMA) ============
 self.addEventListener("activate", (event) => {
   console.log("[SW] Activated");
-  event.waitUntil(self.clients.claim());
-});
-
-// ============ FETCH EVENT (WAJIB UNTUK PWA) ============
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Mengembalikan file dari cache jika tersedia
-        if (response) {
-          return response;
-        }
-        // Jika tidak ada di cache, ambil langsung dari jaringan (internet)
-        return fetch(event.request);
-      })
+  
+  // Fitur Tambahan: Otomatis menghapus cache versi lama (misal v1) di HP client
+  // ketika Anda mengubah CACHE_NAME menjadi v2
+  const cacheWhitelist = [CACHE_NAME];
+  
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log("[SW] Menghapus cache usang:", cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
   );
 });
 
-// ============ TERIMA PUSH NOTIFICATION ============
+// ============ FETCH EVENT (DIUBAH MENJADI NETWORK-FIRST) ============
+self.addEventListener('fetch', (event) => {
+  // Hanya intercept request dokumen/aset internal saja
+  if (event.request.mode === 'navigate' || 
+      event.request.url.includes('style.css') || 
+      event.request.url.includes('script.js') || 
+      event.request.url.match(/\.(html|css|js)$/)) {
+      
+    event.respondWith(
+      // STRATEGI: Paksa browser mengambil kode teranyar langsung dari internet (Render)
+      fetch(event.request)
+        .then((networkResponse) => {
+          // Jika internet aman dan responnya valid, perbarui file di dalam cache
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // JIKA OFFLINE / INTERNET MATI: Baru ambil file cadangan dari cache lokal HP
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // Untuk request luar seperti API, Chart.js, atau FontAwesome, biarkan berjalan normal
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        return response || fetch(event.request);
+      })
+    );
+  }
+});
+
+// ============ TERIMA PUSH NOTIFICATION (TETAP AMAN) ============
 self.addEventListener("push", (event) => {
   let data = { title: "Notifikasi Baru", body: "Ada update." };
 
@@ -55,7 +93,6 @@ self.addEventListener("push", (event) => {
       data = event.data.json();
     }
   } catch (e) {
-    // Jika data bukan JSON, gunakan text
     data.body = event.data ? event.data.text() : "Ada update.";
   }
 
@@ -65,14 +102,14 @@ self.addEventListener("push", (event) => {
     badge: "/assets/favicon/favicon-32x32.png",
     vibrate: [200, 100, 200],
     data: {
-      url: "/", // URL yang akan dibuka saat notifikasi diklik
+      url: "/", 
     },
   };
 
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-// ============ KLIK NOTIFIKASI ============
+// ============ KLIK NOTIFIKASI (TETAP AMAN) ============
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
@@ -82,13 +119,11 @@ self.addEventListener("notificationclick", (event) => {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((windowClients) => {
-        // Jika sudah ada tab yang terbuka, fokuskan
         for (const client of windowClients) {
           if (client.url === urlToOpen && "focus" in client) {
             return client.focus();
           }
         }
-        // Jika tidak, buka tab baru
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
         }
