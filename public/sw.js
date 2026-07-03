@@ -1,7 +1,4 @@
-// ============ KONFIGURASI CACHE ============
-// TIPS: Setiap kali Anda selesai push kode baru ke Render, ubah 'v1' menjadi 'v2', 'v3', dst.
-// Ini akan memaksa HP client langsung membuang semua sisa kode lama.
-const CACHE_NAME = 'getsuzo-cache-v2'; 
+const CACHE_NAME = 'getsuzo-cache-v3'; 
 
 const urlsToCache = [
   '/',
