@@ -60,10 +60,10 @@
     <link rel="manifest" href="/assets/favicon/manifest.json" />
 
     <link
-      browsericon="image/png"
+      rel="icon"
+      type="image/png"
       sizes="16x16"
       href="/assets/favicon/favicon-16x16.png"
-      rel="icon"
     />
     <link
       rel="icon"
@@ -104,7 +104,7 @@
   <body>
     <div class="particles-container" id="particles"></div>
 
-    <div id="pwa-lock-screen" class="pwa-lock-container" style="display: none;">
+    <div id="pwa-lock-screen" class="pwa-lock-container" style="display: flex;">
       <div class="lock-glow-effect"></div>
       
       <div class="lock-card">
@@ -181,7 +181,7 @@
       </div>
     </div>
 
-    <div class="app-wrapper">
+    <div class="app-wrapper" style="display: none;">
       <aside class="sidebar">
         <div class="sidebar-glow"></div>
 
@@ -737,6 +737,37 @@
 
         setInterval(updateBannerVisibility, 8000);
         updateBannerVisibility();
+      })();
+    </script>
+
+    <script>
+      (function() {
+        'use strict';
+        
+        function enforceSecurityLock() {
+          // Deteksi apakah web dibuka lewat PWA di Android/PC atau Safari iOS Standalone
+          const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+          const isIOSStandalone = window.navigator.standalone === true;
+          
+          const lockScreen = document.getElementById('pwa-lock-screen');
+          const appWrapper = document.querySelector('.app-wrapper');
+          
+          if (isStandalone || isIOSStandalone) {
+            // JIKA MEMBUKA LEWAT APLIKASI PWA -> BUKA AKSES DASHBOARD
+            if (lockScreen) lockScreen.style.setProperty('display', 'none', 'important');
+            if (appWrapper) appWrapper.style.setProperty('display', 'flex', 'important');
+          } else {
+            // JIKA MEMBUKA LEWAT BROWSER BIASA -> KUNCI TOTAL
+            if (lockScreen) lockScreen.style.setProperty('display', 'flex', 'important');
+            if (appWrapper) appWrapper.style.setProperty('display', 'none', 'important');
+          }
+        }
+
+        // Eksekusi instan sebelum browser sempat me-render element dalam wrapper
+        enforceSecurityLock();
+        
+        // Eksekusi cadangan saat seluruh DOM telah siap dimanipulasi
+        document.addEventListener('DOMContentLoaded', enforceSecurityLock);
       })();
     </script>
 
