@@ -2119,49 +2119,10 @@ function getColorFromCode(code) {
   return colors[Math.abs(hash) % colors.length];
 }
 
-const hitSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <defs>
-    <filter id="grunge-texture" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="1" result="noise" />
-      <feColorMatrix type="matrix" values="0 0 0 0 1
-                                             0 0 0 0 1
-                                             0 0 0 0 1
-                                             0 0 0 1 0" result="colored-noise" />
-      <feComposite operator="in" in="SourceGraphic" in2="colored-noise" result="masked-stamp" />
-      <feMerge>
-        <feMergeNode in="masked-stamp" />
-      </feMerge>
-    </filter>
-  </defs>
-  <g id="hit-stamp-bg" filter="url(#grunge-texture)">
-    <circle cx="100" cy="100" r="90" fill="none" stroke="#00FF66" stroke-width="10" />
-    <circle cx="100" cy="100" r="68" fill="none" stroke="#00FF66" stroke-width="8" />
-    <rect x="5" y="65" width="190" height="70" rx="12" ry="12" fill="#00FF66" transform="rotate(-15 100 100)" />
-  </g>
-  <text x="100" y="113" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="42" fill="#FFFFFF" transform="rotate(-15 100 100)">HIT</text>
-</svg>`;
-
-const missedSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <defs>
-    <filter id="grunge-texture" x="-20%" y="-20%" width="140%" height="140%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="1" result="noise" />
-      <feColorMatrix type="matrix" values="0 0 0 0 1
-                                             0 0 0 0 1
-                                             0 0 0 0 1
-                                             0 0 0 1 0" result="colored-noise" />
-      <feComposite operator="in" in="SourceGraphic" in2="colored-noise" result="masked-stamp" />
-      <feMerge>
-        <feMergeNode in="masked-stamp" />
-      </feMerge>
-    </filter>
-  </defs>
-  <g id="missed-stamp-bg" filter="url(#grunge-texture)">
-    <circle cx="100" cy="100" r="90" fill="none" stroke="#FF1A1A" stroke-width="10" />
-    <circle cx="100" cy="100" r="68" fill="none" stroke="#FF1A1A" stroke-width="8" />
-    <rect x="5" y="65" width="190" height="70" rx="12" ry="12" fill="#FF1A1A" transform="rotate(-15 100 100)" />
-  </g>
-  <text x="100" y="111" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="32" fill="#FFFFFF" transform="rotate(-15 100 100)">MISSED</text>
-</svg>`;
+const hitSvg = `<img src="https://stockbit.com/assets/img/correct.png" alt="HIT" style="width:36px; height:36px; object-fit:contain; display:inline-block;">`;
+const missedSvg = `<img src="https://stockbit.com/assets/img/missed.png" alt="MISSED" style="width:36px; height:36px; object-fit:contain; display:inline-block;">`;
+const hitSvgrow = `<img src="https://stockbit.com/assets/img/correct.png" alt="HIT" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
+const missedSvgrow = `<img src="https://stockbit.com/assets/img/missed.png" alt="MISSED" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
 
 function renderSignalRows(signals, priceMap, infoMap) {
   let rows = "";
@@ -2192,7 +2153,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
           ? `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`
           : `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
       priceDisplay = `${arrowPrice} ${priceVal}`;
-      statusBadge = `<span class="sig-status-stamp">${hitSvg}</span>`;
+      statusBadge = `<span class="sig-status-stamp">${hitSvgrow}</span>`;
     } else if (s.status === "SL" || s.status === "STOP LOSS") {
       const exitPrice = s.exitPrice || s.sl;
       const entryPrice = s.entryPrice;
@@ -2213,7 +2174,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
           ? `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`
           : `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
       priceDisplay = `${arrowPrice} ${priceVal}`;
-      statusBadge = `<span class="sig-status-stamp">${missedSvg}</span>`;
+      statusBadge = `<span class="sig-status-stamp">${missedSvgrow}</span>`;
     } else {
       const currentPrice = priceMap[s.stockCode];
       const priceVal = currentPrice != null ? fmtPriceNoRp(currentPrice) : "—";
