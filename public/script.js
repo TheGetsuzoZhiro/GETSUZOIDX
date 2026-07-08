@@ -14,7 +14,7 @@ let currentSignalFilter = "none";
 // ========== STATUS DETAIL VIEW ==========
 let isDetailView = false;
 let currentDetailIndex = null;
-let bsjpRefreshInterval = null; // untuk BSJP auto-refresh
+let bsjpRefreshInterval = null;
 
 // ========== STATE UNTUK DAILY & SIGNAL LIST ==========
 let dailyRendered = false;
@@ -30,6 +30,10 @@ let currentDateRange = null;
 // ========== NOTIFICATION HISTORY ==========
 let notificationHistory = [];
 const NOTIF_KEY = "notificationHistory";
+
+// ========== SSE & PRICE CACHE (TAMBAHAN) ==========
+let eventSource = null;
+const latestPrices = new Map(); // key: symbol, value: { price, high, low, timestamp }
 
 function loadNotifications() {
   try {
@@ -234,29 +238,90 @@ function fmtPriceNoRp(num) {
   return num != null ? Number(num).toLocaleString("id-ID") : "–";
 }
 
+// ========== SSE CONNECTION & EVENT HANDLER ==========
+function connectSSE() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+
+  eventSource = new EventSource('/api/events');
+
+  eventSource.addEventListener('open', () => {
+    console.log('✅ SSE connected');
+  });
+
+  eventSource.addEventListener('error', (err) => {
+    console.warn('⚠️ SSE error, reconnecting in 5s...', err);
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    setTimeout(connectSSE, 5000);
+  });
+
+  eventSource.addEventListener('message', (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'price-update') {
+        // Update harga
+        latestPrices.set(data.symbol, {
+          price: data.price,
+          high: data.high || data.price,
+          low: data.low || data.price,
+          timestamp: data.timestamp || Date.now(),
+        });
+        updatePriceInUI(data.symbol, data.price);
+      } else if (data.type === 'signal-update') {
+        // Ada perubahan sinyal (new signal, TP, SL, dll.)
+        // Refresh data sinyal tanpa loading indicator
+        fetchSignals(false).then(() => {
+          const activeTab = document.querySelector(".view.active")?.id;
+          if (activeTab === 'daily' && dailyRendered) {
+            updateDailyContent();
+          } else if (activeTab === 'home') {
+            updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
+          } else if (activeTab === 'signals' && signalListRendered) {
+            // Update daftar sinyal jika sedang di tab signals
+            showSignalList(); // atau updateSignalList()
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('SSE parse error:', e);
+    }
+  });
+}
+
+function updatePriceInUI(symbol, price) {
+  // Update semua elemen harga dengan atribut data-stock dan class .stock-price
+  document.querySelectorAll(`[data-stock="${symbol}"] .stock-price`).forEach(el => {
+    el.textContent = fmtPriceNoRp(price);
+  });
+}
+
 // ========== HARGA & INFO ==========
-const priceCache = new Map();
 const infoCache = new Map();
 
 async function fetchStockPrice(symbol) {
-  if (priceCache.has(symbol)) {
-    const cached = priceCache.get(symbol);
-    if (Date.now() - cached.timestamp < 5000) { // ubah ke 5 detik
-      return cached.price;
-    }
+  // Cek data dari SSE terlebih dahulu (cache 30 detik)
+  const cached = latestPrices.get(symbol);
+  if (cached && Date.now() - cached.timestamp < 30000) {
+    return cached.price;
   }
+  // Fallback ke API jika belum ada data atau cache kadaluarsa
   try {
     const response = await fetch(`/api/price/${symbol}`);
     if (!response.ok) throw new Error("Network error");
     const data = await response.json();
     const price = data.price;
     if (price != null) {
-      priceCache.set(symbol, { price, timestamp: Date.now() });
+      latestPrices.set(symbol, { price, timestamp: Date.now() });
       return price;
     }
-    return null; // langsung null, tidak coba Yahoo
+    return null;
   } catch (e) {
-    console.warn(`Gagal fetch harga ${symbol} dari Stockbit API:`, e);
+    console.warn(`Gagal fetch harga ${symbol}:`, e);
     return null;
   }
 }
@@ -287,8 +352,7 @@ function showLoading(containerId) {
     c.innerHTML = `<div class="loading-state"><div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div><p>Loading...</p></div>`;
 }
 
-// ========== FUNGSI BARU BERBASIS SIGNALS (Pengganti Report) ==========
-
+// ========== FUNGSI FILTER & AGGREGATE SIGNALS ==========
 function filterSignalsByDate(signals, startDate, endDate) {
   if (!signals || !signals.length) return [];
   return signals.filter((s) => {
@@ -741,11 +805,11 @@ function renderDaily() {
             </div>
 
             <div class="pro-card" style="margin-bottom:1.5rem;">
-  <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
-  <div style="height:180px;" id="dailyReturnChartWrapper">
-    <canvas id="dailyReturnChart"></canvas>
-  </div>
-</div>
+              <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
+              <div style="height:180px;" id="dailyReturnChartWrapper">
+                <canvas id="dailyReturnChart"></canvas>
+              </div>
+            </div>
 
             <div class="pro-grid-2" style="margin-bottom:1.5rem;">
               <div class="pro-card">
@@ -1124,7 +1188,6 @@ async function showDailySignalDetail(stockCode, signalDate) {
 }
 
 function renderStrategyFlowForSignal(s) {
-  // Hitung persentase SL dan TP dari entry
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp = s.tp1 || 0;
@@ -1138,16 +1201,13 @@ function renderStrategyFlowForSignal(s) {
   const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
   const tpLabel = tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
 
-  // Step 1: Entry selalu aktif
   const step1Active = true;
   let step1State = "default";
   if (s.status === "SL" && !s.breakEven) step1State = "failed";
 
-  // Step 2: Take Profit / Lock aktif jika breakEven atau status TRAILING/TP
   const step2Active = s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
   const step2State = (s.status === "SL" && s.breakEven) ? "warning" : (s.status === "TP" ? "success" : "default");
 
-  // Step 3: Trailing aktif jika status TRAILING atau TP
   const step3Active = s.status === "TRAILING" || s.status === "TP";
   let step3State = "default";
   if (s.status === "SL" && s.breakEven) step3State = "warning";
@@ -1180,7 +1240,6 @@ function renderStrategyFlowForSignal(s) {
     `;
   }
 
-  // Progress bar
   let progressWidth = "0%";
   let progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
   if (step3Active && step3State !== "warning") {
@@ -1538,13 +1597,11 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
 
   container.innerHTML = html;
 
-  // Hentikan interval lama
   if (bsjpRefreshInterval) {
     clearInterval(bsjpRefreshInterval);
     bsjpRefreshInterval = null;
   }
 
-  // Tombol back
   const backBtn = container.querySelector("#bsjpBackBtn");
   if (backBtn && onBack) {
     backBtn.addEventListener("click", () => {
@@ -1556,7 +1613,6 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
     });
   }
 
-  // Auto-refresh setiap 10 detik
   bsjpRefreshInterval = setInterval(async () => {
     try {
       const res = await fetch("/api/signals");
@@ -1568,7 +1624,6 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
         const changed = updated.status !== s.status || updated.sl !== s.sl || updated.exitPrice !== s.exitPrice || updated.returnPercent !== s.returnPercent || updated.breakEven !== s.breakEven;
         if (changed) {
           Object.assign(s, updated);
-          // Re-render dengan data baru (tanpa mereset interval)
           renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo);
         }
       }
@@ -1588,7 +1643,6 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   }
 
   let stockInfo = { longName: s.stockCode, logoUrl: null };
-
   let currentPrice = null;
   try {
     currentPrice = await fetchStockPrice(s.stockCode);
@@ -4152,10 +4206,11 @@ function requestNotificationPermission() {
   });
 }
 
-// ========== POLLING ==========
+// ========== POLLING (OPSIONAL, BISA DIHAPUS) ==========
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
+    // Hanya sebagai fallback jika SSE putus, polling 60 detik saja
     const activeTab = document.querySelector(".view.active")?.id;
     if (activeTab === "daily" || activeTab === "home") {
       fetchReports();
@@ -4164,7 +4219,7 @@ function startPolling() {
       fetchSignals(false);
     }
     updateLastUpdate();
-  }, 30000);
+  }, 60000);
 }
 
 function updateLastUpdate() {
@@ -4434,18 +4489,15 @@ async function subscribeToPush() {
     if (subscription) {
       await subscription.unsubscribe();
       console.log("🔁 Unsubscribe subscription lama.");
-      // Set subscription null agar dibuat baru
       subscription = null;
     }
 
-    // Buat subscription baru
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     console.log("✅ Dibuat subscription baru di browser.");
 
-    // Kirim ke server
     const response = await fetch("/api/save-subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4454,7 +4506,6 @@ async function subscribeToPush() {
 
     if (response.ok) {
       console.log("✅ Berhasil sinkronisasi token push ke Database server!");
-      // Simpan status aktif di localStorage (jika ada)
       localStorage.setItem("pushActive", "true");
       return true;
     } else {
@@ -4474,6 +4525,9 @@ document.addEventListener("DOMContentLoaded", () => {
   createParticles();
   initTabs();
 
+  // Hubungkan SSE
+  connectSSE();
+
   const pushBtn = document.getElementById("enablePushBtn");
   if (pushBtn) {
     pushBtn.addEventListener("click", async () => {
@@ -4484,13 +4538,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const success = await subscribeToPush();
       if (success) {
         localStorage.setItem("pushActive", "true");
-        alert(
-          "✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.",
-        );
+        alert("✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.");
       } else {
-        alert(
-          "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
-        );
+        alert("❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.");
       }
     });
   }
