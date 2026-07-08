@@ -14,7 +14,7 @@ let currentSignalFilter = "none";
 // ========== STATUS DETAIL VIEW ==========
 let isDetailView = false;
 let currentDetailIndex = null;
-let bsjpRefreshInterval = null; // untuk BSJP auto-refresh
+let bsjpRefreshInterval = null;
 
 // ========== STATE UNTUK DAILY & SIGNAL LIST ==========
 let dailyRendered = false;
@@ -30,6 +30,10 @@ let currentDateRange = null;
 // ========== NOTIFICATION HISTORY ==========
 let notificationHistory = [];
 const NOTIF_KEY = "notificationHistory";
+
+// ========== SSE & PRICE CACHE ==========
+let eventSource = null;
+const latestPrices = new Map(); // key: symbol, value: { price, high, low, timestamp }
 
 function loadNotifications() {
   try {
@@ -234,30 +238,138 @@ function fmtPriceNoRp(num) {
   return num != null ? Number(num).toLocaleString("id-ID") : "–";
 }
 
+// ========== SSE CONNECTION & EVENT HANDLER ==========
+function connectSSE() {
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
+
+  eventSource = new EventSource("/api/events");
+
+  eventSource.addEventListener("open", () => {
+    console.log("✅ SSE connected");
+  });
+
+  eventSource.addEventListener("error", (err) => {
+    console.warn("⚠️ SSE error, reconnecting in 5s...", err);
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+    setTimeout(connectSSE, 5000);
+  });
+
+  eventSource.addEventListener("message", (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "price-update") {
+        latestPrices.set(data.symbol, {
+          price: data.price,
+          high: data.high || data.price,
+          low: data.low || data.price,
+          timestamp: data.timestamp || Date.now(),
+        });
+        updatePriceInUI(data.symbol, data.price);
+      } else if (data.type === "signal-update") {
+        fetchSignals(false).then(() => {
+          const activeTab = document.querySelector(".view.active")?.id;
+          if (activeTab === "daily" && dailyRendered) {
+            updateDailyContent();
+          } else if (activeTab === "home") {
+            updateChartsFromSignals({
+              running: _allRunning,
+              closed: _allClosed,
+            });
+          } else if (activeTab === "signals" && signalListRendered) {
+            showSignalList();
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("SSE parse error:", e);
+    }
+  });
+}
+
+function updatePriceInUI(symbol, price) {
+  document
+    .querySelectorAll(`[data-stock="${symbol}"] .stock-price`)
+    .forEach((el) => {
+      el.textContent = fmtPriceNoRp(price);
+    });
+
+  let signal = _allRunning.find((s) => s.stockCode === symbol);
+  if (!signal) {
+    signal = _allClosed.find(
+      (s) =>
+        s.stockCode === symbol &&
+        (s.status === "RUNNING" || s.status === "TRAILING"),
+    );
+  }
+
+  if (
+    signal &&
+    (signal.status === "RUNNING" || signal.status === "TRAILING") &&
+    signal.entryPrice
+  ) {
+    const entry = signal.entryPrice;
+    const gainAbs = price - entry;
+    const gainPct = (gainAbs / entry) * 100;
+    const absGain = Math.abs(gainAbs).toFixed(0);
+    const absPct = Math.abs(gainPct).toFixed(2);
+    let gainStr = "";
+    let gainColor = "";
+    let arrowIcon = "";
+
+    if (Math.abs(gainAbs) < 0.01) {
+      gainColor = "var(--text-secondary)";
+      gainStr = "0 (0.00%)";
+    } else if (gainAbs > 0) {
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+      gainColor = "#10b981";
+      gainStr = `${arrowIcon} ${absGain} (+${absPct}%)`;
+    } else {
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+      gainColor = "#ef4444";
+      gainStr = `${arrowIcon} ${absGain} (-${absPct}%)`;
+    }
+
+    document
+      .querySelectorAll(`[data-stock="${symbol}"] .stock-gain`)
+      .forEach((el) => {
+        el.style.color = gainColor;
+        el.innerHTML = gainStr;
+      });
+  }
+}
+
 // ========== HARGA & INFO ==========
-const priceCache = new Map();
 const infoCache = new Map();
 
-async function fetchStockPrice(symbol) {
-  if (priceCache.has(symbol)) {
-    const cached = priceCache.get(symbol);
-    if (Date.now() - cached.timestamp < 5000) {
-      // ubah ke 5 detik
-      return cached.price;
-    }
+// ========== PERBAIKAN: fetchStockPrice menerima fromDate ==========
+async function fetchStockPrice(symbol, fromDate) {
+  // Cek data dari SSE terlebih dahulu (cache 30 detik)
+  const cached = latestPrices.get(symbol);
+  if (cached && Date.now() - cached.timestamp < 30000) {
+    return cached.price;
   }
   try {
-    const response = await fetch(`/api/price/${symbol}`);
+    let url = `/api/price/${symbol}`;
+    if (fromDate) {
+      url += `?from=${encodeURIComponent(fromDate)}`;
+    }
+    const response = await fetch(url);
     if (!response.ok) throw new Error("Network error");
     const data = await response.json();
     const price = data.price;
     if (price != null) {
-      priceCache.set(symbol, { price, timestamp: Date.now() });
+      latestPrices.set(symbol, { price, timestamp: Date.now() });
       return price;
     }
-    return null; // langsung null, tidak coba Yahoo
+    return null;
   } catch (e) {
-    console.warn(`Gagal fetch harga ${symbol} dari Stockbit API:`, e);
+    console.warn(`Gagal fetch harga ${symbol}:`, e);
     return null;
   }
 }
@@ -288,8 +400,7 @@ function showLoading(containerId) {
     c.innerHTML = `<div class="loading-state"><div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div><p>Loading...</p></div>`;
 }
 
-// ========== FUNGSI BARU BERBASIS SIGNALS (Pengganti Report) ==========
-
+// ========== FUNGSI FILTER & AGGREGATE SIGNALS ==========
 function filterSignalsByDate(signals, startDate, endDate) {
   if (!signals || !signals.length) return [];
   return signals.filter((s) => {
@@ -360,12 +471,14 @@ function aggregateSignals(signals) {
     }
   }
 
+  // ========== PERBAIKAN: tambahkan signalDate ke positions ==========
   result.positions = runningSignals.map((s) => ({
     stock: s.stockCode,
     entry: s.entryPrice,
     current: null,
     return: 0,
     hold: s.holdingDays || 0,
+    signalDate: s.signalDate, // <-- tambahkan
   }));
 
   return result;
@@ -447,7 +560,7 @@ function getDateRangeFromFilterState() {
   return { start: startStr, end: endStr };
 }
 
-// ========== RENDER DAILY RETURN CHART (BERBASIS SIGNALS) ==========
+// ========== RENDER DAILY RETURN CHART ==========
 let returnChartInstance = null;
 
 function renderDailyReturnChartFromSignals(signals) {
@@ -555,7 +668,7 @@ function renderDailyReturnChartFromSignals(signals) {
   });
 }
 
-// ========== UPDATE DAILY CONTENT (BERBASIS SIGNALS) ==========
+// ========== UPDATE DAILY CONTENT ==========
 async function updateDailyContent() {
   await fetchSignals(false);
   const allSignals = [..._allRunning, ..._allClosed];
@@ -601,9 +714,11 @@ async function updateDailyContent() {
   const positionsContainer = document.getElementById("positionsContainer");
   if (positionsContainer) {
     if (agg.positions.length) {
+      // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
       const posWithPrice = await Promise.all(
         agg.positions.map(async (p) => {
-          const price = await fetchStockPrice(p.stock);
+          const fromDate = p.signalDate ? p.signalDate.split(' ')[0] : null;
+          const price = await fetchStockPrice(p.stock, fromDate);
           let currentReturn = 0;
           if (price && p.entry) {
             currentReturn = ((price - p.entry) / p.entry) * 100;
@@ -742,11 +857,11 @@ function renderDaily() {
             </div>
 
             <div class="pro-card" style="margin-bottom:1.5rem;">
-  <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
-  <div style="height:180px;" id="dailyReturnChartWrapper">
-    <canvas id="dailyReturnChart"></canvas>
-  </div>
-</div>
+              <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
+              <div style="height:180px;" id="dailyReturnChartWrapper">
+                <canvas id="dailyReturnChart"></canvas>
+              </div>
+            </div>
 
             <div class="pro-grid-2" style="margin-bottom:1.5rem;">
               <div class="pro-card">
@@ -1125,7 +1240,6 @@ async function showDailySignalDetail(stockCode, signalDate) {
 }
 
 function renderStrategyFlowForSignal(s) {
-  // Hitung persentase SL dan TP dari entry
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp = s.tp1 || 0;
@@ -1142,12 +1256,10 @@ function renderStrategyFlowForSignal(s) {
   const tpLabel =
     tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
 
-  // Step 1: Entry selalu aktif
   const step1Active = true;
   let step1State = "default";
   if (s.status === "SL" && !s.breakEven) step1State = "failed";
 
-  // Step 2: Take Profit / Lock aktif jika breakEven atau status TRAILING/TP
   const step2Active =
     s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
   const step2State =
@@ -1157,7 +1269,6 @@ function renderStrategyFlowForSignal(s) {
         ? "success"
         : "default";
 
-  // Step 3: Trailing aktif jika status TRAILING atau TP
   const step3Active = s.status === "TRAILING" || s.status === "TP";
   let step3State = "default";
   if (s.status === "SL" && s.breakEven) step3State = "warning";
@@ -1202,7 +1313,6 @@ function renderStrategyFlowForSignal(s) {
     `;
   }
 
-  // Progress bar
   let progressWidth = "0%";
   let progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
   if (step3Active && step3State !== "warning") {
@@ -1267,7 +1377,9 @@ function renderBsjpDetail(s, container, onBack) {
     })
     .catch(() => {});
 
-  fetchStockPrice(s.stockCode)
+  // ========== PERBAIKAN: kirim signalDate ==========
+  const fromDate = s.signalDate ? s.signalDate.split(' ')[0] : null;
+  fetchStockPrice(s.stockCode, fromDate)
     .then((price) => {
       currentPrice = price;
       renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo);
@@ -1586,13 +1698,11 @@ function renderBsjpDetailContent(
 
   container.innerHTML = html;
 
-  // Hentikan interval lama
   if (bsjpRefreshInterval) {
     clearInterval(bsjpRefreshInterval);
     bsjpRefreshInterval = null;
   }
 
-  // Tombol back
   const backBtn = container.querySelector("#bsjpBackBtn");
   if (backBtn && onBack) {
     backBtn.addEventListener("click", () => {
@@ -1604,7 +1714,6 @@ function renderBsjpDetailContent(
     });
   }
 
-  // Auto-refresh setiap 10 detik
   bsjpRefreshInterval = setInterval(async () => {
     try {
       const res = await fetch("/api/signals");
@@ -1624,7 +1733,6 @@ function renderBsjpDetailContent(
           updated.breakEven !== s.breakEven;
         if (changed) {
           Object.assign(s, updated);
-          // Re-render dengan data baru (tanpa mereset interval)
           renderBsjpDetailContent(
             s,
             container,
@@ -1650,10 +1758,11 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   }
 
   let stockInfo = { longName: s.stockCode, logoUrl: null };
-
   let currentPrice = null;
   try {
-    currentPrice = await fetchStockPrice(s.stockCode);
+    // ========== PERBAIKAN: kirim signalDate ==========
+    const fromDate = s.signalDate ? s.signalDate.split(' ')[0] : null;
+    currentPrice = await fetchStockPrice(s.stockCode, fromDate);
   } catch (e) {
     console.warn(`Gagal fetch current price ${s.stockCode}:`, e);
   }
@@ -2078,10 +2187,15 @@ async function renderPerformanceSignalList(status) {
     }
 
     const symbols = [...new Set(filteredByStatus.map((s) => s.stockCode))];
-    const [priceResults, infoResults] = await Promise.all([
-      Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
-      Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
-    ]);
+    // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
+    const priceResults = await Promise.all(
+      symbols.map((sym) => {
+        const signal = filteredByStatus.find(s => s.stockCode === sym);
+        const fromDate = signal && signal.signalDate ? signal.signalDate.split(' ')[0] : null;
+        return fetchStockPrice(sym, fromDate);
+      })
+    );
+    const infoResults = await Promise.all(symbols.map((sym) => fetchStockInfo(sym)));
 
     const priceMap = {};
     const infoMap = {};
@@ -2350,8 +2464,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
           <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
               <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.1rem;">${priceDisplay}</span>
-              <span style="font-family:'JetBrains Mono'; font-size:0.65rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>
-            </div>
+            <span class="stock-gain" style="font-family:'JetBrains Mono'; font-size:0.65rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>            </div>
             ${statusBadge}
           </div>
         </div>
@@ -2404,10 +2517,15 @@ async function showSignalList() {
   }
 
   const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
-  const [priceResults, infoResults] = await Promise.all([
-    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
-    Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
-  ]);
+  // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
+  const priceResults = await Promise.all(
+    symbols.map((sym) => {
+      const signal = filteredSignals.find(s => s.stockCode === sym);
+      const fromDate = signal && signal.signalDate ? signal.signalDate.split(' ')[0] : null;
+      return fetchStockPrice(sym, fromDate);
+    })
+  );
+  const infoResults = await Promise.all(symbols.map((sym) => fetchStockInfo(sym)));
   const priceMap = {};
   const infoMap = {};
   symbols.forEach((sym, idx) => {
@@ -2630,7 +2748,9 @@ async function showSignalDetail(index) {
   let stockInfo = { longName: s.stockCode, logoUrl: null };
   let currentPrice = null;
   try {
-    currentPrice = await fetchStockPrice(s.stockCode);
+    // ========== PERBAIKAN: kirim signalDate ==========
+    const fromDate = s.signalDate ? s.signalDate.split(' ')[0] : null;
+    currentPrice = await fetchStockPrice(s.stockCode, fromDate);
   } catch (e) {
     console.warn(`Gagal fetch current price ${s.stockCode}:`, e);
   }
@@ -3948,9 +4068,14 @@ async function updateSignalList() {
   if (!filteredSignals.length) return;
 
   const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
-  const [priceResults] = await Promise.all([
-    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
-  ]);
+  // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
+  const priceResults = await Promise.all(
+    symbols.map((sym) => {
+      const signal = filteredSignals.find(s => s.stockCode === sym);
+      const fromDate = signal && signal.signalDate ? signal.signalDate.split(' ')[0] : null;
+      return fetchStockPrice(sym, fromDate);
+    })
+  );
   const priceMap = {};
   symbols.forEach((sym, idx) => {
     priceMap[sym] = priceResults[idx];
@@ -4248,7 +4373,7 @@ function startPolling() {
       fetchSignals(false);
     }
     updateLastUpdate();
-  }, 30000);
+  }, 60000);
 }
 
 function updateLastUpdate() {
@@ -4513,23 +4638,19 @@ async function subscribeToPush() {
       return false;
     }
 
-    // 🔄 Selalu hapus subscription lama (jika ada) untuk memastikan token baru
     let subscription = await registration.pushManager.getSubscription();
     if (subscription) {
       await subscription.unsubscribe();
       console.log("🔁 Unsubscribe subscription lama.");
-      // Set subscription null agar dibuat baru
       subscription = null;
     }
 
-    // Buat subscription baru
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     console.log("✅ Dibuat subscription baru di browser.");
 
-    // Kirim ke server
     const response = await fetch("/api/save-subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4538,7 +4659,6 @@ async function subscribeToPush() {
 
     if (response.ok) {
       console.log("✅ Berhasil sinkronisasi token push ke Database server!");
-      // Simpan status aktif di localStorage (jika ada)
       localStorage.setItem("pushActive", "true");
       return true;
     } else {
@@ -4557,6 +4677,8 @@ document.addEventListener("DOMContentLoaded", () => {
   updateNotifBadge();
   createParticles();
   initTabs();
+
+  connectSSE();
 
   const pushBtn = document.getElementById("enablePushBtn");
   if (pushBtn) {
