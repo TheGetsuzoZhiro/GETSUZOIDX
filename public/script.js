@@ -4429,18 +4429,23 @@ async function subscribeToPush() {
       return false;
     }
 
+    // 🔄 Selalu hapus subscription lama (jika ada) untuk memastikan token baru
     let subscription = await registration.pushManager.getSubscription();
-
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-      console.log("✅ Dibuat subscription baru di browser.");
-    } else {
-      console.log("✅ Menggunakan subscription lama dari browser.");
+    if (subscription) {
+      await subscription.unsubscribe();
+      console.log("🔁 Unsubscribe subscription lama.");
+      // Set subscription null agar dibuat baru
+      subscription = null;
     }
 
+    // Buat subscription baru
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    console.log("✅ Dibuat subscription baru di browser.");
+
+    // Kirim ke server
     const response = await fetch("/api/save-subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4449,6 +4454,8 @@ async function subscribeToPush() {
 
     if (response.ok) {
       console.log("✅ Berhasil sinkronisasi token push ke Database server!");
+      // Simpan status aktif di localStorage (jika ada)
+      localStorage.setItem("pushActive", "true");
       return true;
     } else {
       console.error("❌ Gagal simpan subscription ke server");
