@@ -245,14 +245,14 @@ function connectSSE() {
     eventSource = null;
   }
 
-  eventSource = new EventSource('/api/events');
+  eventSource = new EventSource("/api/events");
 
-  eventSource.addEventListener('open', () => {
-    console.log('✅ SSE connected');
+  eventSource.addEventListener("open", () => {
+    console.log("✅ SSE connected");
   });
 
-  eventSource.addEventListener('error', (err) => {
-    console.warn('⚠️ SSE error, reconnecting in 5s...', err);
+  eventSource.addEventListener("error", (err) => {
+    console.warn("⚠️ SSE error, reconnecting in 5s...", err);
     if (eventSource) {
       eventSource.close();
       eventSource = null;
@@ -260,10 +260,10 @@ function connectSSE() {
     setTimeout(connectSSE, 5000);
   });
 
-  eventSource.addEventListener('message', (event) => {
+  eventSource.addEventListener("message", (event) => {
     try {
       const data = JSON.parse(event.data);
-      if (data.type === 'price-update') {
+      if (data.type === "price-update") {
         // Update harga
         latestPrices.set(data.symbol, {
           price: data.price,
@@ -272,32 +272,84 @@ function connectSSE() {
           timestamp: data.timestamp || Date.now(),
         });
         updatePriceInUI(data.symbol, data.price);
-      } else if (data.type === 'signal-update') {
+      } else if (data.type === "signal-update") {
         // Ada perubahan sinyal (new signal, TP, SL, dll.)
         // Refresh data sinyal tanpa loading indicator
         fetchSignals(false).then(() => {
           const activeTab = document.querySelector(".view.active")?.id;
-          if (activeTab === 'daily' && dailyRendered) {
+          if (activeTab === "daily" && dailyRendered) {
             updateDailyContent();
-          } else if (activeTab === 'home') {
-            updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
-          } else if (activeTab === 'signals' && signalListRendered) {
+          } else if (activeTab === "home") {
+            updateChartsFromSignals({
+              running: _allRunning,
+              closed: _allClosed,
+            });
+          } else if (activeTab === "signals" && signalListRendered) {
             // Update daftar sinyal jika sedang di tab signals
             showSignalList(); // atau updateSignalList()
           }
         });
       }
     } catch (e) {
-      console.warn('SSE parse error:', e);
+      console.warn("SSE parse error:", e);
     }
   });
 }
 
 function updatePriceInUI(symbol, price) {
-  // Update semua elemen harga dengan atribut data-stock dan class .stock-price
-  document.querySelectorAll(`[data-stock="${symbol}"] .stock-price`).forEach(el => {
-    el.textContent = fmtPriceNoRp(price);
-  });
+  // 1. Update harga
+  document
+    .querySelectorAll(`[data-stock="${symbol}"] .stock-price`)
+    .forEach((el) => {
+      el.textContent = fmtPriceNoRp(price);
+    });
+
+  // 2. Update gain/return untuk saham yang sedang RUNNING/TRAILING
+  let signal = _allRunning.find((s) => s.stockCode === symbol);
+  if (!signal) {
+    // Jika tidak ditemukan di running, coba di closed (tapi gain hanya untuk running)
+    signal = _allClosed.find(
+      (s) =>
+        s.stockCode === symbol &&
+        (s.status === "RUNNING" || s.status === "TRAILING"),
+    );
+  }
+
+  if (
+    signal &&
+    (signal.status === "RUNNING" || signal.status === "TRAILING") &&
+    signal.entryPrice
+  ) {
+    const entry = signal.entryPrice;
+    const gainAbs = price - entry;
+    const gainPct = (gainAbs / entry) * 100;
+    const absGain = Math.abs(gainAbs).toFixed(0);
+    const absPct = Math.abs(gainPct).toFixed(2);
+    let gainStr = "";
+    let gainColor = "";
+    let arrowIcon = "";
+
+    if (Math.abs(gainAbs) < 0.01) {
+      gainColor = "var(--text-secondary)";
+      gainStr = "0 (0.00%)";
+    } else if (gainAbs > 0) {
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+      gainColor = "#10b981";
+      gainStr = `${arrowIcon} ${absGain} (+${absPct}%)`;
+    } else {
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+      gainColor = "#ef4444";
+      gainStr = `${arrowIcon} ${absGain} (-${absPct}%)`;
+    }
+
+    // Update semua elemen gain dengan class stock-gain
+    document
+      .querySelectorAll(`[data-stock="${symbol}"] .stock-gain`)
+      .forEach((el) => {
+        el.style.color = gainColor;
+        el.innerHTML = gainStr;
+      });
+  }
 }
 
 // ========== HARGA & INFO ==========
@@ -1191,22 +1243,31 @@ function renderStrategyFlowForSignal(s) {
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp = s.tp1 || 0;
-  let slPercent = 0, tpPercent = 0;
+  let slPercent = 0,
+    tpPercent = 0;
   if (entry > 0 && sl > 0) {
     slPercent = ((sl - entry) / entry) * 100;
   }
   if (entry > 0 && tp > 0) {
     tpPercent = ((tp - entry) / entry) * 100;
   }
-  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tpLabel = tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
+  const slLabel =
+    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tpLabel =
+    tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
 
   const step1Active = true;
   let step1State = "default";
   if (s.status === "SL" && !s.breakEven) step1State = "failed";
 
-  const step2Active = s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
-  const step2State = (s.status === "SL" && s.breakEven) ? "warning" : (s.status === "TP" ? "success" : "default");
+  const step2Active =
+    s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
+  const step2State =
+    s.status === "SL" && s.breakEven
+      ? "warning"
+      : s.status === "TP"
+        ? "success"
+        : "default";
 
   const step3Active = s.status === "TRAILING" || s.status === "TP";
   let step3State = "default";
@@ -1216,13 +1277,25 @@ function renderStrategyFlowForSignal(s) {
   function stepCircle(active, label, desc, icon, state = "default") {
     let bg, border, color, shadow;
     if (state === "failed") {
-      bg = "#ef4444"; border = "#ef4444"; color = "#fff"; shadow = "0 0 0 4px rgba(239,68,68,0.2)";
+      bg = "#ef4444";
+      border = "#ef4444";
+      color = "#fff";
+      shadow = "0 0 0 4px rgba(239,68,68,0.2)";
     } else if (state === "warning") {
-      bg = "#f59e0b"; border = "#f59e0b"; color = "#fff"; shadow = "0 0 0 4px rgba(245,158,11,0.2)";
+      bg = "#f59e0b";
+      border = "#f59e0b";
+      color = "#fff";
+      shadow = "0 0 0 4px rgba(245,158,11,0.2)";
     } else if (state === "success" || active) {
-      bg = "#10b981"; border = "#10b981"; color = "#fff"; shadow = "0 0 0 4px rgba(16,185,129,0.2)";
+      bg = "#10b981";
+      border = "#10b981";
+      color = "#fff";
+      shadow = "0 0 0 4px rgba(16,185,129,0.2)";
     } else {
-      bg = "#2a2a2a"; border = "rgba(255,255,255,0.1)"; color = "var(--text-secondary)"; shadow = "0 0 0 4px #121212";
+      bg = "#2a2a2a";
+      border = "rgba(255,255,255,0.1)";
+      color = "var(--text-secondary)";
+      shadow = "0 0 0 4px #121212";
     }
     let descColor = "var(--text-secondary)";
     if (state === "failed") descColor = "#ef4444";
@@ -1260,9 +1333,13 @@ function renderStrategyFlowForSignal(s) {
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
         <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Strategy Flow</span>
-        ${s.status === "RUNNING" ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>` : 
-          s.status === "TRAILING" ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>` :
-          `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`}
+        ${
+          s.status === "RUNNING"
+            ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+            : s.status === "TRAILING"
+              ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+              : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+        }
       </div>
       
       <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
@@ -1310,7 +1387,13 @@ function renderBsjpDetail(s, container, onBack) {
     });
 }
 
-function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) {
+function renderBsjpDetailContent(
+  s,
+  container,
+  onBack,
+  currentPrice,
+  stockInfo,
+) {
   let gainAbs = 0,
     gainPct = 0,
     gainStr = "",
@@ -1398,13 +1481,25 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
   function stepCircle(active, label, desc, icon, state = "default") {
     let bg, border, color, shadow;
     if (state === "failed") {
-      bg = "#ef4444"; border = "#ef4444"; color = "#ffffff"; shadow = "0 0 0 4px rgba(239,68,68,0.2)";
+      bg = "#ef4444";
+      border = "#ef4444";
+      color = "#ffffff";
+      shadow = "0 0 0 4px rgba(239,68,68,0.2)";
     } else if (state === "warning") {
-      bg = "#f59e0b"; border = "#f59e0b"; color = "#ffffff"; shadow = "0 0 0 4px rgba(245,158,11,0.2)";
+      bg = "#f59e0b";
+      border = "#f59e0b";
+      color = "#ffffff";
+      shadow = "0 0 0 4px rgba(245,158,11,0.2)";
     } else if (active) {
-      bg = "#10b981"; border = "#10b981"; color = "#ffffff"; shadow = "0 0 0 4px rgba(16,185,129,0.2)";
+      bg = "#10b981";
+      border = "#10b981";
+      color = "#ffffff";
+      shadow = "0 0 0 4px rgba(16,185,129,0.2)";
     } else {
-      bg = "#2a2a2a"; border = "rgba(255,255,255,0.1)"; color = "var(--text-secondary)"; shadow = "0 0 0 4px #121212";
+      bg = "#2a2a2a";
+      border = "rgba(255,255,255,0.1)";
+      color = "var(--text-secondary)";
+      shadow = "0 0 0 4px #121212";
     }
     let descColor = "var(--text-secondary)";
     if (state === "failed") descColor = "#ef4444";
@@ -1574,9 +1669,13 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
             <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
               <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
               <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">BSJP Strategy Flow</span>
-              ${s.status === "RUNNING" ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>` : 
-                s.status === "TRAILING" ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>` :
-                `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`}
+              ${
+                s.status === "RUNNING"
+                  ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+                  : s.status === "TRAILING"
+                    ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+                    : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+              }
             </div>
             ${strategyVisual}
           </div>
@@ -1619,12 +1718,26 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
       if (!res.ok) return;
       const data = await res.json();
       const all = [...(data.running || []), ...(data.closed || [])];
-      const updated = all.find(sig => sig.stockCode === s.stockCode && sig.signalDate === s.signalDate);
+      const updated = all.find(
+        (sig) =>
+          sig.stockCode === s.stockCode && sig.signalDate === s.signalDate,
+      );
       if (updated) {
-        const changed = updated.status !== s.status || updated.sl !== s.sl || updated.exitPrice !== s.exitPrice || updated.returnPercent !== s.returnPercent || updated.breakEven !== s.breakEven;
+        const changed =
+          updated.status !== s.status ||
+          updated.sl !== s.sl ||
+          updated.exitPrice !== s.exitPrice ||
+          updated.returnPercent !== s.returnPercent ||
+          updated.breakEven !== s.breakEven;
         if (changed) {
           Object.assign(s, updated);
-          renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo);
+          renderBsjpDetailContent(
+            s,
+            container,
+            onBack,
+            currentPrice,
+            stockInfo,
+          );
         }
       }
     } catch (e) {
@@ -1660,7 +1773,10 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
     gainStr = "",
     gainColor = "",
     arrowIcon = "";
-  let isRunning = (s.status === "RUNNING" || s.status === "TRAILING") && s.entryPrice && currentPrice;
+  let isRunning =
+    (s.status === "RUNNING" || s.status === "TRAILING") &&
+    s.entryPrice &&
+    currentPrice;
   if (isRunning) {
     gainAbs = currentPrice - s.entryPrice;
     gainPct = (gainAbs / s.entryPrice) * 100;
@@ -1679,7 +1795,10 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
       gainColor = "#ef4444";
       gainStr = `${arrowIcon} ${absGain} (-${absPct}%)`;
     }
-  } else if ((s.status === "RUNNING" || s.status === "TRAILING") && !currentPrice) {
+  } else if (
+    (s.status === "RUNNING" || s.status === "TRAILING") &&
+    !currentPrice
+  ) {
     gainStr = "—";
     gainColor = "var(--text-secondary)";
   } else {
@@ -1814,7 +1933,8 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
     confColor = "#ef4444";
     confLabel = "RISK";
     confTier = "Risk";
-    confDesc = "Tidak memenuhi standar minimum — difilter otomatis oleh engine.";
+    confDesc =
+      "Tidak memenuhi standar minimum — difilter otomatis oleh engine.";
     confIcon = `<i class="fa-regular fa-circle-xmark" style="color:#ef4444; font-size:14px; margin-right:4px;"></i>`;
   }
 
@@ -2217,7 +2337,10 @@ function renderSignalRows(signals, priceMap, infoMap) {
       const currentPrice = priceMap[s.stockCode];
       const priceVal = currentPrice != null ? fmtPriceNoRp(currentPrice) : "—";
       priceDisplay = priceVal;
-      const isRunning = (s.status === "RUNNING" || s.status === "TRAILING") && s.entryPrice && currentPrice;
+      const isRunning =
+        (s.status === "RUNNING" || s.status === "TRAILING") &&
+        s.entryPrice &&
+        currentPrice;
       if (isRunning) {
         const gainAbs = currentPrice - s.entryPrice;
         const gainPct = (gainAbs / s.entryPrice) * 100;
@@ -2332,8 +2455,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
           <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
               <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.1rem;">${priceDisplay}</span>
-              <span style="font-family:'JetBrains Mono'; font-size:0.65rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>
-            </div>
+            <span class="stock-gain" style="font-family:'JetBrains Mono'; font-size:0.65rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>            </div>
             ${statusBadge}
           </div>
         </div>
@@ -2622,7 +2744,10 @@ async function showSignalDetail(index) {
   let gainStr = "";
   let gainColor = "";
   let arrowIcon = "";
-  let isRunning = (s.status === "RUNNING" || s.status === "TRAILING") && s.entryPrice && currentPrice;
+  let isRunning =
+    (s.status === "RUNNING" || s.status === "TRAILING") &&
+    s.entryPrice &&
+    currentPrice;
 
   if (isRunning) {
     gainAbs = currentPrice - s.entryPrice;
@@ -2643,7 +2768,10 @@ async function showSignalDetail(index) {
       gainColor = "#ef4444";
       gainStr = `${arrowIcon} ${absGain} (-${absPct}%)`;
     }
-  } else if ((s.status === "RUNNING" || s.status === "TRAILING") && !currentPrice) {
+  } else if (
+    (s.status === "RUNNING" || s.status === "TRAILING") &&
+    !currentPrice
+  ) {
     gainStr = "—";
     gainColor = "var(--text-secondary)";
   } else {
@@ -2842,7 +2970,8 @@ async function showSignalDetail(index) {
     confColor = "#ef4444";
     confLabel = "RISK";
     confTier = "Risk";
-    confDesc = "Tidak memenuhi standar minimum — difilter otomatis oleh engine.";
+    confDesc =
+      "Tidak memenuhi standar minimum — difilter otomatis oleh engine.";
     confIcon = `<i class="fa-regular fa-circle-xmark" style="color:#ef4444; font-size:14px; margin-right:4px;"></i>`;
   }
 
@@ -3952,7 +4081,12 @@ async function updateSignalList() {
       }
       priceEl.innerHTML = `${arrowPrice} ${displayPrice}`;
     }
-    if (gainEl && (signal.status === "RUNNING" || signal.status === "TRAILING") && signal.entryPrice && price) {
+    if (
+      gainEl &&
+      (signal.status === "RUNNING" || signal.status === "TRAILING") &&
+      signal.entryPrice &&
+      price
+    ) {
       const gainAbs = price - signal.entryPrice;
       const gainPct = (gainAbs / signal.entryPrice) * 100;
       const absGain = Math.abs(gainAbs).toFixed(0);
@@ -4538,9 +4672,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const success = await subscribeToPush();
       if (success) {
         localStorage.setItem("pushActive", "true");
-        alert("✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.");
+        alert(
+          "✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.",
+        );
       } else {
-        alert("❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.");
+        alert(
+          "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
+        );
       }
     });
   }
@@ -4627,14 +4765,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('ServiceWorker berhasil didaftarkan dengan scope: ', registration.scope);
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        console.log(
+          "ServiceWorker berhasil didaftarkan dengan scope: ",
+          registration.scope,
+        );
       })
-      .catch(error => {
-        console.log('ServiceWorker gagal didaftarkan: ', error);
+      .catch((error) => {
+        console.log("ServiceWorker gagal didaftarkan: ", error);
       });
   });
 }
