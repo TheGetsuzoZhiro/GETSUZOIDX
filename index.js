@@ -5,11 +5,14 @@ const path = require("path");
 const os = require("os");
 const webpush = require("web-push");
 const mongoose = require("mongoose");
+
 const sentPushesCache = new Map();
+const priceCacheBackend = new Map();
+const infoCache = new Map();
 
 moment.tz.setDefault("Asia/Jakarta");
 
-// Variabel pushSubscriptions (RAM) dihapus karena sudah diganti database
+// ============ VAPID ============
 const vapidPublicKey =
   "BCGyIOUseFBON2YXTAk-rcvncZ65jkbKqb2ShjOuvZhP08HLvaJJis5Bsx8ybuVVcZbXZow5GRrl9ykSiV0Y3B0";
 const vapidPrivateKey = "7PHNRENDWCkDl7JwoVYayqJDBkvSbzwZ2vxz1Cx7bSI";
@@ -30,7 +33,7 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
-// ============ MONGOOSE SCHEMAS & MODELS ============
+// ============ MONGOOSE SCHEMAS ============
 const SignalSchema = new mongoose.Schema(
   {
     stockCode: String,
@@ -78,60 +81,90 @@ const SignalSchema = new mongoose.Schema(
 
 const SignalModel = mongoose.model("Signal", SignalSchema, "signals");
 
-// === TAMBAHAN BARU: SCHEMA & MODEL UNTUK SUBSCRIPTION PUSH NOTIF ===
 const SubscriptionSchema = new mongoose.Schema(
   {
     endpoint: { type: String, required: true, unique: true },
     expirationTime: mongoose.Schema.Types.Mixed,
-    keys: {
-      p256dh: String,
-      auth: String,
-    },
+    keys: { p256dh: String, auth: String },
   },
   { timestamps: true, versionKey: false },
 );
-
 const SubscriptionModel = mongoose.model(
   "PushSubscription",
   SubscriptionSchema,
   "push_subscriptions",
 );
 
-// ============ YAHOO FINANCE & MARKET TIME HELPERS ============
-const yahooCache = new Map();
+// ============ TOKEN STOCKBIT ============
+const TokenSchema = new mongoose.Schema(
+  {
+    _id: { type: String, default: "stockbit_token" },
+    token: { type: String, required: true },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { versionKey: false },
+);
+const TokenModel = mongoose.model("StockbitToken", TokenSchema, "stockbit_tokens");
 
-async function fetchYahooData(symbol) {
-  const now = Date.now();
-  const cached = yahooCache.get(symbol);
-  if (cached && now - cached.timestamp < 10000) {
-    return cached.data;
+let stockbitToken = null;
+
+async function fetchTokenFromMongo() {
+  try {
+    const doc = await TokenModel.findById("stockbit_token");
+    if (doc && doc.token) {
+      stockbitToken = doc.token;
+      console.log("✅ Token Stockbit dimuat dari MongoDB (Frontend)");
+      return true;
+    }
+    console.warn("⚠️ Token tidak ditemukan di MongoDB (Frontend)");
+    return false;
+  } catch (err) {
+    console.error("❌ Gagal ambil token:", err.message);
+    return false;
+  }
+}
+
+// Fungsi ambil harga dari Stockbit (sama persis seperti di backend worker)
+async function fetchStockbitPrice(symbol) {
+  if (!stockbitToken) {
+    console.warn(`[STOCKBIT] Token kosong, skip ${symbol}`);
+    return null;
   }
 
+  const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
+  const url = `https://exodus.stockbit.com/company-price-feed/historical/summary/${symbol.toUpperCase()}?period=HS_PERIOD_DAILY&start_date=${today}&end_date=${today}&limit=1&page=1`;
+
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.JK`;
-    const response = await axios.get(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
+    const response = await axios({
+      method: "GET",
+      url,
+      headers: {
+        Authorization: stockbitToken,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
+        Origin: "https://pro.stockbit.com",
+        Referer: "https://pro.stockbit.com/",
+      },
       timeout: 10000,
     });
-    const meta = response.data?.chart?.result?.[0]?.meta;
-    if (!meta) throw new Error("Meta tidak ditemukan");
 
-    const regularMarketTime = meta.regularMarketTime;
-    const dateObj = moment.unix(regularMarketTime).tz("Asia/Jakarta");
-    const dateStr = dateObj.format("YYYY-MM-DD");
-
-    const result = {
-      price: meta.regularMarketPrice,
-      date: dateStr,
-    };
-    yahooCache.set(symbol, { data: result, timestamp: now });
-    return result;
+    const result = response.data?.data?.result;
+    if (!result || result.length === 0) return null;
+    const last = result[0];
+    // Harga langsung, tanpa pembulatan (sama seperti backend)
+    return { price: last.close };
   } catch (err) {
-    console.error(`Yahoo error for ${symbol}:`, err.message);
+    if (err.response && err.response.status === 401) {
+      console.warn(`[STOCKBIT] Token expired, refresh...`);
+      await fetchTokenFromMongo();
+    } else {
+      console.error(`[STOCKBIT] Gagal ambil ${symbol}:`, err.message);
+    }
     return null;
   }
 }
 
+// ============ MARKET HELPERS (libur, jam bursa) ============
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
 
@@ -183,55 +216,43 @@ async function isMarketOpen() {
   if (!(await isTradingDay())) return false;
 
   const now = moment().tz("Asia/Jakarta");
-  const hour = now.hour();
-  const minute = now.minute();
-  const dayOfWeek = now.day();
-  const isFriday = dayOfWeek === 5;
+  const hour = now.hour(),
+    minute = now.minute(),
+    dayOfWeek = now.day(),
+    isFriday = dayOfWeek === 5;
 
   if (isFriday) {
-    const session1 =
-      (hour > 9 || (hour === 9 && minute >= 0)) &&
-      (hour < 11 || (hour === 11 && minute <= 30));
-    const session2 =
-      (hour > 14 || (hour === 14 && minute >= 0)) &&
-      (hour < 15 || (hour === 15 && minute <= 49));
-    return session1 || session2;
+    const s1 = (hour > 9 || (hour === 9 && minute >= 0)) && (hour < 11 || (hour === 11 && minute <= 30));
+    const s2 = (hour > 14 || (hour === 14 && minute >= 0)) && (hour < 15 || (hour === 15 && minute <= 49));
+    return s1 || s2;
   } else {
-    const session1 =
-      (hour > 9 || (hour === 9 && minute >= 0)) &&
-      (hour < 12 || (hour === 12 && minute <= 0));
-    const session2 =
-      (hour > 13 || (hour === 13 && minute >= 30)) &&
-      (hour < 15 || (hour === 15 && minute <= 49));
-    return session1 || session2;
+    const s1 = (hour > 9 || (hour === 9 && minute >= 0)) && (hour < 12 || (hour === 12 && minute <= 0));
+    const s2 = (hour > 13 || (hour === 13 && minute >= 30)) && (hour < 15 || (hour === 15 && minute <= 49));
+    return s1 || s2;
   }
 }
 
-// ============ EXPRESS WEB SERVER (READ-ONLY INTERFACE) ============
+// ============ EXPRESS APP ============
 const app = express();
-const PORT =
-  process.env.PORT || process.env.SERVER_PORT || process.env.APP_PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Route untuk Realtime Price Checker via Yahoo
-const priceCacheBackend = new Map();
+// ----- ROUTE PRICE (STOCKBIT) dengan CACHE 5 DETIK -----
 app.get("/api/price/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   try {
+    // Cache 5 detik (selaras dengan interval backend worker)
     if (priceCacheBackend.has(symbol)) {
       const cached = priceCacheBackend.get(symbol);
-      if (Date.now() - cached.timestamp < 30000) {
+      if (Date.now() - cached.timestamp < 5000) {
         return res.json({ symbol, price: cached.price });
       }
     }
-    const data = await fetchYahooData(symbol);
-    if (data) {
-      priceCacheBackend.set(symbol, {
-        price: data.price,
-        timestamp: Date.now(),
-      });
+    const data = await fetchStockbitPrice(symbol);
+    if (data && data.price !== undefined) {
+      priceCacheBackend.set(symbol, { price: data.price, timestamp: Date.now() });
       res.json({ symbol, price: data.price });
     } else {
       res.status(404).json({ error: "Price not found" });
@@ -241,8 +262,7 @@ app.get("/api/price/:symbol", async (req, res) => {
   }
 });
 
-// Route untuk Informasi Profil Saham & Logo
-const infoCache = new Map();
+// ----- ROUTE STOCK INFO (long name dari Yahoo Search, logo dari Stockbit) -----
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   if (infoCache.has(symbol)) {
@@ -251,30 +271,46 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       return res.json(cached.data);
     }
   }
+
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.JK`;
-    const response = await axios.get(url, {
+    // Ambil longname dari Yahoo Search API (ringan)
+    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}.JK`;
+    const response = await axios.get(searchUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
       timeout: 10000,
     });
-    const meta = response.data?.chart?.result?.[0]?.meta;
-    // 🔁 Ambil shortName (semua emiten punya), fallback ke symbol
-    const longName = meta?.shortName || meta?.symbol || symbol;
-    // ❌ LogoUrl dihapus / tidak dikirim
-    const result = { symbol, longName, logoUrl: null };
+
+    let longName = symbol;
+    const quotes = response.data?.quotes;
+    if (quotes && quotes.length > 0) {
+      const match = quotes.find(q => q.symbol && q.symbol.toUpperCase() === `${symbol}.JK`);
+      if (match) {
+        longName = match.longname || match.shortname || symbol;
+      } else {
+        longName = quotes[0].longname || quotes[0].shortname || symbol;
+      }
+    }
+
+    const result = {
+      symbol,
+      longName,
+      logoUrl: `https://assets.stockbit.com/logos/companies/${symbol}.png`,
+    };
+
     infoCache.set(symbol, { data: result, timestamp: Date.now() });
     res.json(result);
   } catch (error) {
-    // Fallback jika gagal
+    console.warn(`Gagal fetch info ${symbol} dari Yahoo Search:`, error.message);
+    // Fallback
     res.json({
       symbol,
       longName: symbol,
-      logoUrl: null,
+      logoUrl: `https://assets.stockbit.com/logos/companies/${symbol}.png`,
     });
   }
 });
 
-// Route untuk mengambil semua sinyal
+// ----- ROUTE SIGNALS -----
 app.get("/api/signals", async (req, res) => {
   try {
     const allSignals = await SignalModel.find({});
@@ -286,14 +322,13 @@ app.get("/api/signals", async (req, res) => {
   }
 });
 
-// Route untuk Status Operasional Bursa Realtime
+// ----- ROUTE MARKET STATUS -----
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
   const now = moment().tz("Asia/Jakarta");
   const dayOfWeek = now.day();
-  let statusText = "";
-  let statusClass = "";
-
+  let statusText = "",
+    statusClass = "";
   if (open) {
     statusText = "Market Open";
     statusClass = "open";
@@ -303,155 +338,94 @@ app.get("/api/market-status", async (req, res) => {
       statusText = `Libur: ${currentHolidayName || "Nasional"}`;
       statusClass = "holiday";
     } else {
-      const hour = now.hour();
-      const minute = now.minute();
+      const hour = now.hour(),
+        minute = now.minute();
       if (dayOfWeek === 5) {
-        if (hour < 9 || (hour === 9 && minute < 0)) {
-          statusText = "Pra Buka";
-        } else if (
-          (hour > 11 || (hour === 11 && minute > 30)) &&
-          (hour < 14 || (hour === 14 && minute < 0))
-        ) {
+        if (hour < 9 || (hour === 9 && minute < 0)) statusText = "Pra Buka";
+        else if ((hour > 11 || (hour === 11 && minute > 30)) && (hour < 14 || (hour === 14 && minute < 0)))
           statusText = "Istirahat";
-        } else if (hour >= 15 || (hour === 15 && minute > 49)) {
-          statusText = "Pasca Bursa";
-        } else {
-          statusText = "Market Closed";
-        }
+        else if (hour >= 15 || (hour === 15 && minute > 49)) statusText = "Pasca Bursa";
+        else statusText = "Market Closed";
       } else {
-        if (hour < 9 || (hour === 9 && minute < 0)) {
-          statusText = "Pra Buka";
-        } else if (
-          (hour > 12 || (hour === 12 && minute > 0)) &&
-          (hour < 13 || (hour === 13 && minute < 30))
-        ) {
+        if (hour < 9 || (hour === 9 && minute < 0)) statusText = "Pra Buka";
+        else if ((hour > 12 || (hour === 12 && minute > 0)) && (hour < 13 || (hour === 13 && minute < 30)))
           statusText = "Istirahat";
-        } else if (hour >= 15 || (hour === 15 && minute > 49)) {
-          statusText = "Pasca Bursa";
-        } else {
-          statusText = "Market Closed";
-        }
+        else if (hour >= 15 || (hour === 15 && minute > 49)) statusText = "Pasca Bursa";
+        else statusText = "Market Closed";
       }
       statusClass = "closed";
     }
   }
-
   res.json({
     isOpen: open,
     currentTime: now.format("HH:mm:ss"),
     day: now.format("dddd"),
     date: now.format("DD MMM YYYY"),
-    statusText: statusText,
-    statusClass: statusClass,
+    statusText,
+    statusClass,
     holidayName: currentHolidayName,
   });
 });
 
+// ----- ROUTE SAVE SUBSCRIPTION -----
 app.post("/api/save-subscription", async (req, res) => {
   const subscription = req.body;
   if (!subscription || !subscription.endpoint) {
     return res.status(400).json({ error: "Invalid subscription data" });
   }
-
   try {
-    // Simpan ke MongoDB. Jika endpoint sudah ada, akan ditimpa (upsert)
     await SubscriptionModel.findOneAndUpdate(
       { endpoint: subscription.endpoint },
       subscription,
-      { upsert: true, returnDocument: 'after' }, // <-- PERUBAHAN di sini
+      { upsert: true, returnDocument: "after" },
     );
-
-    console.log(`✅ Subscription berhasil disimpan permanen ke MongoDB.`);
+    console.log(`✅ Subscription saved to MongoDB.`);
     res.json({ success: true });
   } catch (error) {
-    console.error("❌ Gagal menyimpan subscription ke DB:", error.message);
-    res.status(500).json({ error: "Gagal menyimpan ke database server" });
+    console.error("❌ Gagal simpan subscription:", error.message);
+    res.status(500).json({ error: "Gagal menyimpan ke database" });
   }
 });
 
+// ----- ROUTE SEND PUSH (dengan spam protection) -----
 app.post("/api/send-push", async (req, res) => {
   const { title, body } = req.body;
-
   if (!title || !body) {
     return res.status(400).json({ error: "Title and body required" });
   }
-
-  // --- PROTEKSI ANTI-SPAM (MENCEGAH DUPLIKAT DARI MULTI-CLIENT) ---
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-
-  // Membuat kunci unik berdasarkan Judul dan Tanggal (Contoh: "SIGNALS SESI 1_2026-06-25")
   const pushKey = `${title.toUpperCase().trim()}_${today}`;
-
-  // Jika backend sudah pernah menembakkan notifikasi dengan judul ini hari ini, abaikan request!
   if (sentPushesCache.has(pushKey)) {
-    console.log(
-      `[SPAM PROTECT] Blokir push duplikat: "${title}". Sudah dikirim hari ini.`,
-    );
-    return res.json({
-      success: true,
-      message:
-        "Push sudah dikirim sebelumnya untuk sesi ini, dibatalkan untuk mencegah spam.",
-    });
+    console.log(`[SPAM] Blokir duplikat: "${title}"`);
+    return res.json({ success: true, message: "Sudah dikirim hari ini" });
   }
-
-  // Kunci sistem segera agar request dari client/tab lain yang masuk di milidetik yang sama langsung terblokir
   sentPushesCache.set(pushKey, true);
-  // ----------------------------------------------------------------
 
   const payload = JSON.stringify({ title, body });
-
-  // Tambahkan opsi pengiriman khusus agar handal di iOS & Android background
-  const pushOptions = {
-    TTL: 86400, // Waktu simpan di server push (1 hari)
-    urgency: "high", // Memaksa iOS/Android langsung bangun di background
-  };
+  const pushOptions = { TTL: 86400, urgency: "high" };
 
   try {
-    // Ambil seluruh data subscription aktif dari MongoDB
-    const activeSubscriptions = await SubscriptionModel.find({});
-
-    if (activeSubscriptions.length === 0) {
-      // Jika kosong, hapus kunci cache agar bisa dicoba lagi nanti
+    const subscriptions = await SubscriptionModel.find({});
+    if (subscriptions.length === 0) {
       sentPushesCache.delete(pushKey);
-      return res.json({
-        success: true,
-        message: "Tidak ada subscriber terdaftar.",
-      });
+      return res.json({ success: true, message: "Tidak ada subscriber" });
     }
-
-    const promises = activeSubscriptions.map((subscription) =>
-      webpush
-        .sendNotification(subscription, payload, pushOptions)
-        .catch(async (err) => {
-          console.error(
-            "❌ Gagal kirim ke endpoint:",
-            subscription.endpoint,
-            "Motive:",
-            err.message,
-          );
-
-          // Gunting/Hapus token dari MongoDB jika statusnya 410 (Gone) atau 404 (Not Found)
-          if (err.statusCode === 410 || err.statusCode === 404) {
-            await SubscriptionModel.deleteOne({
-              endpoint: subscription.endpoint,
-            });
-            console.log(
-              `🗑️ Membersihkan token mati dari DB: ${subscription.endpoint}`,
-            );
-          }
-        }),
+    const promises = subscriptions.map((sub) =>
+      webpush.sendNotification(sub, payload, pushOptions).catch(async (err) => {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await SubscriptionModel.deleteOne({ endpoint: sub.endpoint });
+        }
+      }),
     );
-
     await Promise.all(promises);
-    res.json({ success: true, sent: activeSubscriptions.length });
+    res.json({ success: true, sent: subscriptions.length });
   } catch (error) {
-    // Jika gagal total (misal VAPID error), hapus kunci cache agar sistem bisa mencoba ulang
     sentPushesCache.delete(pushKey);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Helper IP publik untuk logging lokal
+// ----- HELPER IP -----
 async function getPublicIP() {
   const sources = [
     "https://api.ipify.org?format=text",
@@ -490,45 +464,41 @@ app.listen(PORT, "0.0.0.0", async () => {
 });
 
 // =========================================================================
-// 🚀 SERVER-SIDE WATCHDOG (BACKGROUND PUSH TRIGGER SUNGGUHAN)
+// 🚀 WATCHDOG – Deteksi sinyal baru & perubahan status ke TP/SL (Background)
 // =========================================================================
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
+// Map untuk menyimpan status terakhir per sinyal
+const serverLastStatus = new Map();
 
-// Helper untuk waktu sesi
 function getSessionFromDate(signalDate) {
   if (!signalDate) return null;
   const date = new Date(signalDate);
-  const hour = date.getHours();
-  const minute = date.getMinutes();
+  const hour = date.getHours(),
+    minute = date.getMinutes();
   const time = hour + minute / 60;
   if (time >= 4 && time < 12) return 1;
   if (time >= 12 && time <= 16) return 2;
   return null;
 }
 
-// Helper untuk menembak push dari dalam server sendiri
 async function triggerInternalPush(title, body) {
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = `${title.toUpperCase().trim()}_${today}`;
-
   if (sentPushesCache.has(pushKey)) {
-    console.log(`[WATCHDOG] Blokir spam harian: "${title}" sudah terkirim.`);
+    console.log(`[WATCHDOG] Blokir spam: "${title}"`);
     return;
   }
   sentPushesCache.set(pushKey, true);
-
   const payload = JSON.stringify({ title, body });
   const pushOptions = { TTL: 86400, urgency: "high" };
-
   try {
-    const activeSubscriptions = await SubscriptionModel.find({});
-    if (activeSubscriptions.length === 0) {
+    const subscriptions = await SubscriptionModel.find({});
+    if (subscriptions.length === 0) {
       sentPushesCache.delete(pushKey);
       return;
     }
-
-    const promises = activeSubscriptions.map((sub) =>
+    const promises = subscriptions.map((sub) =>
       webpush.sendNotification(sub, payload, pushOptions).catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
           await SubscriptionModel.deleteOne({ endpoint: sub.endpoint });
@@ -536,14 +506,13 @@ async function triggerInternalPush(title, body) {
       }),
     );
     await Promise.all(promises);
-    console.log(`✅ [WATCHDOG] BACKGROUND PUSH TERKIRIM: ${title}`);
+    console.log(`✅ [WATCHDOG] PUSH TERKIRIM: ${title}`);
   } catch (err) {
     sentPushesCache.delete(pushKey);
     console.error("❌ [WATCHDOG] Gagal kirim push:", err.message);
   }
 }
 
-// Fungsi utama yang berjalan mutlak di background server
 async function checkDatabaseForNewSignals() {
   try {
     const allSignals = await SignalModel.find({});
@@ -559,33 +528,28 @@ async function checkDatabaseForNewSignals() {
       .sort()
       .join(",");
 
-    // Pencegah Spam Saat Server Restart
+    // Inisialisasi pertama kali
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
       serverLastClosedIds = currentClosedIds;
-      console.log(
-        "🔄 [WATCHDOG] Server siap. Memantau sinyal saham di background 24/7...",
-      );
+      allSignals.forEach((s) => {
+        const key = `${s.stockCode}-${s.signalDate}`;
+        serverLastStatus.set(key, s.status);
+      });
+      console.log("🔄 [WATCHDOG] Server siap. Memantau sinyal saham di background 24/7...");
       return;
     }
 
-    const prevRunningArr = serverLastRunningIds
-      ? serverLastRunningIds.split(",")
-      : [];
-    const currentRunningArr = currentRunningIds
-      ? currentRunningIds.split(",")
-      : [];
-    const newRunning = currentRunningArr.filter(
-      (id) => !prevRunningArr.includes(id),
-    );
+    // ---- DETEKSI SINYAL BARU (RUNNING) ----
+    const prevRunningArr = serverLastRunningIds.split(",");
+    const currentRunningArr = currentRunningIds.split(",");
+    const newRunning = currentRunningArr.filter((id) => !prevRunningArr.includes(id));
 
-    // 1. CEK SINYAL BARU
     if (newRunning.length > 0) {
       const newSignals = running.filter((s) =>
-        newRunning.includes(`${s.stockCode}-${s.signalDate}`),
+        newRunning.includes(`${s.stockCode}-${s.signalDate}`)
       );
       const groups = { session1: [], session2: [], bsjp: [], other: [] };
-
       newSignals.forEach((s) => {
         if (s.signalType === "BSJP") groups.bsjp.push(s);
         else {
@@ -595,67 +559,62 @@ async function checkDatabaseForNewSignals() {
           else groups.other.push(s);
         }
       });
-
-      if (groups.session1.length > 0)
-        triggerInternalPush(
-          "NEW SIGNALS SESI 1",
-          `${groups.session1.length} sinyal saham baru terdeteksi untuk SESI 1.`,
-        );
-      if (groups.session2.length > 0)
-        triggerInternalPush(
-          "NEW SIGNALS SESI 2",
-          `${groups.session2.length} sinyal saham baru terdeteksi untuk SESI 2.`,
-        );
-      if (groups.bsjp.length > 0)
-        triggerInternalPush(
-          "NEW SIGNALS BSJP",
-          `${groups.bsjp.length} sinyal saham baru terdeteksi untuk BSJP.`,
-        );
-      if (groups.other.length > 0)
-        triggerInternalPush(
-          "NEW SIGNALS LAINNYA",
-          `${groups.other.length} sinyal saham baru terdeteksi.`,
-        );
+      if (groups.session1.length)
+        triggerInternalPush("NEW SIGNALS SESI 1", `${groups.session1.length} sinyal saham baru untuk SESI 1.`);
+      if (groups.session2.length)
+        triggerInternalPush("NEW SIGNALS SESI 2", `${groups.session2.length} sinyal saham baru untuk SESI 2.`);
+      if (groups.bsjp.length)
+        triggerInternalPush("NEW SIGNALS BSJP", `${groups.bsjp.length} sinyal saham baru untuk BSJP.`);
+      if (groups.other.length)
+        triggerInternalPush("NEW SIGNALS LAINNYA", `${groups.other.length} sinyal saham baru.`);
     }
 
-    // 2. CEK SINYAL TAKE PROFIT
-    const prevClosedArr = serverLastClosedIds
-      ? serverLastClosedIds.split(",")
-      : [];
-    const currentClosedArr = currentClosedIds
-      ? currentClosedIds.split(",")
-      : [];
-    const newClosed = currentClosedArr.filter(
-      (id) => !prevClosedArr.includes(id),
-    );
-
-    if (newClosed.length > 0) {
-      const closedSignals = closed.filter((s) =>
-        newClosed.includes(`${s.stockCode}-${s.signalDate}`),
-      );
-
-      closedSignals.forEach((s) => {
-        if (s.status === "TP") {
-          const ret = s.returnPercent || 0;
-          const sign = ret >= 0 ? "+" : "";
-          const title = `✅ TP: ${s.stockCode}`;
-          const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
-
-          triggerInternalPush(title, body); // Tembak langsung per-saham
-        }
-      });
+    // ---- DETEKSI PERUBAHAN STATUS MENJADI TP (dari status apapun) ----
+    const tpSignals = allSignals.filter((s) => s.status === "TP");
+    for (const s of tpSignals) {
+      const key = `${s.stockCode}-${s.signalDate}`;
+      const prevStatus = serverLastStatus.get(key);
+      if (prevStatus !== "TP") {
+        const ret = s.returnPercent || 0;
+        const sign = ret >= 0 ? "+" : "";
+        const title = `✅ TP: ${s.stockCode}`;
+        const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
+        await triggerInternalPush(title, body);
+        serverLastStatus.set(key, "TP");
+      }
     }
 
-    // Update ingatan server
+    // ---- (Opsional) DETEKSI SL ----
+    const slSignals = allSignals.filter((s) => s.status === "SL");
+    for (const s of slSignals) {
+      const key = `${s.stockCode}-${s.signalDate}`;
+      const prevStatus = serverLastStatus.get(key);
+      if (prevStatus !== "SL") {
+        const ret = s.returnPercent || 0;
+        const title = `❌ SL: ${s.stockCode}`;
+        const body = `${s.stockCode} Stop Loss ${ret.toFixed(2)}%`;
+        await triggerInternalPush(title, body);
+        serverLastStatus.set(key, "SL");
+      }
+    }
+
+    // Update cache
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
+    allSignals.forEach((s) => {
+      const key = `${s.stockCode}-${s.signalDate}`;
+      if (!serverLastStatus.has(key)) {
+        serverLastStatus.set(key, s.status);
+      }
+    });
   } catch (err) {
-    console.error("Gagal polling database internal:", err.message);
+    console.error("❌ [WATCHDOG] Gagal polling database:", err.message);
   }
 }
 
-// Jalankan pengecekan pertama kali saat server baru nyala
-checkDatabaseForNewSignals();
+// ============ START WATCHDOG & TOKEN REFRESH ============
+fetchTokenFromMongo();
+setInterval(fetchTokenFromMongo, 60 * 60 * 1000); // refresh token setiap jam
 
-// Jalankan Watchdog setiap 30 detik secara abadi di server
-setInterval(checkDatabaseForNewSignals, 30000);
+checkDatabaseForNewSignals();
+setInterval(checkDatabaseForNewSignals, 30000); // setiap 30 detik
