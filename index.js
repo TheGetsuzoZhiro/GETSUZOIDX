@@ -168,9 +168,16 @@ async function fetchStockbitPrice(symbol) {
     const last = result[0];
     return { price: last.close };
   } catch (err) {
-    if (err.response && err.response.status === 401) {
-      console.warn(`[STOCKBIT] Token expired, refresh...`);
-      await fetchTokenFromMongo();
+    // Log detail error untuk debugging
+    if (err.response) {
+      console.error(`[STOCKBIT] Gagal ambil ${symbol}: Status ${err.response.status}`);
+      console.error(`[STOCKBIT] Response data:`, err.response.data);
+      if (err.response.status === 401) {
+        console.warn(`[STOCKBIT] Token expired untuk ${symbol}, refresh...`);
+        await fetchTokenFromMongo();
+      }
+    } else if (err.request) {
+      console.error(`[STOCKBIT] Gagal ambil ${symbol}: No response (timeout/network)`);
     } else {
       console.error(`[STOCKBIT] Gagal ambil ${symbol}:`, err.message);
     }
