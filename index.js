@@ -10,6 +10,9 @@ const sentPushesCache = new Map();
 const priceCacheBackend = new Map();
 const infoCache = new Map();
 
+// ============ SSE CLIENTS ============
+const sseClients = new Set();
+
 moment.tz.setDefault("Asia/Jakarta");
 
 // ============ VAPID ============
@@ -75,6 +78,7 @@ const SignalSchema = new mongoose.Schema(
     holdingDays: Number,
     currentHigh: Number,
     currentLow: Number,
+    breakEven: { type: Boolean, default: false },
   },
   { versionKey: false },
 );
@@ -124,7 +128,7 @@ async function fetchTokenFromMongo() {
   }
 }
 
-// Fungsi ambil harga dari Stockbit (sama persis seperti di backend worker)
+// Fungsi ambil harga dari Stockbit (fallback jika push belum ada)
 async function fetchStockbitPrice(symbol) {
   if (!stockbitToken) {
     console.warn(`[STOCKBIT] Token kosong, skip ${symbol}`);
@@ -151,7 +155,6 @@ async function fetchStockbitPrice(symbol) {
     const result = response.data?.data?.result;
     if (!result || result.length === 0) return null;
     const last = result[0];
-    // Harga langsung, tanpa pembulatan (sama seperti backend)
     return { price: last.close };
   } catch (err) {
     if (err.response && err.response.status === 401) {
@@ -164,7 +167,7 @@ async function fetchStockbitPrice(symbol) {
   }
 }
 
-// ============ MARKET HELPERS (libur, jam bursa) ============
+// ============ MARKET HELPERS ============
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
 
@@ -239,17 +242,74 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ----- ROUTE PRICE (STOCKBIT) dengan CACHE 5 DETIK -----
+// ============ SSE ENDPOINT (TAMBAHAN) ============
+app.get("/api/events", (req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  res.flushHeaders();
+
+  // Ping setiap 30 detik agar koneksi tetap hidup
+  const pingInterval = setInterval(() => {
+    res.write(": ping\n\n");
+  }, 30000);
+
+  sseClients.add(res);
+
+  req.on("close", () => {
+    sseClients.delete(res);
+    clearInterval(pingInterval);
+  });
+});
+
+function broadcastSSE(data) {
+  const message = `data: ${JSON.stringify(data)}\n\n`;
+  sseClients.forEach((client) => {
+    try {
+      client.write(message);
+    } catch (e) {
+      sseClients.delete(client);
+    }
+  });
+}
+
+// ============ ENDPOINT UPDATE PRICE DARI BACKEND WORKER (TAMBAHAN) ============
+app.post("/api/update-price", (req, res) => {
+  const { symbol, price, high, low, timestamp } = req.body;
+  if (!symbol || price == null) {
+    return res.status(400).json({ error: "Invalid data" });
+  }
+
+  // Simpan di cache (fallback) dengan TTL 30 detik
+  priceCacheBackend.set(symbol, { price, timestamp: Date.now() });
+
+  // Broadcast ke semua client
+  broadcastSSE({
+    type: "price-update",
+    symbol,
+    price,
+    high: high || price,
+    low: low || price,
+    timestamp: timestamp || Date.now(),
+  });
+
+  res.json({ success: true });
+});
+
+// ----- ROUTE PRICE (FALLBACK) -----
 app.get("/api/price/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   try {
-    // Cache 5 detik (selaras dengan interval backend worker)
+    // Cek cache (dari push atau fetch sebelumnya) dengan TTL 30 detik
     if (priceCacheBackend.has(symbol)) {
       const cached = priceCacheBackend.get(symbol);
-      if (Date.now() - cached.timestamp < 5000) {
+      if (Date.now() - cached.timestamp < 30000) {
         return res.json({ symbol, price: cached.price });
       }
     }
+    // Jika cache kadaluarsa, fetch langsung ke Stockbit
     const data = await fetchStockbitPrice(symbol);
     if (data && data.price !== undefined) {
       priceCacheBackend.set(symbol, { price: data.price, timestamp: Date.now() });
@@ -262,7 +322,7 @@ app.get("/api/price/:symbol", async (req, res) => {
   }
 });
 
-// ----- ROUTE STOCK INFO (long name dari Yahoo Search, logo dari Stockbit) -----
+// ----- ROUTE STOCK INFO -----
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   if (infoCache.has(symbol)) {
@@ -273,7 +333,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 
   try {
-    // Ambil longname dari Yahoo Search API (ringan)
     const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}.JK`;
     const response = await axios.get(searchUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
@@ -301,7 +360,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
     res.json(result);
   } catch (error) {
     console.warn(`Gagal fetch info ${symbol} dari Yahoo Search:`, error.message);
-    // Fallback
     res.json({
       symbol,
       longName: symbol,
@@ -387,7 +445,7 @@ app.post("/api/save-subscription", async (req, res) => {
   }
 });
 
-// ----- ROUTE SEND PUSH (dengan spam protection) -----
+// ----- ROUTE SEND PUSH -----
 app.post("/api/send-push", async (req, res) => {
   const { title, body } = req.body;
   if (!title || !body) {
@@ -468,7 +526,6 @@ app.listen(PORT, "0.0.0.0", async () => {
 // =========================================================================
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
-// Map untuk menyimpan status terakhir per sinyal
 const serverLastStatus = new Map();
 
 function getSessionFromDate(signalDate) {
@@ -528,7 +585,6 @@ async function checkDatabaseForNewSignals() {
       .sort()
       .join(",");
 
-    // Inisialisasi pertama kali
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
       serverLastClosedIds = currentClosedIds;
@@ -598,7 +654,6 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
-    // Update cache
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
     allSignals.forEach((s) => {
@@ -614,7 +669,7 @@ async function checkDatabaseForNewSignals() {
 
 // ============ START WATCHDOG & TOKEN REFRESH ============
 fetchTokenFromMongo();
-setInterval(fetchTokenFromMongo, 60 * 60 * 1000); // refresh token setiap jam
+setInterval(fetchTokenFromMongo, 60 * 60 * 1000);
 
 checkDatabaseForNewSignals();
-setInterval(checkDatabaseForNewSignals, 30000); // setiap 30 detik
+setInterval(checkDatabaseForNewSignals, 30000);
