@@ -10,9 +10,6 @@ const sentPushesCache = new Map();
 const priceCacheBackend = new Map();
 const infoCache = new Map();
 
-// ============ SSE CLIENTS ============
-const sseClients = new Set();
-
 moment.tz.setDefault("Asia/Jakarta");
 
 // ============ VAPID ============
@@ -78,7 +75,6 @@ const SignalSchema = new mongoose.Schema(
     holdingDays: Number,
     currentHigh: Number,
     currentLow: Number,
-    breakEven: { type: Boolean, default: false },
   },
   { versionKey: false },
 );
@@ -125,12 +121,6 @@ async function fetchTokenFromMongo() {
       return true;
     }
     console.warn("⚠️ Token tidak ditemukan di MongoDB (Frontend)");
-    // Fallback ke environment variable jika tersedia
-    if (process.env.STOCKBIT_TOKEN) {
-      stockbitToken = process.env.STOCKBIT_TOKEN;
-      console.log("✅ Token Stockbit dimuat dari environment variable");
-      return true;
-    }
     return false;
   } catch (err) {
     console.error("❌ Gagal ambil token:", err.message);
@@ -138,7 +128,7 @@ async function fetchTokenFromMongo() {
   }
 }
 
-// Fungsi ambil harga dari Stockbit (fallback jika push belum ada)
+// Fungsi ambil harga dari Stockbit (sama persis seperti di backend worker)
 async function fetchStockbitPrice(symbol) {
   if (!stockbitToken) {
     console.warn(`[STOCKBIT] Token kosong, skip ${symbol}`);
@@ -166,18 +156,12 @@ async function fetchStockbitPrice(symbol) {
     const result = response.data?.data?.result;
     if (!result || result.length === 0) return null;
     const last = result[0];
+    // Harga langsung, tanpa pembulatan (sama seperti backend)
     return { price: last.close };
   } catch (err) {
-    // Log detail error untuk debugging
-    if (err.response) {
-      console.error(`[STOCKBIT] Gagal ambil ${symbol}: Status ${err.response.status}`);
-      console.error(`[STOCKBIT] Response data:`, err.response.data);
-      if (err.response.status === 401) {
-        console.warn(`[STOCKBIT] Token expired untuk ${symbol}, refresh...`);
-        await fetchTokenFromMongo();
-      }
-    } else if (err.request) {
-      console.error(`[STOCKBIT] Gagal ambil ${symbol}: No response (timeout/network)`);
+    if (err.response && err.response.status === 401) {
+      console.warn(`[STOCKBIT] Token expired, refresh...`);
+      await fetchTokenFromMongo();
     } else {
       console.error(`[STOCKBIT] Gagal ambil ${symbol}:`, err.message);
     }
@@ -185,7 +169,7 @@ async function fetchStockbitPrice(symbol) {
   }
 }
 
-// ============ MARKET HELPERS ============
+// ============ MARKET HELPERS (libur, jam bursa) ============
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
 
@@ -268,76 +252,17 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ============ SSE ENDPOINT ============
-app.get("/api/events", (req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
-  res.flushHeaders();
-
-  // Ping setiap 30 detik agar koneksi tetap hidup
-  const pingInterval = setInterval(() => {
-    res.write(": ping\n\n");
-  }, 30000);
-
-  sseClients.add(res);
-
-  req.on("close", () => {
-    sseClients.delete(res);
-    clearInterval(pingInterval);
-  });
-});
-
-function broadcastSSE(data) {
-  const message = `data: ${JSON.stringify(data)}\n\n`;
-  sseClients.forEach((client) => {
-    try {
-      client.write(message);
-    } catch (e) {
-      sseClients.delete(client);
-    }
-  });
-}
-
-// ============ ENDPOINT UPDATE PRICE DARI BACKEND WORKER ============
-app.post("/api/update-price", (req, res) => {
-  const { symbol, price, high, low, timestamp } = req.body;
-  if (!symbol || price == null) {
-    return res.status(400).json({ error: "Invalid data" });
-  }
-
-  console.log(`📩 [PUSH] Received price for ${symbol}: ${price}`);
-
-  // Simpan di cache (fallback) dengan TTL 30 detik
-  priceCacheBackend.set(symbol, { price, timestamp: Date.now() });
-
-  // Broadcast ke semua client
-  broadcastSSE({
-    type: "price-update",
-    symbol,
-    price,
-    high: high || price,
-    low: low || price,
-    timestamp: timestamp || Date.now(),
-  });
-
-  res.json({ success: true });
-});
-
-// ----- ROUTE PRICE (FALLBACK) -----
+// ----- ROUTE PRICE (STOCKBIT) dengan CACHE 5 DETIK -----
 app.get("/api/price/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   try {
-    // Cek cache (dari push atau fetch sebelumnya) dengan TTL 30 detik
+    // Cache 5 detik (selaras dengan interval backend worker)
     if (priceCacheBackend.has(symbol)) {
       const cached = priceCacheBackend.get(symbol);
-      if (Date.now() - cached.timestamp < 30000) {
+      if (Date.now() - cached.timestamp < 5000) {
         return res.json({ symbol, price: cached.price });
       }
     }
-    // Jika cache kadaluarsa, fetch langsung ke Stockbit
     const data = await fetchStockbitPrice(symbol);
     if (data && data.price !== undefined) {
       priceCacheBackend.set(symbol, {
@@ -353,7 +278,7 @@ app.get("/api/price/:symbol", async (req, res) => {
   }
 });
 
-// ----- ROUTE STOCK INFO -----
+// ----- ROUTE STOCK INFO (long name dari Yahoo Search, logo dari Stockbit) -----
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   if (infoCache.has(symbol)) {
@@ -364,6 +289,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 
   try {
+    // Ambil longname dari Yahoo Search API (ringan)
     const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}.JK`;
     const response = await axios.get(searchUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
@@ -396,6 +322,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       `Gagal fetch info ${symbol} dari Yahoo Search:`,
       error.message,
     );
+    // Fallback
     res.json({
       symbol,
       longName: symbol,
@@ -489,7 +416,7 @@ app.post("/api/save-subscription", async (req, res) => {
   }
 });
 
-// ----- ROUTE SEND PUSH -----
+// ----- ROUTE SEND PUSH (dengan spam protection) -----
 app.post("/api/send-push", async (req, res) => {
   const { title, body } = req.body;
   if (!title || !body) {
@@ -557,11 +484,20 @@ app.get("/", (req, res) => {
   res.send("Server Frontend Read-Only Aktif!");
 });
 
+app.listen(PORT, "0.0.0.0", async () => {
+  const ip = await getPublicIP();
+  console.log(`\n🌐 Frontend API server available at:`);
+  console.log(`   • http://localhost:${PORT}`);
+  console.log(`   • http://${ip}:${PORT}`);
+  console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
+});
+
 // =========================================================================
 // 🚀 WATCHDOG – Deteksi sinyal baru & perubahan status ke TP/SL (Background)
 // =========================================================================
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
+// Map untuk menyimpan status terakhir per sinyal
 const serverLastStatus = new Map();
 
 function getSessionFromDate(signalDate) {
@@ -621,6 +557,7 @@ async function checkDatabaseForNewSignals() {
       .sort()
       .join(",");
 
+    // Inisialisasi pertama kali
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
       serverLastClosedIds = currentClosedIds;
@@ -706,6 +643,7 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
+    // Update cache
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
     allSignals.forEach((s) => {
@@ -719,18 +657,9 @@ async function checkDatabaseForNewSignals() {
   }
 }
 
-// ============ START SERVER SETELAH TOKEN DIMUAT ============
-(async () => {
-  await fetchTokenFromMongo(); // Tunggu token selesai dimuat
-  app.listen(PORT, "0.0.0.0", async () => {
-    const ip = await getPublicIP();
-    console.log(`\n🌐 Frontend API server available at:`);
-    console.log(`   • http://localhost:${PORT}`);
-    console.log(`   • http://${ip}:${PORT}`);
-    console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
-  });
-})();
-
 // ============ START WATCHDOG & TOKEN REFRESH ============
-setInterval(fetchTokenFromMongo, 60 * 60 * 1000);
-setInterval(checkDatabaseForNewSignals, 30000);
+fetchTokenFromMongo();
+setInterval(fetchTokenFromMongo, 60 * 60 * 1000); // refresh token setiap jam
+
+checkDatabaseForNewSignals();
+setInterval(checkDatabaseForNewSignals, 30000); // setiap 30 detik
