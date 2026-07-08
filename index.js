@@ -108,7 +108,11 @@ const TokenSchema = new mongoose.Schema(
   },
   { versionKey: false },
 );
-const TokenModel = mongoose.model("StockbitToken", TokenSchema, "stockbit_tokens");
+const TokenModel = mongoose.model(
+  "StockbitToken",
+  TokenSchema,
+  "stockbit_tokens",
+);
 
 let stockbitToken = null;
 
@@ -121,6 +125,12 @@ async function fetchTokenFromMongo() {
       return true;
     }
     console.warn("⚠️ Token tidak ditemukan di MongoDB (Frontend)");
+    // Fallback ke environment variable jika tersedia
+    if (process.env.STOCKBIT_TOKEN) {
+      stockbitToken = process.env.STOCKBIT_TOKEN;
+      console.log("✅ Token Stockbit dimuat dari environment variable");
+      return true;
+    }
     return false;
   } catch (err) {
     console.error("❌ Gagal ambil token:", err.message);
@@ -144,7 +154,8 @@ async function fetchStockbitPrice(symbol) {
       url,
       headers: {
         Authorization: stockbitToken,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         Accept: "application/json",
         Origin: "https://pro.stockbit.com",
         Referer: "https://pro.stockbit.com/",
@@ -225,12 +236,20 @@ async function isMarketOpen() {
     isFriday = dayOfWeek === 5;
 
   if (isFriday) {
-    const s1 = (hour > 9 || (hour === 9 && minute >= 0)) && (hour < 11 || (hour === 11 && minute <= 30));
-    const s2 = (hour > 14 || (hour === 14 && minute >= 0)) && (hour < 15 || (hour === 15 && minute <= 49));
+    const s1 =
+      (hour > 9 || (hour === 9 && minute >= 0)) &&
+      (hour < 11 || (hour === 11 && minute <= 30));
+    const s2 =
+      (hour > 14 || (hour === 14 && minute >= 0)) &&
+      (hour < 15 || (hour === 15 && minute <= 49));
     return s1 || s2;
   } else {
-    const s1 = (hour > 9 || (hour === 9 && minute >= 0)) && (hour < 12 || (hour === 12 && minute <= 0));
-    const s2 = (hour > 13 || (hour === 13 && minute >= 30)) && (hour < 15 || (hour === 15 && minute <= 49));
+    const s1 =
+      (hour > 9 || (hour === 9 && minute >= 0)) &&
+      (hour < 12 || (hour === 12 && minute <= 0));
+    const s2 =
+      (hour > 13 || (hour === 13 && minute >= 30)) &&
+      (hour < 15 || (hour === 15 && minute <= 49));
     return s1 || s2;
   }
 }
@@ -242,7 +261,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ============ SSE ENDPOINT (TAMBAHAN) ============
+// ============ SSE ENDPOINT ============
 app.get("/api/events", (req, res) => {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -275,12 +294,14 @@ function broadcastSSE(data) {
   });
 }
 
-// ============ ENDPOINT UPDATE PRICE DARI BACKEND WORKER (TAMBAHAN) ============
+// ============ ENDPOINT UPDATE PRICE DARI BACKEND WORKER ============
 app.post("/api/update-price", (req, res) => {
   const { symbol, price, high, low, timestamp } = req.body;
   if (!symbol || price == null) {
     return res.status(400).json({ error: "Invalid data" });
   }
+
+  console.log(`📩 [PUSH] Received price for ${symbol}: ${price}`);
 
   // Simpan di cache (fallback) dengan TTL 30 detik
   priceCacheBackend.set(symbol, { price, timestamp: Date.now() });
@@ -312,7 +333,10 @@ app.get("/api/price/:symbol", async (req, res) => {
     // Jika cache kadaluarsa, fetch langsung ke Stockbit
     const data = await fetchStockbitPrice(symbol);
     if (data && data.price !== undefined) {
-      priceCacheBackend.set(symbol, { price: data.price, timestamp: Date.now() });
+      priceCacheBackend.set(symbol, {
+        price: data.price,
+        timestamp: Date.now(),
+      });
       res.json({ symbol, price: data.price });
     } else {
       res.status(404).json({ error: "Price not found" });
@@ -342,7 +366,9 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
     let longName = symbol;
     const quotes = response.data?.quotes;
     if (quotes && quotes.length > 0) {
-      const match = quotes.find(q => q.symbol && q.symbol.toUpperCase() === `${symbol}.JK`);
+      const match = quotes.find(
+        (q) => q.symbol && q.symbol.toUpperCase() === `${symbol}.JK`,
+      );
       if (match) {
         longName = match.longname || match.shortname || symbol;
       } else {
@@ -359,7 +385,10 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
     infoCache.set(symbol, { data: result, timestamp: Date.now() });
     res.json(result);
   } catch (error) {
-    console.warn(`Gagal fetch info ${symbol} dari Yahoo Search:`, error.message);
+    console.warn(
+      `Gagal fetch info ${symbol} dari Yahoo Search:`,
+      error.message,
+    );
     res.json({
       symbol,
       longName: symbol,
@@ -400,15 +429,23 @@ app.get("/api/market-status", async (req, res) => {
         minute = now.minute();
       if (dayOfWeek === 5) {
         if (hour < 9 || (hour === 9 && minute < 0)) statusText = "Pra Buka";
-        else if ((hour > 11 || (hour === 11 && minute > 30)) && (hour < 14 || (hour === 14 && minute < 0)))
+        else if (
+          (hour > 11 || (hour === 11 && minute > 30)) &&
+          (hour < 14 || (hour === 14 && minute < 0))
+        )
           statusText = "Istirahat";
-        else if (hour >= 15 || (hour === 15 && minute > 49)) statusText = "Pasca Bursa";
+        else if (hour >= 15 || (hour === 15 && minute > 49))
+          statusText = "Pasca Bursa";
         else statusText = "Market Closed";
       } else {
         if (hour < 9 || (hour === 9 && minute < 0)) statusText = "Pra Buka";
-        else if ((hour > 12 || (hour === 12 && minute > 0)) && (hour < 13 || (hour === 13 && minute < 30)))
+        else if (
+          (hour > 12 || (hour === 12 && minute > 0)) &&
+          (hour < 13 || (hour === 13 && minute < 30))
+        )
           statusText = "Istirahat";
-        else if (hour >= 15 || (hour === 15 && minute > 49)) statusText = "Pasca Bursa";
+        else if (hour >= 15 || (hour === 15 && minute > 49))
+          statusText = "Pasca Bursa";
         else statusText = "Market Closed";
       }
       statusClass = "closed";
@@ -513,14 +550,6 @@ app.get("/", (req, res) => {
   res.send("Server Frontend Read-Only Aktif!");
 });
 
-app.listen(PORT, "0.0.0.0", async () => {
-  const ip = await getPublicIP();
-  console.log(`\n🌐 Frontend API server available at:`);
-  console.log(`   • http://localhost:${PORT}`);
-  console.log(`   • http://${ip}:${PORT}`);
-  console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
-});
-
 // =========================================================================
 // 🚀 WATCHDOG – Deteksi sinyal baru & perubahan status ke TP/SL (Background)
 // =========================================================================
@@ -592,18 +621,22 @@ async function checkDatabaseForNewSignals() {
         const key = `${s.stockCode}-${s.signalDate}`;
         serverLastStatus.set(key, s.status);
       });
-      console.log("🔄 [WATCHDOG] Server siap. Memantau sinyal saham di background 24/7...");
+      console.log(
+        "🔄 [WATCHDOG] Server siap. Memantau sinyal saham di background 24/7...",
+      );
       return;
     }
 
     // ---- DETEKSI SINYAL BARU (RUNNING) ----
     const prevRunningArr = serverLastRunningIds.split(",");
     const currentRunningArr = currentRunningIds.split(",");
-    const newRunning = currentRunningArr.filter((id) => !prevRunningArr.includes(id));
+    const newRunning = currentRunningArr.filter(
+      (id) => !prevRunningArr.includes(id),
+    );
 
     if (newRunning.length > 0) {
       const newSignals = running.filter((s) =>
-        newRunning.includes(`${s.stockCode}-${s.signalDate}`)
+        newRunning.includes(`${s.stockCode}-${s.signalDate}`),
       );
       const groups = { session1: [], session2: [], bsjp: [], other: [] };
       newSignals.forEach((s) => {
@@ -616,13 +649,25 @@ async function checkDatabaseForNewSignals() {
         }
       });
       if (groups.session1.length)
-        triggerInternalPush("NEW SIGNALS SESI 1", `${groups.session1.length} sinyal saham baru untuk SESI 1.`);
+        triggerInternalPush(
+          "NEW SIGNALS SESI 1",
+          `${groups.session1.length} sinyal saham baru untuk SESI 1.`,
+        );
       if (groups.session2.length)
-        triggerInternalPush("NEW SIGNALS SESI 2", `${groups.session2.length} sinyal saham baru untuk SESI 2.`);
+        triggerInternalPush(
+          "NEW SIGNALS SESI 2",
+          `${groups.session2.length} sinyal saham baru untuk SESI 2.`,
+        );
       if (groups.bsjp.length)
-        triggerInternalPush("NEW SIGNALS BSJP", `${groups.bsjp.length} sinyal saham baru untuk BSJP.`);
+        triggerInternalPush(
+          "NEW SIGNALS BSJP",
+          `${groups.bsjp.length} sinyal saham baru untuk BSJP.`,
+        );
       if (groups.other.length)
-        triggerInternalPush("NEW SIGNALS LAINNYA", `${groups.other.length} sinyal saham baru.`);
+        triggerInternalPush(
+          "NEW SIGNALS LAINNYA",
+          `${groups.other.length} sinyal saham baru.`,
+        );
     }
 
     // ---- DETEKSI PERUBAHAN STATUS MENJADI TP (dari status apapun) ----
@@ -667,9 +712,18 @@ async function checkDatabaseForNewSignals() {
   }
 }
 
-// ============ START WATCHDOG & TOKEN REFRESH ============
-fetchTokenFromMongo();
-setInterval(fetchTokenFromMongo, 60 * 60 * 1000);
+// ============ START SERVER SETELAH TOKEN DIMUAT ============
+(async () => {
+  await fetchTokenFromMongo(); // Tunggu token selesai dimuat
+  app.listen(PORT, "0.0.0.0", async () => {
+    const ip = await getPublicIP();
+    console.log(`\n🌐 Frontend API server available at:`);
+    console.log(`   • http://localhost:${PORT}`);
+    console.log(`   • http://${ip}:${PORT}`);
+    console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
+  });
+})();
 
-checkDatabaseForNewSignals();
+// ============ START WATCHDOG & TOKEN REFRESH ============
+setInterval(fetchTokenFromMongo, 60 * 60 * 1000);
 setInterval(checkDatabaseForNewSignals, 30000);
