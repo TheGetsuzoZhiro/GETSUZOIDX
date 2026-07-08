@@ -241,7 +241,7 @@ const infoCache = new Map();
 async function fetchStockPrice(symbol) {
   if (priceCache.has(symbol)) {
     const cached = priceCache.get(symbol);
-    if (Date.now() - cached.timestamp < 30000) {
+    if (Date.now() - cached.timestamp < 5000) { // ubah ke 5 detik
       return cached.price;
     }
   }
@@ -254,26 +254,10 @@ async function fetchStockPrice(symbol) {
       priceCache.set(symbol, { price, timestamp: Date.now() });
       return price;
     }
-    throw new Error("Price null dari internal API");
+    return null; // langsung null, tidak coba Yahoo
   } catch (e) {
-    console.warn(`Gagal fetch harga ${symbol} dari internal API:`, e);
-    try {
-      const yahooSymbol = `${symbol}.JK`;
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Yahoo fetch error");
-      const data = await response.json();
-      const result = data.chart.result[0];
-      if (result && result.meta && result.meta.regularMarketPrice) {
-        const price = result.meta.regularMarketPrice;
-        priceCache.set(symbol, { price, timestamp: Date.now() });
-        return price;
-      }
-      throw new Error("Tidak ada harga dari Yahoo");
-    } catch (yahooError) {
-      console.warn(`Yahoo Finance gagal untuk ${symbol}:`, yahooError);
-      return null;
-    }
+    console.warn(`Gagal fetch harga ${symbol} dari Stockbit API:`, e);
+    return null;
   }
 }
 
