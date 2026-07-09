@@ -14,7 +14,7 @@ let currentSignalFilter = "none";
 // ========== STATUS DETAIL VIEW ==========
 let isDetailView = false;
 let currentDetailIndex = null;
-let bsjpRefreshInterval = null;
+let bsjpRefreshInterval = null; // untuk BSJP auto-refresh
 
 // ========== STATE UNTUK DAILY & SIGNAL LIST ==========
 let dailyRendered = false;
@@ -30,10 +30,6 @@ let currentDateRange = null;
 // ========== NOTIFICATION HISTORY ==========
 let notificationHistory = [];
 const NOTIF_KEY = "notificationHistory";
-
-// ========== SSE & PRICE CACHE ==========
-let eventSource = null;
-const latestPrices = new Map(); // key: symbol, value: { price, high, low, timestamp }
 
 function loadNotifications() {
   try {
@@ -238,138 +234,29 @@ function fmtPriceNoRp(num) {
   return num != null ? Number(num).toLocaleString("id-ID") : "–";
 }
 
-// ========== SSE CONNECTION & EVENT HANDLER ==========
-function connectSSE() {
-  if (eventSource) {
-    eventSource.close();
-    eventSource = null;
-  }
-
-  eventSource = new EventSource("/api/events");
-
-  eventSource.addEventListener("open", () => {
-    console.log("✅ SSE connected");
-  });
-
-  eventSource.addEventListener("error", (err) => {
-    console.warn("⚠️ SSE error, reconnecting in 5s...", err);
-    if (eventSource) {
-      eventSource.close();
-      eventSource = null;
-    }
-    setTimeout(connectSSE, 5000);
-  });
-
-  eventSource.addEventListener("message", (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === "price-update") {
-        latestPrices.set(data.symbol, {
-          price: data.price,
-          high: data.high || data.price,
-          low: data.low || data.price,
-          timestamp: data.timestamp || Date.now(),
-        });
-        updatePriceInUI(data.symbol, data.price);
-      } else if (data.type === "signal-update") {
-        fetchSignals(false).then(() => {
-          const activeTab = document.querySelector(".view.active")?.id;
-          if (activeTab === "daily" && dailyRendered) {
-            updateDailyContent();
-          } else if (activeTab === "home") {
-            updateChartsFromSignals({
-              running: _allRunning,
-              closed: _allClosed,
-            });
-          } else if (activeTab === "signals" && signalListRendered) {
-            showSignalList();
-          }
-        });
-      }
-    } catch (e) {
-      console.warn("SSE parse error:", e);
-    }
-  });
-}
-
-function updatePriceInUI(symbol, price) {
-  document
-    .querySelectorAll(`[data-stock="${symbol}"] .stock-price`)
-    .forEach((el) => {
-      el.textContent = fmtPriceNoRp(price);
-    });
-
-  let signal = _allRunning.find((s) => s.stockCode === symbol);
-  if (!signal) {
-    signal = _allClosed.find(
-      (s) =>
-        s.stockCode === symbol &&
-        (s.status === "RUNNING" || s.status === "TRAILING"),
-    );
-  }
-
-  if (
-    signal &&
-    (signal.status === "RUNNING" || signal.status === "TRAILING") &&
-    signal.entryPrice
-  ) {
-    const entry = signal.entryPrice;
-    const gainAbs = price - entry;
-    const gainPct = (gainAbs / entry) * 100;
-    const absGain = Math.abs(gainAbs).toFixed(0);
-    const absPct = Math.abs(gainPct).toFixed(2);
-    let gainStr = "";
-    let gainColor = "";
-    let arrowIcon = "";
-
-    if (Math.abs(gainAbs) < 0.01) {
-      gainColor = "var(--text-secondary)";
-      gainStr = "0 (0.00%)";
-    } else if (gainAbs > 0) {
-      arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
-      gainColor = "#10b981";
-      gainStr = `${arrowIcon} ${absGain} (+${absPct}%)`;
-    } else {
-      arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
-      gainColor = "#ef4444";
-      gainStr = `${arrowIcon} ${absGain} (-${absPct}%)`;
-    }
-
-    document
-      .querySelectorAll(`[data-stock="${symbol}"] .stock-gain`)
-      .forEach((el) => {
-        el.style.color = gainColor;
-        el.innerHTML = gainStr;
-      });
-  }
-}
-
 // ========== HARGA & INFO ==========
+const priceCache = new Map();
 const infoCache = new Map();
 
-// ========== PERBAIKAN: fetchStockPrice menerima fromDate ==========
-async function fetchStockPrice(symbol, fromDate) {
-  // Cek data dari SSE terlebih dahulu (cache 30 detik)
-  const cached = latestPrices.get(symbol);
-  if (cached && Date.now() - cached.timestamp < 30000) {
-    return cached.price;
+async function fetchStockPrice(symbol) {
+  if (priceCache.has(symbol)) {
+    const cached = priceCache.get(symbol);
+    if (Date.now() - cached.timestamp < 5000) {
+      return cached.price;
+    }
   }
   try {
-    let url = `/api/price/${symbol}`;
-    if (fromDate) {
-      url += `?from=${encodeURIComponent(fromDate)}`;
-    }
-    const response = await fetch(url);
+    const response = await fetch(`/api/price/${symbol}`);
     if (!response.ok) throw new Error("Network error");
     const data = await response.json();
     const price = data.price;
     if (price != null) {
-      latestPrices.set(symbol, { price, timestamp: Date.now() });
+      priceCache.set(symbol, { price, timestamp: Date.now() });
       return price;
     }
     return null;
   } catch (e) {
-    console.warn(`Gagal fetch harga ${symbol}:`, e);
+    console.warn(`Gagal fetch harga ${symbol} dari Stockbit API:`, e);
     return null;
   }
 }
@@ -400,7 +287,8 @@ function showLoading(containerId) {
     c.innerHTML = `<div class="loading-state"><div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div><p>Loading...</p></div>`;
 }
 
-// ========== FUNGSI FILTER & AGGREGATE SIGNALS ==========
+// ========== FUNGSI BERBASIS SIGNALS ==========
+
 function filterSignalsByDate(signals, startDate, endDate) {
   if (!signals || !signals.length) return [];
   return signals.filter((s) => {
@@ -471,14 +359,12 @@ function aggregateSignals(signals) {
     }
   }
 
-  // ========== PERBAIKAN: tambahkan signalDate ke positions ==========
   result.positions = runningSignals.map((s) => ({
     stock: s.stockCode,
     entry: s.entryPrice,
     current: null,
     return: 0,
     hold: s.holdingDays || 0,
-    signalDate: s.signalDate, // <-- tambahkan
   }));
 
   return result;
@@ -714,11 +600,9 @@ async function updateDailyContent() {
   const positionsContainer = document.getElementById("positionsContainer");
   if (positionsContainer) {
     if (agg.positions.length) {
-      // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
       const posWithPrice = await Promise.all(
         agg.positions.map(async (p) => {
-          const fromDate = p.signalDate ? p.signalDate.split(' ')[0] : null;
-          const price = await fetchStockPrice(p.stock, fromDate);
+          const price = await fetchStockPrice(p.stock);
           let currentReturn = 0;
           if (price && p.entry) {
             currentReturn = ((price - p.entry) / p.entry) * 100;
@@ -1377,9 +1261,7 @@ function renderBsjpDetail(s, container, onBack) {
     })
     .catch(() => {});
 
-  // ========== PERBAIKAN: kirim signalDate ==========
-  const fromDate = s.signalDate ? s.signalDate.split(' ')[0] : null;
-  fetchStockPrice(s.stockCode, fromDate)
+  fetchStockPrice(s.stockCode)
     .then((price) => {
       currentPrice = price;
       renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo);
@@ -1758,11 +1640,10 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   }
 
   let stockInfo = { longName: s.stockCode, logoUrl: null };
+
   let currentPrice = null;
   try {
-    // ========== PERBAIKAN: kirim signalDate ==========
-    const fromDate = s.signalDate ? s.signalDate.split(' ')[0] : null;
-    currentPrice = await fetchStockPrice(s.stockCode, fromDate);
+    currentPrice = await fetchStockPrice(s.stockCode);
   } catch (e) {
     console.warn(`Gagal fetch current price ${s.stockCode}:`, e);
   }
@@ -2187,15 +2068,10 @@ async function renderPerformanceSignalList(status) {
     }
 
     const symbols = [...new Set(filteredByStatus.map((s) => s.stockCode))];
-    // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
-    const priceResults = await Promise.all(
-      symbols.map((sym) => {
-        const signal = filteredByStatus.find(s => s.stockCode === sym);
-        const fromDate = signal && signal.signalDate ? signal.signalDate.split(' ')[0] : null;
-        return fetchStockPrice(sym, fromDate);
-      })
-    );
-    const infoResults = await Promise.all(symbols.map((sym) => fetchStockInfo(sym)));
+    const [priceResults, infoResults] = await Promise.all([
+      Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
+      Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
+    ]);
 
     const priceMap = {};
     const infoMap = {};
@@ -2464,7 +2340,8 @@ function renderSignalRows(signals, priceMap, infoMap) {
           <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
               <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.1rem;">${priceDisplay}</span>
-            <span class="stock-gain" style="font-family:'JetBrains Mono'; font-size:0.65rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>            </div>
+              <span style="font-family:'JetBrains Mono'; font-size:0.65rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>
+            </div>
             ${statusBadge}
           </div>
         </div>
@@ -2517,15 +2394,10 @@ async function showSignalList() {
   }
 
   const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
-  // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
-  const priceResults = await Promise.all(
-    symbols.map((sym) => {
-      const signal = filteredSignals.find(s => s.stockCode === sym);
-      const fromDate = signal && signal.signalDate ? signal.signalDate.split(' ')[0] : null;
-      return fetchStockPrice(sym, fromDate);
-    })
-  );
-  const infoResults = await Promise.all(symbols.map((sym) => fetchStockInfo(sym)));
+  const [priceResults, infoResults] = await Promise.all([
+    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
+    Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
+  ]);
   const priceMap = {};
   const infoMap = {};
   symbols.forEach((sym, idx) => {
@@ -2748,9 +2620,7 @@ async function showSignalDetail(index) {
   let stockInfo = { longName: s.stockCode, logoUrl: null };
   let currentPrice = null;
   try {
-    // ========== PERBAIKAN: kirim signalDate ==========
-    const fromDate = s.signalDate ? s.signalDate.split(' ')[0] : null;
-    currentPrice = await fetchStockPrice(s.stockCode, fromDate);
+    currentPrice = await fetchStockPrice(s.stockCode);
   } catch (e) {
     console.warn(`Gagal fetch current price ${s.stockCode}:`, e);
   }
@@ -4068,14 +3938,9 @@ async function updateSignalList() {
   if (!filteredSignals.length) return;
 
   const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
-  // ========== PERBAIKAN: kirim signalDate ke fetchStockPrice ==========
-  const priceResults = await Promise.all(
-    symbols.map((sym) => {
-      const signal = filteredSignals.find(s => s.stockCode === sym);
-      const fromDate = signal && signal.signalDate ? signal.signalDate.split(' ')[0] : null;
-      return fetchStockPrice(sym, fromDate);
-    })
-  );
+  const [priceResults] = await Promise.all([
+    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
+  ]);
   const priceMap = {};
   symbols.forEach((sym, idx) => {
     priceMap[sym] = priceResults[idx];
@@ -4373,7 +4238,7 @@ function startPolling() {
       fetchSignals(false);
     }
     updateLastUpdate();
-  }, 60000);
+  }, 30000);
 }
 
 function updateLastUpdate() {
@@ -4671,14 +4536,132 @@ async function subscribeToPush() {
   }
 }
 
+// ========== REALTIME PRICE POLLING (5 DETIK) ==========
+let pricePollingInterval = null;
+
+function getVisibleSymbols() {
+  const allSignals = getSortedSignals();
+  let filtered = [];
+  const filter = currentSignalFilter;
+
+  if (filter === "today") {
+    const today = getTodayWIB();
+    filtered = allSignals.filter(
+      (s) => s.signalDate && s.signalDate.startsWith(today),
+    );
+  } else if (filter === "running") {
+    filtered = allSignals.filter(
+      (s) => s.status === "RUNNING" || s.status === "TRAILING",
+    );
+  } else if (filter === "none" || filter === null) {
+    filtered = allSignals;
+  } else {
+    filtered = allSignals;
+  }
+
+  const symbols = [...new Set(filtered.map((s) => s.stockCode))];
+  return symbols;
+}
+
+async function refreshAllPrices() {
+  const activeTab = document.querySelector(".view.active")?.id;
+  if (activeTab !== "signals" && activeTab !== "home" && activeTab !== "daily") {
+    return;
+  }
+
+  // Detail view
+  if (isDetailView && currentDetailIndex !== null) {
+    const detailContainer = document.getElementById("signals");
+    if (detailContainer) {
+      const priceEl = detailContainer.querySelector(
+        ".price-item .value:first-child",
+      );
+      const gainEl = detailContainer.querySelector(
+        ".price-item .change:last-child",
+      );
+      if (priceEl) {
+        const allSignals = getSortedSignals();
+        const s = allSignals[currentDetailIndex];
+        if (s) {
+          const price = await fetchStockPrice(s.stockCode);
+          if (price != null) {
+            priceEl.textContent = fmtPriceNoRp(price);
+            if (gainEl && s.entryPrice) {
+              const gain = ((price - s.entryPrice) / s.entryPrice) * 100;
+              gainEl.textContent =
+                (gain >= 0 ? "+" : "") + gain.toFixed(2) + "%";
+              gainEl.style.color = gain >= 0 ? "#10b981" : "#ef4444";
+            }
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  const symbols = getVisibleSymbols();
+  if (symbols.length === 0) return;
+
+  const pricePromises = symbols.map(async (sym) => {
+    const price = await fetchStockPrice(sym);
+    return { symbol: sym, price };
+  });
+
+  const results = await Promise.all(pricePromises);
+
+  results.forEach(({ symbol, price }) => {
+    updatePriceElement(symbol, price);
+  });
+}
+
+function updatePriceElement(symbol, price) {
+  const rows = document.querySelectorAll(`.sig-list-row[data-stock="${symbol}"]`);
+  rows.forEach((row) => {
+    const priceEl = row.querySelector(".stock-price");
+    const gainEl = row.querySelector(".sig-right span:last-child");
+    if (!priceEl) return;
+
+    if (price != null) {
+      let arrow = "";
+      const allSignals = getSortedSignals();
+      const signal = allSignals.find((s) => s.stockCode === symbol);
+      if (signal && (signal.status === "RUNNING" || signal.status === "TRAILING")) {
+        const gain = ((price - signal.entryPrice) / signal.entryPrice) * 100;
+        if (gain > 0)
+          arrow =
+            '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
+        else if (gain < 0)
+          arrow =
+            '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
+        if (gainEl) {
+          const absGain = Math.abs(gain).toFixed(2);
+          const sign = gain >= 0 ? "+" : "";
+          const gainColor = gain >= 0 ? "#10b981" : "#ef4444";
+          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-${gain >= 0 ? "up" : "down"}" style="font-size:0.7rem; color:${gainColor};"></i> ${sign}${absGain}%`;
+          gainEl.style.color = gainColor;
+        }
+      } else if (signal && (signal.status === "TP" || signal.status === "SL")) {
+        // Jangan update untuk closed
+        return;
+      }
+      priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
+    } else {
+      priceEl.textContent = "—";
+    }
+  });
+}
+
+function startPricePolling() {
+  if (pricePollingInterval) clearInterval(pricePollingInterval);
+  pricePollingInterval = setInterval(refreshAllPrices, 5000);
+}
+
 // ========== INIT ==========
 document.addEventListener("DOMContentLoaded", () => {
   loadNotifications();
   updateNotifBadge();
   createParticles();
   initTabs();
-
-  connectSSE();
 
   const pushBtn = document.getElementById("enablePushBtn");
   if (pushBtn) {
@@ -4774,6 +4757,7 @@ document.addEventListener("DOMContentLoaded", () => {
   showSignalList();
 
   startPolling();
+  startPricePolling(); // Mulai polling harga 5 detik
   setInterval(updateClock, 1000);
   updateClock();
   updateLastUpdate();
