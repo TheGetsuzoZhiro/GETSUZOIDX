@@ -135,43 +135,68 @@ async function fetchStockbitPrice(symbol, startDate = null) {
     return null;
   }
 
-  const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
+  const today = moment().tz('Asia/Jakarta').format('YYYY-MM-DD');
   let start = today;
   if (startDate) {
-    start = moment(startDate).tz("Asia/Jakarta").format("YYYY-MM-DD");
-    if (start > today) start = today; // antisipasi jika startDate di masa depan
+    start = moment(startDate).tz('Asia/Jakarta').format('YYYY-MM-DD');
+    if (start > today) start = today;
   }
 
-  const url = `https://exodus.stockbit.com/company-price-feed/historical/summary/${symbol.toUpperCase()}?period=HS_PERIOD_DAILY&start_date=${start}&end_date=${today}&limit=1&page=1`;
-
-  try {
-    const response = await axios({
-      method: "GET",
-      url,
-      headers: {
-        Authorization: stockbitToken,
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        Accept: "application/json",
-        Origin: "https://pro.stockbit.com",
-        Referer: "https://pro.stockbit.com/",
-      },
-      timeout: 10000,
-    });
-
-    const result = response.data?.data?.result;
-    if (!result || result.length === 0) return null;
-    const last = result[0]; // data terbaru dalam rentang
-    return { price: last.close };
-  } catch (err) {
-    if (err.response && err.response.status === 401) {
-      console.warn(`[STOCKBIT] Token expired, refresh...`);
-      await fetchTokenFromMongo();
-    } else {
-      console.error(`[STOCKBIT] Gagal ambil ${symbol}:`, err.message);
+  // Fungsi untuk request dengan rentang tertentu
+  async function fetchData(startDate, endDate) {
+    const url = `https://exodus.stockbit.com/company-price-feed/historical/summary/${symbol.toUpperCase()}?period=HS_PERIOD_DAILY&start_date=${startDate}&end_date=${endDate}&limit=1&page=1`;
+    try {
+      const response = await axios({
+        method: 'GET',
+        url,
+        headers: {
+          Authorization: stockbitToken,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          Accept: 'application/json',
+          Origin: 'https://pro.stockbit.com',
+          Referer: 'https://pro.stockbit.com/',
+        },
+        timeout: 10000,
+      });
+      const result = response.data?.data?.result;
+      return result && result.length > 0 ? result[0] : null;
+    } catch (err) {
+      if (err.response?.status === 401) {
+        console.warn(`[STOCKBIT] Token expired, refresh...`);
+        await fetchTokenFromMongo();
+      } else {
+        console.error(`[STOCKBIT] Gagal ambil ${symbol}:`, err.message);
+      }
+      return null;
     }
-    return null;
   }
+
+  // 1. Coba rentang awal (signalDate → today)
+  let data = await fetchData(start, today);
+  if (!data) {
+    // 2. Jika kosong, perlebar ke 30 hari sebelum start
+    const startEarlier = moment(start).subtract(30, 'days').format('YYYY-MM-DD');
+    data = await fetchData(startEarlier, today);
+  }
+  if (!data) {
+    // 3. Jika masih kosong, perlebar ke 90 hari (fallback)
+    const startFurther = moment(start).subtract(90, 'days').format('YYYY-MM-DD');
+    data = await fetchData(startFurther, today);
+  }
+
+  if (data) {
+    return {
+      price: roundToTick(data.close),
+      high: roundToTick(data.high),
+      low: roundToTick(data.low),
+      change: data.change,
+      changePercent: data.change_percentage,
+      volume: data.volume,
+      timestamp: data.date,
+    };
+  }
+
+  return null;
 }
 
 // ============ MARKET HELPERS (libur, jam bursa) ============
