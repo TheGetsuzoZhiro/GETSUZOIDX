@@ -2167,6 +2167,7 @@ const missedSvg = `<img src="https://stockbit.com/assets/img/missed.png" alt="MI
 const hitSvgrow = `<img src="https://stockbit.com/assets/img/correct.png" alt="HIT" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
 const missedSvgrow = `<img src="https://stockbit.com/assets/img/missed.png" alt="MISSED" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
 
+// ========== FUNGSI RENDER SIGNAL ROWS (perbaikan gain 0) ==========
 function renderSignalRows(signals, priceMap, infoMap) {
   let rows = "";
   signals.forEach((s) => {
@@ -2186,15 +2187,17 @@ function renderSignalRows(signals, priceMap, infoMap) {
       const priceVal = exitPrice != null ? fmtPriceNoRp(exitPrice) : "—";
       const sign = ret >= 0 ? "+" : "";
       gainStr = `${sign}${ret.toFixed(2)}%`;
-      gainColor = ret >= 0 ? "#10b981" : "#ef4444";
-      arrowIcon =
-        ret >= 0
-          ? `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`
-          : `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
-      arrowPrice =
-        ret >= 0
-          ? `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`
-          : `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
+      gainColor = ret > 0.01 ? "#10b981" : ret < -0.01 ? "#ef4444" : "var(--text-secondary)";
+      if (ret > 0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`;
+      } else if (ret < -0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
+      } else {
+        arrowIcon = "";
+        arrowPrice = "";
+      }
       priceDisplay = `${arrowPrice} ${priceVal}`;
       statusBadge = `<span class="sig-status-stamp">${hitSvgrow}</span>`;
     } else if (s.status === "SL" || s.status === "STOP LOSS") {
@@ -2207,15 +2210,17 @@ function renderSignalRows(signals, priceMap, infoMap) {
       const priceVal = exitPrice != null ? fmtPriceNoRp(exitPrice) : "—";
       const sign = ret >= 0 ? "+" : "";
       gainStr = `${sign}${ret.toFixed(2)}%`;
-      gainColor = ret >= 0 ? "#10b981" : "#ef4444";
-      arrowIcon =
-        ret >= 0
-          ? `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`
-          : `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
-      arrowPrice =
-        ret >= 0
-          ? `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`
-          : `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
+      gainColor = ret > 0.01 ? "#10b981" : ret < -0.01 ? "#ef4444" : "var(--text-secondary)";
+      if (ret > 0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`;
+      } else if (ret < -0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
+      } else {
+        arrowIcon = "";
+        arrowPrice = "";
+      }
       priceDisplay = `${arrowPrice} ${priceVal}`;
       statusBadge = `<span class="sig-status-stamp">${missedSvgrow}</span>`;
     } else {
@@ -2231,6 +2236,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
         const gainPct = (gainAbs / s.entryPrice) * 100;
         const absGain = Math.abs(gainAbs).toFixed(0);
         const absPct = Math.abs(gainPct).toFixed(2);
+        // Tampilkan gain dengan warna dan icon, jika gain 0 -> netral
         if (Math.abs(gainAbs) < 0.01) {
           gainColor = "var(--text-secondary)";
           gainStr = `0 (0.00%)`;
@@ -4627,30 +4633,33 @@ function updatePriceElement(symbol, price) {
       const signal = allSignals.find((s) => s.stockCode === symbol);
       if (signal && (signal.status === "RUNNING" || signal.status === "TRAILING")) {
         const gain = ((price - signal.entryPrice) / signal.entryPrice) * 100;
-        if (gain > 0)
-          arrow =
-            '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
-        else if (gain < 0)
-          arrow =
-            '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
-        if (gainEl) {
+        // ---------- PERBAIKAN DI SINI ----------
+        if (Math.abs(gain) < 0.01) {
+          gainEl.innerHTML = `0 (0.00%)`;
+          gainEl.style.color = 'var(--text-secondary)';
+        } else if (gain > 0) {
           const absGain = Math.abs(gain).toFixed(2);
-          const sign = gain >= 0 ? "+" : "";
-          const gainColor = gain >= 0 ? "#10b981" : "#ef4444";
-          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-${gain >= 0 ? "up" : "down"}" style="font-size:0.7rem; color:${gainColor};"></i> ${sign}${absGain}%`;
-          gainEl.style.color = gainColor;
+          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
+          gainEl.style.color = '#10b981';
+          arrow = '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
+        } else {
+          const absGain = Math.abs(gain).toFixed(2);
+          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
+          gainEl.style.color = '#ef4444';
+          arrow = '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
         }
+        // --------------------------------------
       } else if (signal && (signal.status === "TP" || signal.status === "SL")) {
-        // Jangan update untuk closed
-        return;
+        return; // tidak update closed
       }
+      // Update harga
       priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
     } else {
       priceEl.textContent = "—";
     }
   });
 }
-
+    
 function startPricePolling() {
   if (pricePollingInterval) clearInterval(pricePollingInterval);
   pricePollingInterval = setInterval(refreshAllPrices, 5000);
