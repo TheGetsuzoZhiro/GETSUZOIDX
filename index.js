@@ -10,9 +10,6 @@ const sentPushesCache = new Map();
 const priceCacheBackend = new Map();
 const infoCache = new Map();
 
-// ============ SSE CLIENTS ============
-const sseClients = new Set();
-
 moment.tz.setDefault("Asia/Jakarta");
 
 // ============ VAPID ============
@@ -78,7 +75,6 @@ const SignalSchema = new mongoose.Schema(
     holdingDays: Number,
     currentHigh: Number,
     currentLow: Number,
-    breakEven: { type: Boolean, default: false },
   },
   { versionKey: false },
 );
@@ -132,27 +128,21 @@ async function fetchTokenFromMongo() {
   }
 }
 
-// ============ PERBAIKAN: FUNGSI FETCH HARGA DENGAN DATE RANGE ============
-async function fetchStockbitPrice(symbol, fromDate) {
+// ============ FUNGSI AMBIL HARGA STOCKBIT DENGAN RENTANG (SAMA SEPERTI BACKEND) ============
+async function fetchStockbitPrice(symbol, startDate = null) {
   if (!stockbitToken) {
     console.warn(`[STOCKBIT] Token kosong, skip ${symbol}`);
     return null;
   }
 
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-  // Jika fromDate tidak diberikan, gunakan 7 hari terakhir sebagai fallback
-  let startDate = fromDate || moment().tz("Asia/Jakarta").subtract(7, 'days').format("YYYY-MM-DD");
-
-  // Validasi agar startDate tidak lebih besar dari today
-  if (moment(startDate).isAfter(moment(today))) {
-    console.warn(`[STOCKBIT] startDate (${startDate}) > today (${today}), pakai today`);
-    startDate = today;
+  let start = today;
+  if (startDate) {
+    start = moment(startDate).tz("Asia/Jakarta").format("YYYY-MM-DD");
+    if (start > today) start = today; // antisipasi jika startDate di masa depan
   }
 
-  // Log untuk debug
-  console.log(`[STOCKBIT] Fetch ${symbol} from ${startDate} to ${today}`);
-
-  const url = `https://exodus.stockbit.com/company-price-feed/historical/summary/${symbol.toUpperCase()}?period=HS_PERIOD_DAILY&start_date=${startDate}&end_date=${today}&limit=30&page=1`;
+  const url = `https://exodus.stockbit.com/company-price-feed/historical/summary/${symbol.toUpperCase()}?period=HS_PERIOD_DAILY&start_date=${start}&end_date=${today}&limit=1&page=1`;
 
   try {
     const response = await axios({
@@ -160,7 +150,8 @@ async function fetchStockbitPrice(symbol, fromDate) {
       url,
       headers: {
         Authorization: stockbitToken,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         Accept: "application/json",
         Origin: "https://pro.stockbit.com",
         Referer: "https://pro.stockbit.com/",
@@ -169,17 +160,9 @@ async function fetchStockbitPrice(symbol, fromDate) {
     });
 
     const result = response.data?.data?.result;
-    if (!result || result.length === 0) {
-      console.warn(`[STOCKBIT] No data for ${symbol} from ${startDate} to ${today}`);
-      return null;
-    }
-    const last = result[result.length - 1];
-    return {
-      price: last.close,
-      high: last.high,
-      low: last.low,
-      history: result,
-    };
+    if (!result || result.length === 0) return null;
+    const last = result[0]; // data terbaru dalam rentang
+    return { price: last.close };
   } catch (err) {
     if (err.response && err.response.status === 401) {
       console.warn(`[STOCKBIT] Token expired, refresh...`);
@@ -191,7 +174,7 @@ async function fetchStockbitPrice(symbol, fromDate) {
   }
 }
 
-// ============ MARKET HELPERS ============
+// ============ MARKET HELPERS (libur, jam bursa) ============
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
 
@@ -274,82 +257,28 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ============ SSE ENDPOINT ============
-app.get("/api/events", (req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
-  res.flushHeaders();
-
-  const pingInterval = setInterval(() => {
-    res.write(": ping\n\n");
-  }, 30000);
-
-  sseClients.add(res);
-
-  req.on("close", () => {
-    sseClients.delete(res);
-    clearInterval(pingInterval);
-  });
-});
-
-function broadcastSSE(data) {
-  const message = `data: ${JSON.stringify(data)}\n\n`;
-  sseClients.forEach((client) => {
-    try {
-      client.write(message);
-    } catch (e) {
-      sseClients.delete(client);
-    }
-  });
-}
-
-// ============ ENDPOINT UPDATE PRICE DARI BACKEND WORKER ============
-app.post("/api/update-price", (req, res) => {
-  const { symbol, price, high, low, timestamp } = req.body;
-  if (!symbol || price == null) {
-    return res.status(400).json({ error: "Invalid data" });
-  }
-
-  priceCacheBackend.set(symbol, { price, timestamp: Date.now() });
-
-  broadcastSSE({
-    type: "price-update",
-    symbol,
-    price,
-    high: high || price,
-    low: low || price,
-    timestamp: timestamp || Date.now(),
-  });
-
-  res.json({ success: true });
-});
-
-// ============ PERBAIKAN: ENDPOINT PRICE DENGAN QUERY PARAM from ============
+// ----- ROUTE PRICE (STOCKBIT) dengan CACHE 5 DETIK & DUKUNGAN startDate -----
 app.get("/api/price/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
-  const fromDate = req.query.from || null; // ambil query ?from=YYYY-MM-DD
+  const startDate = req.query.startDate || null; // misal: ?startDate=2026-07-07
 
   try {
-    // Cek cache (dari push atau fetch sebelumnya) dengan TTL 30 detik
-    if (priceCacheBackend.has(symbol)) {
-      const cached = priceCacheBackend.get(symbol);
-      if (Date.now() - cached.timestamp < 30000) {
+    // Cache bedakan berdasarkan symbol dan startDate (jika ada)
+    const cacheKey = startDate ? `${symbol}_${startDate}` : symbol;
+    if (priceCacheBackend.has(cacheKey)) {
+      const cached = priceCacheBackend.get(cacheKey);
+      if (Date.now() - cached.timestamp < 5000) {
         return res.json({ symbol, price: cached.price });
       }
     }
 
-    const data = await fetchStockbitPrice(symbol, fromDate);
+    const data = await fetchStockbitPrice(symbol, startDate);
     if (data && data.price !== undefined) {
-      priceCacheBackend.set(symbol, {
+      priceCacheBackend.set(cacheKey, {
         price: data.price,
-        high: data.high,
-        low: data.low,
         timestamp: Date.now(),
       });
-      res.json({ symbol, price: data.price, high: data.high, low: data.low });
+      res.json({ symbol, price: data.price });
     } else {
       res.status(404).json({ error: "Price not found" });
     }
@@ -358,7 +287,7 @@ app.get("/api/price/:symbol", async (req, res) => {
   }
 });
 
-// ============ ENDPOINT STOCK INFO ============
+// ----- ROUTE STOCK INFO (long name dari Yahoo Search, logo dari Stockbit) -----
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   if (infoCache.has(symbol)) {
@@ -369,6 +298,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 
   try {
+    // Ambil longname dari Yahoo Search API (ringan)
     const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}.JK`;
     const response = await axios.get(searchUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
@@ -401,6 +331,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       `Gagal fetch info ${symbol} dari Yahoo Search:`,
       error.message,
     );
+    // Fallback
     res.json({
       symbol,
       longName: symbol,
@@ -409,7 +340,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 });
 
-// ============ ENDPOINT SIGNALS ============
+// ----- ROUTE SIGNALS -----
 app.get("/api/signals", async (req, res) => {
   try {
     const allSignals = await SignalModel.find({});
@@ -421,7 +352,7 @@ app.get("/api/signals", async (req, res) => {
   }
 });
 
-// ============ ENDPOINT MARKET STATUS ============
+// ----- ROUTE MARKET STATUS -----
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
   const now = moment().tz("Asia/Jakarta");
@@ -474,7 +405,7 @@ app.get("/api/market-status", async (req, res) => {
   });
 });
 
-// ============ ENDPOINT SAVE SUBSCRIPTION ============
+// ----- ROUTE SAVE SUBSCRIPTION -----
 app.post("/api/save-subscription", async (req, res) => {
   const subscription = req.body;
   if (!subscription || !subscription.endpoint) {
@@ -494,7 +425,7 @@ app.post("/api/save-subscription", async (req, res) => {
   }
 });
 
-// ============ ENDPOINT SEND PUSH ============
+// ----- ROUTE SEND PUSH (dengan spam protection) -----
 app.post("/api/send-push", async (req, res) => {
   const { title, body } = req.body;
   if (!title || !body) {
@@ -532,7 +463,7 @@ app.post("/api/send-push", async (req, res) => {
   }
 });
 
-// ============ HELPER IP ============
+// ----- HELPER IP -----
 async function getPublicIP() {
   const sources = [
     "https://api.ipify.org?format=text",
@@ -575,6 +506,7 @@ app.listen(PORT, "0.0.0.0", async () => {
 // =========================================================================
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
+// Map untuk menyimpan status terakhir per sinyal
 const serverLastStatus = new Map();
 
 function getSessionFromDate(signalDate) {
@@ -634,6 +566,7 @@ async function checkDatabaseForNewSignals() {
       .sort()
       .join(",");
 
+    // Inisialisasi pertama kali
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
       serverLastClosedIds = currentClosedIds;
@@ -705,7 +638,7 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
-    // ---- DETEKSI SL ----
+    // ---- (Opsional) DETEKSI SL ----
     const slSignals = allSignals.filter((s) => s.status === "SL");
     for (const s of slSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
@@ -719,6 +652,7 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
+    // Update cache
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
     allSignals.forEach((s) => {
@@ -734,7 +668,7 @@ async function checkDatabaseForNewSignals() {
 
 // ============ START WATCHDOG & TOKEN REFRESH ============
 fetchTokenFromMongo();
-setInterval(fetchTokenFromMongo, 60 * 60 * 1000);
+setInterval(fetchTokenFromMongo, 60 * 60 * 1000); // refresh token setiap jam
 
 checkDatabaseForNewSignals();
-setInterval(checkDatabaseForNewSignals, 30000);
+setInterval(checkDatabaseForNewSignals, 30000); // setiap 30 detik
