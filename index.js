@@ -116,7 +116,12 @@ async function fetchTokenFromMongo() {
   try {
     const doc = await TokenModel.findById("stockbit_token");
     if (doc && doc.token) {
-      stockbitToken = doc.token;
+      // Pastikan ada prefix "Bearer "
+      let token = doc.token.trim();
+      if (!token.startsWith("Bearer ")) {
+        token = `Bearer ${token}`;
+      }
+      stockbitToken = token;
       console.log("✅ Token Stockbit dimuat dari MongoDB (Frontend)");
       return true;
     }
@@ -128,33 +133,33 @@ async function fetchTokenFromMongo() {
   }
 }
 
-// ============ FUNGSI AMBIL HARGA STOCKBIT DENGAN RENTANG (SAMA SEPERTI BACKEND) ============
+// ============ FUNGSI AMBIL HARGA STOCKBIT DENGAN SMART FALLBACK ============
 async function fetchStockbitPrice(symbol, startDate = null) {
   if (!stockbitToken) {
     console.warn(`[STOCKBIT] Token kosong, skip ${symbol}`);
     return null;
   }
 
-  const today = moment().tz('Asia/Jakarta').format('YYYY-MM-DD');
+  const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   let start = today;
   if (startDate) {
-    start = moment(startDate).tz('Asia/Jakarta').format('YYYY-MM-DD');
+    start = moment(startDate).tz("Asia/Jakarta").format("YYYY-MM-DD");
     if (start > today) start = today;
   }
 
-  // Fungsi untuk request dengan rentang tertentu
+  // Fungsi internal untuk request dengan rentang tertentu
   async function fetchData(startDate, endDate) {
     const url = `https://exodus.stockbit.com/company-price-feed/historical/summary/${symbol.toUpperCase()}?period=HS_PERIOD_DAILY&start_date=${startDate}&end_date=${endDate}&limit=1&page=1`;
     try {
       const response = await axios({
-        method: 'GET',
+        method: "GET",
         url,
         headers: {
           Authorization: stockbitToken,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          Accept: 'application/json',
-          Origin: 'https://pro.stockbit.com',
-          Referer: 'https://pro.stockbit.com/',
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Accept: "application/json",
+          Origin: "https://pro.stockbit.com",
+          Referer: "https://pro.stockbit.com/",
         },
         timeout: 10000,
       });
@@ -171,31 +176,29 @@ async function fetchStockbitPrice(symbol, startDate = null) {
     }
   }
 
-  // 1. Coba rentang awal (signalDate → today)
+  // 1. Coba rentang awal (start → today)
   let data = await fetchData(start, today);
-  if (!data) {
-    // 2. Jika kosong, perlebar ke 30 hari sebelum start
-    const startEarlier = moment(start).subtract(30, 'days').format('YYYY-MM-DD');
-    data = await fetchData(startEarlier, today);
-  }
-  if (!data) {
-    // 3. Jika masih kosong, perlebar ke 90 hari (fallback)
-    const startFurther = moment(start).subtract(90, 'days').format('YYYY-MM-DD');
-    data = await fetchData(startFurther, today);
-  }
-
   if (data) {
-    return {
-      price: roundToTick(data.close),
-      high: roundToTick(data.high),
-      low: roundToTick(data.low),
-      change: data.change,
-      changePercent: data.change_percentage,
-      volume: data.volume,
-      timestamp: data.date,
-    };
+    return { price: data.close };
   }
 
+  // 2. Jika kosong, perlebar 30 hari ke belakang
+  console.log(`[STOCKBIT] Tidak ada data di rentang ${start} → ${today}, coba 30 hari ke belakang...`);
+  const startEarlier = moment(start).subtract(30, 'days').format('YYYY-MM-DD');
+  data = await fetchData(startEarlier, today);
+  if (data) {
+    return { price: data.close };
+  }
+
+  // 3. Jika masih kosong, perlebar 90 hari (fallback terakhir)
+  console.log(`[STOCKBIT] Masih tidak ada data, coba 90 hari ke belakang...`);
+  const startFurther = moment(start).subtract(90, 'days').format('YYYY-MM-DD');
+  data = await fetchData(startFurther, today);
+  if (data) {
+    return { price: data.close };
+  }
+
+  console.warn(`[STOCKBIT] Gagal mendapatkan data untuk ${symbol} setelah semua percobaan.`);
   return null;
 }
 
@@ -312,7 +315,7 @@ app.get("/api/price/:symbol", async (req, res) => {
   }
 });
 
-// ----- ROUTE STOCK INFO (long name dari Yahoo Search, logo dari Stockbit) -----
+// ----- ROUTE STOCK INFO -----
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
   if (infoCache.has(symbol)) {
@@ -323,7 +326,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 
   try {
-    // Ambil longname dari Yahoo Search API (ringan)
     const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}.JK`;
     const response = await axios.get(searchUrl, {
       headers: { "User-Agent": "Mozilla/5.0" },
@@ -356,7 +358,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       `Gagal fetch info ${symbol} dari Yahoo Search:`,
       error.message,
     );
-    // Fallback
     res.json({
       symbol,
       longName: symbol,
@@ -450,7 +451,7 @@ app.post("/api/save-subscription", async (req, res) => {
   }
 });
 
-// ----- ROUTE SEND PUSH (dengan spam protection) -----
+// ----- ROUTE SEND PUSH -----
 app.post("/api/send-push", async (req, res) => {
   const { title, body } = req.body;
   if (!title || !body) {
@@ -531,7 +532,6 @@ app.listen(PORT, "0.0.0.0", async () => {
 // =========================================================================
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
-// Map untuk menyimpan status terakhir per sinyal
 const serverLastStatus = new Map();
 
 function getSessionFromDate(signalDate) {
@@ -591,7 +591,6 @@ async function checkDatabaseForNewSignals() {
       .sort()
       .join(",");
 
-    // Inisialisasi pertama kali
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
       serverLastClosedIds = currentClosedIds;
@@ -605,7 +604,6 @@ async function checkDatabaseForNewSignals() {
       return;
     }
 
-    // ---- DETEKSI SINYAL BARU (RUNNING) ----
     const prevRunningArr = serverLastRunningIds.split(",");
     const currentRunningArr = currentRunningIds.split(",");
     const newRunning = currentRunningArr.filter(
@@ -648,7 +646,6 @@ async function checkDatabaseForNewSignals() {
         );
     }
 
-    // ---- DETEKSI PERUBAHAN STATUS MENJADI TP (dari status apapun) ----
     const tpSignals = allSignals.filter((s) => s.status === "TP");
     for (const s of tpSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
@@ -663,7 +660,6 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
-    // ---- (Opsional) DETEKSI SL ----
     const slSignals = allSignals.filter((s) => s.status === "SL");
     for (const s of slSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
@@ -677,7 +673,6 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
-    // Update cache
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
     allSignals.forEach((s) => {
