@@ -7,8 +7,9 @@ const webpush = require("web-push");
 const mongoose = require("mongoose");
 
 const sentPushesCache = new Map();
-const priceCacheBackend = new Map();
 const infoCache = new Map();
+const lastPrices = new Map();
+const sseClients = [];
 
 moment.tz.setDefault("Asia/Jakarta");
 
@@ -132,71 +133,6 @@ async function fetchTokenFromMongo() {
   }
 }
 
-// ============ FUNGSI AMBIL HARGA STOCKBIT DENGAN SMART FALLBACK ============
-async function fetchStockbitPrice(symbol, startDate = null) {
-  if (!stockbitToken) {
-    console.warn(`[STOCKBIT] Token kosong, skip ${symbol}`);
-    return null;
-  }
-
-  const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-  let start = today;
-  if (startDate) {
-    start = moment(startDate).tz("Asia/Jakarta").format("YYYY-MM-DD");
-    if (start > today) start = today;
-  }
-
-  async function fetchData(startDate, endDate) {
-    const url = `https://exodus.stockbit.com/company-price-feed/historical/summary/${symbol.toUpperCase()}?period=HS_PERIOD_DAILY&start_date=${startDate}&end_date=${endDate}&limit=1&page=1`;
-    try {
-      const response = await axios({
-        method: "GET",
-        url,
-        headers: {
-          Authorization: stockbitToken,
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          Accept: "application/json",
-          Origin: "https://pro.stockbit.com",
-          Referer: "https://pro.stockbit.com/",
-        },
-        timeout: 10000,
-      });
-      const result = response.data?.data?.result;
-      return result && result.length > 0 ? result[0] : null;
-    } catch (err) {
-      if (err.response?.status === 401) {
-        console.warn(`[STOCKBIT] Token expired, refresh...`);
-        await fetchTokenFromMongo();
-      } else {
-        console.error(`[STOCKBIT] Gagal ambil ${symbol}:`, err.message);
-      }
-      return null;
-    }
-  }
-
-  let data = await fetchData(start, today);
-  if (data) {
-    return { price: data.close };
-  }
-
-  console.log(`[STOCKBIT] Tidak ada data di rentang ${start} → ${today}, coba 30 hari ke belakang...`);
-  const startEarlier = moment(start).subtract(30, 'days').format('YYYY-MM-DD');
-  data = await fetchData(startEarlier, today);
-  if (data) {
-    return { price: data.close };
-  }
-
-  console.log(`[STOCKBIT] Masih tidak ada data, coba 90 hari ke belakang...`);
-  const startFurther = moment(start).subtract(90, 'days').format('YYYY-MM-DD');
-  data = await fetchData(startFurther, today);
-  if (data) {
-    return { price: data.close };
-  }
-
-  console.warn(`[STOCKBIT] Gagal mendapatkan data untuk ${symbol} setelah semua percobaan.`);
-  return null;
-}
-
 // ============ MARKET HELPERS ============
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
@@ -280,32 +216,55 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/api/price/:symbol", async (req, res) => {
-  const symbol = req.params.symbol.toUpperCase();
-  const startDate = req.query.startDate || null;
+app.get("/api/sse/prices", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
 
-  try {
-    const cacheKey = startDate ? `${symbol}_${startDate}` : symbol;
-    if (priceCacheBackend.has(cacheKey)) {
-      const cached = priceCacheBackend.get(cacheKey);
-      if (Date.now() - cached.timestamp < 5000) {
-        return res.json({ symbol, price: cached.price });
-      }
-    }
+  const client = { id: Date.now(), res };
+  sseClients.push(client);
 
-    const data = await fetchStockbitPrice(symbol, startDate);
-    if (data && data.price !== undefined) {
-      priceCacheBackend.set(cacheKey, {
-        price: data.price,
-        timestamp: Date.now(),
-      });
-      res.json({ symbol, price: data.price });
-    } else {
-      res.status(404).json({ error: "Price not found" });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  // Kirim harga terakhir yang tersimpan
+  if (lastPrices.size > 0) {
+    const updates = Array.from(lastPrices.values());
+    const payload = JSON.stringify({ type: "price", updates });
+    try {
+      res.write(`data: ${payload}\n\n`);
+    } catch (e) {}
   }
+
+  req.on("close", () => {
+    const idx = sseClients.indexOf(client);
+    if (idx > -1) sseClients.splice(idx, 1);
+  });
+});
+
+app.post("/api/sse/price-update", (req, res) => {
+  const { updates } = req.body;
+  if (!updates || !Array.isArray(updates)) {
+    return res.status(400).json({ error: "Invalid updates" });
+  }
+
+  // Simpan ke cache
+  updates.forEach((u) => {
+    if (u.symbol && u.price != null) {
+      lastPrices.set(u.symbol, u);
+    }
+  });
+
+  // Kirim ke semua klien SSE
+  const payload = JSON.stringify({ type: "price", updates });
+  sseClients.forEach((client) => {
+    try {
+      client.res.write(`data: ${payload}\n\n`);
+    } catch (e) {
+      const idx = sseClients.indexOf(client);
+      if (idx > -1) sseClients.splice(idx, 1);
+    }
+  });
+
+  res.json({ success: true, clients: sseClients.length });
 });
 
 app.get("/api/stock-info/:symbol", async (req, res) => {
