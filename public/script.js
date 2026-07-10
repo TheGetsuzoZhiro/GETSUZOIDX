@@ -4471,7 +4471,6 @@ function initNotifications() {
       const success = await subscribeToPush();
       if (success) {
         alert("✅ Notifikasi aktif! Token baru tersimpan.");
-        renderNotificationModal();
       } else {
         alert(
           "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
@@ -4631,7 +4630,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const success = await subscribeToPush();
       if (success) {
         alert("✅ Notifikasi aktif! Token baru tersimpan.");
-        renderNotificationModal();
       } else {
         alert(
           "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
