@@ -1,4 +1,41 @@
 const apiBase = "/api";
+// ============ SSE PRICE STREAM ============
+let sseConnection = null;
+const localPrices = new Map();
+
+function connectPriceSSE() {
+  if (sseConnection) {
+    sseConnection.close();
+    sseConnection = null;
+  }
+
+  sseConnection = new EventSource("/api/sse/prices");
+
+  sseConnection.onmessage = function (event) {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "price" && data.updates) {
+        data.updates.forEach(({ symbol, price }) => {
+          if (price != null) {
+            localPrices.set(symbol, price);
+            updatePriceElement(symbol, price);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("SSE parse error:", e);
+    }
+  };
+
+  sseConnection.onerror = function () {
+    console.warn("SSE connection lost, reconnecting in 3s...");
+    sseConnection.close();
+    sseConnection = null;
+    setTimeout(connectPriceSSE, 3000);
+  };
+
+  console.log("✅ SSE price stream connected");
+}
 let refreshInterval = null;
 let lastSignalCount = 0;
 let equityChart = null,
@@ -235,30 +272,13 @@ function fmtPriceNoRp(num) {
 }
 
 // ========== HARGA & INFO ==========
-const priceCache = new Map();
 const infoCache = new Map();
 
 async function fetchStockPrice(symbol) {
-  if (priceCache.has(symbol)) {
-    const cached = priceCache.get(symbol);
-    if (Date.now() - cached.timestamp < 5000) {
-      return cached.price;
-    }
+  if (localPrices.has(symbol)) {
+    return localPrices.get(symbol);
   }
-  try {
-    const response = await fetch(`/api/price/${symbol}`);
-    if (!response.ok) throw new Error("Network error");
-    const data = await response.json();
-    const price = data.price;
-    if (price != null) {
-      priceCache.set(symbol, { price, timestamp: Date.now() });
-      return price;
-    }
-    return null;
-  } catch (e) {
-    console.warn(`Gagal fetch harga ${symbol} dari Stockbit API:`, e);
-    return null;
-  }
+  return null;
 }
 
 async function fetchStockInfo(symbol) {
@@ -2187,7 +2207,12 @@ function renderSignalRows(signals, priceMap, infoMap) {
       const priceVal = exitPrice != null ? fmtPriceNoRp(exitPrice) : "—";
       const sign = ret >= 0 ? "+" : "";
       gainStr = `${sign}${ret.toFixed(2)}%`;
-      gainColor = ret > 0.01 ? "#10b981" : ret < -0.01 ? "#ef4444" : "var(--text-secondary)";
+      gainColor =
+        ret > 0.01
+          ? "#10b981"
+          : ret < -0.01
+            ? "#ef4444"
+            : "var(--text-secondary)";
       if (ret > 0.01) {
         arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
         arrowPrice = `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`;
@@ -2210,7 +2235,12 @@ function renderSignalRows(signals, priceMap, infoMap) {
       const priceVal = exitPrice != null ? fmtPriceNoRp(exitPrice) : "—";
       const sign = ret >= 0 ? "+" : "";
       gainStr = `${sign}${ret.toFixed(2)}%`;
-      gainColor = ret > 0.01 ? "#10b981" : ret < -0.01 ? "#ef4444" : "var(--text-secondary)";
+      gainColor =
+        ret > 0.01
+          ? "#10b981"
+          : ret < -0.01
+            ? "#ef4444"
+            : "var(--text-secondary)";
       if (ret > 0.01) {
         arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
         arrowPrice = `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`;
@@ -4542,86 +4572,10 @@ async function subscribeToPush() {
   }
 }
 
-// ========== REALTIME PRICE POLLING (5 DETIK) ==========
-let pricePollingInterval = null;
-
-function getVisibleSymbols() {
-  const allSignals = getSortedSignals();
-  let filtered = [];
-  const filter = currentSignalFilter;
-
-  if (filter === "today") {
-    const today = getTodayWIB();
-    filtered = allSignals.filter(
-      (s) => s.signalDate && s.signalDate.startsWith(today),
-    );
-  } else if (filter === "running") {
-    filtered = allSignals.filter(
-      (s) => s.status === "RUNNING" || s.status === "TRAILING",
-    );
-  } else if (filter === "none" || filter === null) {
-    filtered = allSignals;
-  } else {
-    filtered = allSignals;
-  }
-
-  const symbols = [...new Set(filtered.map((s) => s.stockCode))];
-  return symbols;
-}
-
-async function refreshAllPrices() {
-  const activeTab = document.querySelector(".view.active")?.id;
-  if (activeTab !== "signals" && activeTab !== "home" && activeTab !== "daily") {
-    return;
-  }
-
-  // Detail view
-  if (isDetailView && currentDetailIndex !== null) {
-    const detailContainer = document.getElementById("signals");
-    if (detailContainer) {
-      const priceEl = detailContainer.querySelector(
-        ".price-item .value:first-child",
-      );
-      const gainEl = detailContainer.querySelector(
-        ".price-item .change:last-child",
-      );
-      if (priceEl) {
-        const allSignals = getSortedSignals();
-        const s = allSignals[currentDetailIndex];
-        if (s) {
-          const price = await fetchStockPrice(s.stockCode);
-          if (price != null) {
-            priceEl.textContent = fmtPriceNoRp(price);
-            if (gainEl && s.entryPrice) {
-              const gain = ((price - s.entryPrice) / s.entryPrice) * 100;
-              gainEl.textContent =
-                (gain >= 0 ? "+" : "") + gain.toFixed(2) + "%";
-              gainEl.style.color = gain >= 0 ? "#10b981" : "#ef4444";
-            }
-          }
-        }
-      }
-    }
-    return;
-  }
-
-  const symbols = getVisibleSymbols();
-  if (symbols.length === 0) return;
-
-  const pricePromises = symbols.map(async (sym) => {
-    const price = await fetchStockPrice(sym);
-    return { symbol: sym, price };
-  });
-
-  const results = await Promise.all(pricePromises);
-
-  results.forEach(({ symbol, price }) => {
-    updatePriceElement(symbol, price);
-  });
-}
-
 function updatePriceElement(symbol, price) {
-  const rows = document.querySelectorAll(`.sig-list-row[data-stock="${symbol}"]`);
+  const rows = document.querySelectorAll(
+    `.sig-list-row[data-stock="${symbol}"]`,
+  );
   rows.forEach((row) => {
     const priceEl = row.querySelector(".stock-price");
     const gainEl = row.querySelector(".sig-right span:last-child");
@@ -4631,38 +4585,42 @@ function updatePriceElement(symbol, price) {
       let arrow = "";
       const allSignals = getSortedSignals();
       const signal = allSignals.find((s) => s.stockCode === symbol);
-      if (signal && (signal.status === "RUNNING" || signal.status === "TRAILING")) {
+      if (
+        signal &&
+        (signal.status === "RUNNING" || signal.status === "TRAILING")
+      ) {
         const gain = ((price - signal.entryPrice) / signal.entryPrice) * 100;
-        // ---------- PERBAIKAN DI SINI ----------
         if (Math.abs(gain) < 0.01) {
-          gainEl.innerHTML = `0 (0.00%)`;
-          gainEl.style.color = 'var(--text-secondary)';
+          if (gainEl) {
+            gainEl.innerHTML = `0 (0.00%)`;
+            gainEl.style.color = "var(--text-secondary)";
+          }
         } else if (gain > 0) {
           const absGain = Math.abs(gain).toFixed(2);
-          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
-          gainEl.style.color = '#10b981';
-          arrow = '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
+          if (gainEl) {
+            gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
+            gainEl.style.color = "#10b981";
+          }
+          arrow =
+            '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
         } else {
           const absGain = Math.abs(gain).toFixed(2);
-          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
-          gainEl.style.color = '#ef4444';
-          arrow = '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
+          if (gainEl) {
+            gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
+            gainEl.style.color = "#ef4444";
+          }
+          arrow =
+            '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
         }
-        // --------------------------------------
       } else if (signal && (signal.status === "TP" || signal.status === "SL")) {
-        return; // tidak update closed
+        // Jangan update untuk sinyal yang sudah closed
+        return;
       }
-      // Update harga
       priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
     } else {
       priceEl.textContent = "—";
     }
   });
-}
-    
-function startPricePolling() {
-  if (pricePollingInterval) clearInterval(pricePollingInterval);
-  pricePollingInterval = setInterval(refreshAllPrices, 5000);
 }
 
 // ========== INIT ==========
@@ -4766,7 +4724,7 @@ document.addEventListener("DOMContentLoaded", () => {
   showSignalList();
 
   startPolling();
-  startPricePolling(); // Mulai polling harga 5 detik
+  connectPriceSSE();
   setInterval(updateClock, 1000);
   updateClock();
   updateLastUpdate();
