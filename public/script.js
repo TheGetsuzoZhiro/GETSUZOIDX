@@ -4420,48 +4420,243 @@ function initMobileMenu() {
   }
 }
 
-function initPullToRefresh() {
-  const wrapper = document.getElementById("pullToRefresh");
-  const indicator = document.querySelector(".pull-indicator");
-  let startY = 0,
-    endY = 0;
-  wrapper.addEventListener(
-    "touchstart",
-    (e) => {
-      if (window.scrollY === 0) startY = e.touches[0].clientY;
-    },
-    { passive: true },
-  );
-  wrapper.addEventListener(
-    "touchmove",
-    (e) => {
-      if (window.scrollY === 0 && startY > 0) {
-        endY = e.touches[0].clientY;
-        const diff = endY - startY;
-        if (diff > 0 && diff < 200) {
-          indicator.classList.add("visible");
-          indicator.style.transform = `translateX(-50%) translateY(${diff * 0.5}px)`;
+// ========== REFRESH ALL DATA UNTUK PULL TO REFRESH ==========
+async function refreshAllData() {
+    console.log('🔄 Pull to Refresh: Memulai refresh semua data...');
+    
+    try {
+        // 1. Refresh sinyal (running + closed)
+        await fetchSignals(true);
+        
+        // 2. Refresh daily content jika tab daily aktif
+        const activeTab = document.querySelector('.view.active')?.id;
+        if (activeTab === 'daily' || activeTab === 'home') {
+            if (dailyRendered) {
+                await updateDailyContent();
+            } else {
+                renderDaily();
+            }
         }
-      }
-    },
-    { passive: true },
-  );
-  wrapper.addEventListener("touchend", () => {
-    if (startY > 0 && endY > 0 && endY - startY > 100 && window.scrollY === 0) {
-      triggerHaptic();
-      fetchReports();
-      fetchSignals(true);
-      setTimeout(() => {
-        indicator.classList.remove("visible");
-        indicator.style.transform = "translateX(-50%) translateY(0)";
-      }, 1000);
-    } else {
-      indicator.classList.remove("visible");
-      indicator.style.transform = "translateX(-50%) translateY(0)";
+        
+        // 3. Refresh charts
+        updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
+        
+        // 4. Refresh market status
+        await updateMarketStatus();
+        await updateSystemStatus();
+        
+        // 5. Refresh total sinyal
+        updateTotalSignals(_allRunning, _allClosed);
+        
+        // 6. Update last update timestamp
+        updateLastUpdate();
+        
+        console.log('✅ Pull to Refresh: Semua data berhasil diperbarui!');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Pull to Refresh gagal:', error);
+        throw error;
     }
-    startY = 0;
-    endY = 0;
-  });
+}
+
+function initPullToRefresh() {
+    const wrapper = document.getElementById('pullToRefresh');
+    if (!wrapper) return;
+    
+    const indicator = document.querySelector('.pull-indicator');
+    const spinner = indicator?.querySelector('.spinner-icon');
+    const label = indicator?.querySelector('span');
+    
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    let isRefreshing = false;
+    const pullThreshold = 80;
+    const maxPull = 150;
+    
+    // State
+    const STATE = {
+        IDLE: 'idle',
+        PULL: 'pull',
+        RELEASE: 'release',
+        LOADING: 'loading',
+        DONE: 'done'
+    };
+    
+    let currentState = STATE.IDLE;
+    
+    // ========== UPDATE UI ==========
+    function setState(state, progress = 0) {
+        currentState = state;
+        if (!indicator) return;
+        
+        indicator.className = 'pull-indicator';
+        
+        switch (state) {
+            case STATE.IDLE:
+                if (label) label.textContent = '⬇️ Tarik untuk refresh';
+                if (spinner) {
+                    spinner.style.display = 'none';
+                    spinner.classList.remove('spin');
+                }
+                indicator.style.opacity = '0';
+                indicator.style.transform = 'translateY(0)';
+                break;
+                
+            case STATE.PULL:
+                if (label) label.textContent = '⬇️ Tarik terus...';
+                if (spinner) {
+                    spinner.style.display = 'none';
+                    spinner.classList.remove('spin');
+                }
+                indicator.style.opacity = Math.min(progress / 40, 1);
+                indicator.style.transform = `translateY(${Math.min(progress, maxPull)}px)`;
+                break;
+                
+            case STATE.RELEASE:
+                if (label) label.textContent = '🔄 Lepaskan untuk refresh';
+                if (spinner) {
+                    spinner.style.display = 'none';
+                    spinner.classList.remove('spin');
+                }
+                indicator.style.opacity = '1';
+                indicator.style.transform = `translateY(${pullThreshold}px)`;
+                break;
+                
+            case STATE.LOADING:
+                if (label) label.textContent = '⏳ Memuat data...';
+                if (spinner) {
+                    spinner.style.display = 'block';
+                    spinner.classList.add('spin');
+                }
+                indicator.style.opacity = '1';
+                indicator.style.transform = `translateY(${pullThreshold}px)`;
+                break;
+                
+            case STATE.DONE:
+                if (label) label.textContent = '✅ Selesai!';
+                if (spinner) {
+                    spinner.style.display = 'none';
+                    spinner.classList.remove('spin');
+                }
+                indicator.style.opacity = '1';
+                indicator.style.transform = `translateY(${pullThreshold}px)`;
+                break;
+        }
+    }
+    
+    // ========== FUNGSI REFRESH ==========
+    async function performRefresh() {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        
+        setState(STATE.LOADING);
+        
+        try {
+            // Panggil refreshAllData
+            await refreshAllData();
+            setState(STATE.DONE);
+            await new Promise(r => setTimeout(r, 800));
+        } catch (err) {
+            console.error('❌ Refresh gagal:', err);
+            if (label) label.textContent = '❌ Gagal refresh, coba lagi';
+            await new Promise(r => setTimeout(r, 1200));
+        } finally {
+            setState(STATE.IDLE);
+            isRefreshing = false;
+        }
+    }
+    
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+    
+    // ========== TOUCH EVENTS ==========
+    wrapper.addEventListener('touchstart', function(e) {
+        if (isRefreshing) return;
+        if (wrapper.scrollTop <= 0) {
+            startY = e.touches[0].clientY;
+            isDragging = true;
+            currentY = startY;
+            setState(STATE.IDLE);
+        }
+    }, { passive: true });
+    
+    wrapper.addEventListener('touchmove', function(e) {
+        if (!isDragging || isRefreshing) return;
+        
+        currentY = e.touches[0].clientY;
+        let diff = currentY - startY;
+        
+        if (diff > 0 && wrapper.scrollTop <= 0) {
+            e.preventDefault();
+            let progress = Math.min(diff, maxPull);
+            
+            if (progress > pullThreshold) {
+                setState(STATE.RELEASE, progress);
+            } else {
+                setState(STATE.PULL, progress);
+            }
+        }
+    }, { passive: false });
+    
+    wrapper.addEventListener('touchend', function(e) {
+        if (!isDragging || isRefreshing) {
+            isDragging = false;
+            return;
+        }
+        
+        isDragging = false;
+        let diff = currentY - startY;
+        
+        if (diff > pullThreshold) {
+            performRefresh();
+        } else {
+            setState(STATE.IDLE);
+        }
+    }, { passive: true });
+    
+    // ========== MOUSE SUPPORT (DESKTOP) ==========
+    let mouseDown = false;
+    let mouseStartY = 0;
+    
+    wrapper.addEventListener('mousedown', function(e) {
+        if (isRefreshing) return;
+        if (wrapper.scrollTop <= 0) {
+            mouseDown = true;
+            mouseStartY = e.clientY;
+            setState(STATE.IDLE);
+        }
+    });
+    
+    wrapper.addEventListener('mousemove', function(e) {
+        if (!mouseDown || isRefreshing) return;
+        let diff = e.clientY - mouseStartY;
+        
+        if (diff > 0 && wrapper.scrollTop <= 0) {
+            let progress = Math.min(diff, maxPull);
+            if (progress > pullThreshold) {
+                setState(STATE.RELEASE, progress);
+            } else {
+                setState(STATE.PULL, progress);
+            }
+        }
+    });
+    
+    wrapper.addEventListener('mouseup', function(e) {
+        if (!mouseDown) return;
+        mouseDown = false;
+        let diff = e.clientY - mouseStartY;
+        
+        if (diff > pullThreshold) {
+            performRefresh();
+        } else {
+            setState(STATE.IDLE);
+        }
+    });
+    
+    // Inisialisasi
+    setState(STATE.IDLE);
+    console.log('✅ Pull to Refresh siap!');
 }
 
 function initNotifications() {
