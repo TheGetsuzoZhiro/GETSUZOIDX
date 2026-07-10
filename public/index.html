@@ -113,7 +113,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- ================================================================ -->
-    <!-- STYLE UTAMA + PERBAIKAN PULL TO REFRESH + FIX FLASH PWA          -->
+    <!-- STYLE UTAMA + PERBAIKAN FLASH PWA                                -->
     <!-- ================================================================ -->
     <style>
       :root {
@@ -378,83 +378,6 @@
       }
       .blink-cursor { animation: blink 1.1s step-end infinite; color: #fff; font-weight: 700; }
       @keyframes blink { 50% { opacity: 0; } }
-
-      /* =================================================================== */
-      /* PULL TO REFRESH – INDIKATOR DAN ANIMASI                             */
-      /* =================================================================== */
-      .content-wrapper {
-        position: relative;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior: contain;
-      }
-
-      .pull-indicator {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        padding: 16px 0;
-        min-height: 50px;
-        font-family: 'Space Grotesk', sans-serif;
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.5);
-        transition: all 0.15s ease;
-        user-select: none;
-        -webkit-user-select: none;
-        pointer-events: none;
-        background: transparent;
-        position: sticky;
-        top: -10px;
-        z-index: 5;
-        opacity: 0;
-        transform: translateY(0);
-      }
-
-      .pull-indicator .spinner-icon {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-        stroke: currentColor;
-        display: none;
-        transition: transform 0.4s ease;
-      }
-
-      .pull-indicator .spinner-icon.spin {
-        display: block;
-        animation: spin 0.7s linear infinite;
-      }
-
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-
-      /* =================================================================== */
-      /* LOADING STATE DI VIEW                                               */
-      /* =================================================================== */
-      .loading-state .loader {
-        display: flex;
-        gap: 6px;
-        justify-content: center;
-      }
-      .loading-state .loader-ring {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.15);
-        animation: pulse-ring 1s ease-in-out infinite;
-      }
-      .loading-state .loader-ring:nth-child(2) {
-        animation-delay: 0.2s;
-      }
-      .loading-state .loader-ring:nth-child(3) {
-        animation-delay: 0.4s;
-      }
-      @keyframes pulse-ring {
-        0%, 100% { transform: scale(0.8); opacity: 0.3; }
-        50% { transform: scale(1.2); opacity: 0.8; }
-      }
     </style>
   </head>
   <body>
@@ -574,7 +497,7 @@
       </div>
     </div>
 
-    <!-- ===== APP WRAPPER ORIGINAL ===== -->
+    <!-- APP WRAPPER ORIGINAL -->
     <div class="app-wrapper">
       <!-- Sidebar -->
       <aside class="sidebar">
@@ -740,12 +663,17 @@
         </header>
 
         <div class="content-wrapper" id="pullToRefresh">
-          <!-- Indikator Pull to Refresh -->
-          <div class="pull-indicator" id="pullIndicator">
-            <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div class="pull-indicator">
+            <svg
+              class="spinner-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
             </svg>
-            <span id="pullLabel">⬇️ Tarik untuk refresh</span>
+            <span>Pull to Refresh</span>
           </div>
 
           <!-- NOTIFICATION BANNER -->
@@ -1000,20 +928,13 @@
       </div>
     </div>
 
-    <!-- ========================== -->
-    <!-- SCRIPT PERBAIKAN           -->
-    <!-- ========================== -->
-
+    <!-- ===== SCRIPTS LOGIC HANDLING ===== -->
     <script>
-      // ====================================================================
-      // 1. FUNGSI-FUNGSI DASAR (market status, dll.)
-      // ====================================================================
       async function updateMarketStatus() {
         try {
           const res = await fetch("/api/market-status");
           const data = await res.json();
           const statusEl = document.getElementById("marketStatus");
-          if (!statusEl) return;
           const dot = statusEl.querySelector(".dot");
           const text = statusEl.querySelector(".market-text");
 
@@ -1035,7 +956,6 @@
           const res = await fetch("/api/market-status");
           const data = await res.json();
           const statusEl = document.getElementById("systemStatus");
-          if (!statusEl) return;
           let displayText =
             data.statusText || (data.isOpen ? "Market Open" : "Market Closed");
           statusEl.textContent = displayText;
@@ -1047,7 +967,7 @@
             statusEl.className = "stat-number status-closed";
           }
           const clockEl = document.getElementById("clockDisplay");
-          if (clockEl && data.currentTime) {
+          if (data.currentTime) {
             clockEl.textContent = data.currentTime;
           }
         } catch (e) {
@@ -1055,13 +975,19 @@
         }
       }
 
-      // ====================================================================
-      // 2. NOTIF BANNER (tetap seperti asli)
-      // ====================================================================
+      updateMarketStatus();
+      updateSystemStatus();
+      setInterval(() => {
+        updateMarketStatus();
+        updateSystemStatus();
+      }, 30000);
+
       (function() {
         'use strict';
+
         const banner = document.getElementById('notifBanner');
         if (!banner) return;
+
         const closeBtn = document.getElementById('notifBannerClose');
         const bannerBtn = document.getElementById('notifBannerBtn');
 
@@ -1070,6 +996,7 @@
             banner.style.display = 'none';
             return;
           }
+
           const permission = Notification.permission;
           const dismissed = localStorage.getItem('notifBannerDismissed') === 'true';
 
@@ -1099,16 +1026,20 @@
             const headerBtn = document.getElementById('enablePushBtn');
             if (headerBtn) {
               headerBtn.click();
-            } else if ('Notification' in window) {
-              Notification.requestPermission().then(function(perm) {
-                if (perm === 'granted') {
-                  banner.style.display = 'none';
-                  localStorage.removeItem('notifBannerDismissed');
-                } else {
-                  banner.style.display = 'none';
-                  localStorage.setItem('notifBannerDismissed', 'true');
-                }
-              });
+            } else {
+              if (typeof requestNotificationPermission === 'function') {
+                requestNotificationPermission();
+              } else if ('Notification' in window) {
+                Notification.requestPermission().then(function(perm) {
+                  if (perm === 'granted') {
+                    banner.style.display = 'none';
+                    localStorage.removeItem('notifBannerDismissed');
+                  } else {
+                    banner.style.display = 'none';
+                    localStorage.setItem('notifBannerDismissed', 'true');
+                  }
+                });
+              }
             }
             setTimeout(updateBannerVisibility, 1500);
           });
@@ -1125,221 +1056,14 @@
         document.addEventListener('visibilitychange', function() {
           if (!document.hidden) updateBannerVisibility();
         });
+
         setInterval(updateBannerVisibility, 8000);
         updateBannerVisibility();
       })();
+    </script>
 
-      // ====================================================================
-      // 3. PULL TO REFRESH – FIX INFINITE LOADING
-      // ====================================================================
-      (function() {
-        'use strict';
-
-        const container = document.getElementById('pullToRefresh');
-        if (!container) return;
-
-        const indicator = document.getElementById('pullIndicator');
-        const spinner = indicator?.querySelector('.spinner-icon');
-        const label = document.getElementById('pullLabel');
-
-        let startY = 0;
-        let currentY = 0;
-        let isDragging = false;
-        let isRefreshing = false;
-        const pullThreshold = 80;
-        const maxPull = 150;
-
-        const STATE = {
-          IDLE: 'idle',
-          PULL: 'pull',
-          RELEASE: 'release',
-          LOADING: 'loading',
-          DONE: 'done'
-        };
-
-        let currentState = STATE.IDLE;
-
-        function setState(state, progress = 0) {
-          currentState = state;
-          if (!indicator) return;
-
-          indicator.className = 'pull-indicator';
-
-          switch (state) {
-            case STATE.IDLE:
-              if (label) label.textContent = '⬇️ Tarik untuk refresh';
-              if (spinner) {
-                spinner.style.display = 'none';
-                spinner.classList.remove('spin');
-              }
-              indicator.style.opacity = '0';
-              indicator.style.transform = 'translateY(0)';
-              break;
-
-            case STATE.PULL:
-              if (label) label.textContent = '⬇️ Tarik terus...';
-              if (spinner) {
-                spinner.style.display = 'none';
-                spinner.classList.remove('spin');
-              }
-              indicator.style.opacity = Math.min(progress / 40, 1);
-              indicator.style.transform = `translateY(${Math.min(progress, maxPull)}px)`;
-              break;
-
-            case STATE.RELEASE:
-              if (label) label.textContent = '🔄 Lepaskan untuk refresh';
-              if (spinner) {
-                spinner.style.display = 'none';
-                spinner.classList.remove('spin');
-              }
-              indicator.style.opacity = '1';
-              indicator.style.transform = `translateY(${pullThreshold}px)`;
-              break;
-
-            case STATE.LOADING:
-              if (label) label.textContent = '⏳ Memuat data...';
-              if (spinner) {
-                spinner.style.display = 'block';
-                spinner.classList.add('spin');
-              }
-              indicator.style.opacity = '1';
-              indicator.style.transform = `translateY(${pullThreshold}px)`;
-              break;
-
-            case STATE.DONE:
-              if (label) label.textContent = '✅ Selesai!';
-              if (spinner) {
-                spinner.style.display = 'none';
-                spinner.classList.remove('spin');
-              }
-              indicator.style.opacity = '1';
-              indicator.style.transform = `translateY(${pullThreshold}px)`;
-              break;
-          }
-        }
-
-        // Fungsi refresh semua data – GANTI dengan fungsi asli Anda
-        async function refreshAllData() {
-          console.log('🔄 Refreshing semua data...');
-          try {
-            await updateMarketStatus();
-            await updateSystemStatus();
-            // Panggil fungsi lain seperti loadSignals, updateCharts, dll.
-            // Contoh:
-            // if (typeof loadSignals === 'function') await loadSignals();
-            // if (typeof updateCharts === 'function') await updateCharts();
-            console.log('✅ Refresh selesai!');
-          } catch (err) {
-            console.error('❌ Gagal refresh:', err);
-            throw err;
-          }
-        }
-
-        async function performRefresh() {
-          if (isRefreshing) return;
-          isRefreshing = true;
-
-          setState(STATE.LOADING);
-
-          try {
-            await refreshAllData();
-            setState(STATE.DONE);
-            await new Promise(r => setTimeout(r, 800));
-          } catch (err) {
-            if (label) label.textContent = '❌ Gagal refresh, coba lagi';
-            await new Promise(r => setTimeout(r, 1200));
-          } finally {
-            setState(STATE.IDLE);
-            isRefreshing = false;
-          }
-        }
-
-        // ========== TOUCH EVENTS ==========
-        container.addEventListener('touchstart', function(e) {
-          if (isRefreshing) return;
-          if (container.scrollTop <= 0) {
-            startY = e.touches[0].clientY;
-            isDragging = true;
-            currentY = startY;
-            setState(STATE.IDLE);
-          }
-        }, { passive: true });
-
-        container.addEventListener('touchmove', function(e) {
-          if (!isDragging || isRefreshing) return;
-          currentY = e.touches[0].clientY;
-          let diff = currentY - startY;
-
-          if (diff > 0 && container.scrollTop <= 0) {
-            e.preventDefault();
-            let progress = Math.min(diff, maxPull);
-            if (progress > pullThreshold) {
-              setState(STATE.RELEASE, progress);
-            } else {
-              setState(STATE.PULL, progress);
-            }
-          }
-        }, { passive: false });
-
-        container.addEventListener('touchend', function(e) {
-          if (!isDragging || isRefreshing) {
-            isDragging = false;
-            return;
-          }
-          isDragging = false;
-          let diff = currentY - startY;
-          if (diff > pullThreshold) {
-            performRefresh();
-          } else {
-            setState(STATE.IDLE);
-          }
-        }, { passive: true });
-
-        // ========== MOUSE SUPPORT ==========
-        let mouseDown = false;
-        let mouseStartY = 0;
-
-        container.addEventListener('mousedown', function(e) {
-          if (isRefreshing) return;
-          if (container.scrollTop <= 0) {
-            mouseDown = true;
-            mouseStartY = e.clientY;
-            setState(STATE.IDLE);
-          }
-        });
-
-        container.addEventListener('mousemove', function(e) {
-          if (!mouseDown || isRefreshing) return;
-          let diff = e.clientY - mouseStartY;
-          if (diff > 0 && container.scrollTop <= 0) {
-            let progress = Math.min(diff, maxPull);
-            if (progress > pullThreshold) {
-              setState(STATE.RELEASE, progress);
-            } else {
-              setState(STATE.PULL, progress);
-            }
-          }
-        });
-
-        container.addEventListener('mouseup', function(e) {
-          if (!mouseDown) return;
-          mouseDown = false;
-          let diff = e.clientY - mouseStartY;
-          if (diff > pullThreshold) {
-            performRefresh();
-          } else {
-            setState(STATE.IDLE);
-          }
-        });
-
-        // Inisialisasi
-        setState(STATE.IDLE);
-        console.log('✅ Pull to Refresh siap!');
-      })();
-
-      // ====================================================================
-      // 4. PWA SYSTEM DETECTOR – FIX FLASH LOCK SCREEN
-      // ====================================================================
+    <!-- ===== PWA SYSTEM DETECTOR (PERBAIKAN FLASH) ===== -->
+    <script>
       (function() {
         'use strict';
 
@@ -1351,21 +1075,35 @@
           const isIOSStandalone = window.navigator.standalone === true;
           const isPWA = isStandalone || isIOSStandalone;
 
+          const lockScreen = document.getElementById('pwa-lock-screen');
+          const appWrapper = document.querySelector('.app-wrapper');
+
           if (isPWA) {
+            // Tambahkan class ke body agar CSS fallback bekerja
             document.body.classList.add('pwa-mode');
-            const lockScreen = document.getElementById('pwa-lock-screen');
-            const appWrapper = document.querySelector('.app-wrapper');
             if (lockScreen) lockScreen.style.display = 'none';
             if (appWrapper) appWrapper.style.display = 'flex';
           } else {
             document.body.classList.remove('pwa-mode');
-            const lockScreen = document.getElementById('pwa-lock-screen');
-            const appWrapper = document.querySelector('.app-wrapper');
             if (lockScreen) lockScreen.style.display = 'flex';
             if (appWrapper) appWrapper.style.display = 'none';
           }
         }
 
+        // Jalankan segera setelah DOM siap (sebelum paint)
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', enforceSecurityLock);
+        } else {
+          enforceSecurityLock();
+        }
+
+        // Juga jalankan jika mode berubah (misal dari browser ke standalone)
+        window.matchMedia('(display-mode: standalone)').addEventListener('change', enforceSecurityLock);
+
+        // Fallback: jalankan lagi setelah 100ms untuk memastikan
+        setTimeout(enforceSecurityLock, 100);
+
+        // Event PWA Install
         window.addEventListener('beforeinstallprompt', (e) => {
           e.preventDefault();
           deferredPrompt = e;
@@ -1395,12 +1133,6 @@
           enforceSecurityLock();
         });
 
-        // Jalankan saat DOM siap dan juga setiap kali mode berubah
-        document.addEventListener('DOMContentLoaded', enforceSecurityLock);
-        window.matchMedia('(display-mode: standalone)').addEventListener('change', enforceSecurityLock);
-        // Fallback interval untuk keamanan
-        setTimeout(enforceSecurityLock, 200);
-
         // Update live latency ticker
         setInterval(() => {
           const ticker = document.getElementById('live-latency-ticker');
@@ -1411,32 +1143,24 @@
         }, 700);
 
         // Tab switching di lock screen
-        document.querySelectorAll('.tab-btn').forEach(tab => {
-          tab.addEventListener('click', function() {
-            const target = this.getAttribute('data-platform');
-            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.platform-pane').forEach(p => p.className = 'platform-pane');
-            this.classList.add('active');
-            const targetPane = document.getElementById(`pane-${target}`);
-            if (targetPane) targetPane.className = 'platform-pane active';
+        document.addEventListener('DOMContentLoaded', function() {
+          const tabs = document.querySelectorAll('.tab-btn');
+          tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+              const target = this.getAttribute('data-platform');
+              tabs.forEach(t => t.classList.remove('active'));
+              document.querySelectorAll('.platform-pane').forEach(p => p.className = 'platform-pane');
+              this.classList.add('active');
+              const targetPane = document.getElementById(`pane-${target}`);
+              if (targetPane) targetPane.className = 'platform-pane active';
+            });
           });
         });
-      })();
 
-      // ====================================================================
-      // 5. INISIALISASI MARKET STATUS
-      // ====================================================================
-      updateMarketStatus();
-      updateSystemStatus();
-      setInterval(() => {
-        updateMarketStatus();
-        updateSystemStatus();
-      }, 30000);
+      })();
     </script>
 
-    <!-- ================================================================== -->
-    <!-- SCRIPT.JS ANDALAN (jika ada) – pastikan tidak konflik              -->
-    <!-- ================================================================== -->
+    <!-- File script.js asli -->
     <script src="script.js"></script>
   </body>
 </html>
