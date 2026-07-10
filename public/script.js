@@ -4239,29 +4239,6 @@ function sendNotification(title, body) {
   }
 }
 
-function requestNotificationPermission() {
-  triggerHaptic();
-  if (!("Notification" in window)) {
-    alert("Browser tidak mendukung notifikasi.");
-    return;
-  }
-  if (Notification.permission === "denied") {
-    alert("Notifikasi diblokir. Silakan aktifkan melalui pengaturan browser.");
-    return;
-  }
-  if (Notification.permission === "granted") {
-    renderNotificationModal();
-    return;
-  }
-  Notification.requestPermission().then((perm) => {
-    if (perm === "granted") {
-      document.querySelector(".notif-badge")?.classList.remove("active");
-      sendNotification("✅ Berhasil", "Notifikasi diaktifkan!");
-      renderNotificationModal();
-    } else alert("Izin notifikasi ditolak.");
-  });
-}
-
 // ========== POLLING ==========
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
@@ -4490,7 +4467,17 @@ function initPullToRefresh() {
 function initNotifications() {
   const notifBtn = document.getElementById("notifBtn");
   if (notifBtn) {
-    notifBtn.addEventListener("click", requestNotificationPermission);
+    notifBtn.addEventListener("click", async () => {
+      const success = await subscribeToPush();
+      if (success) {
+        alert("✅ Notifikasi aktif! Token baru tersimpan.");
+        renderNotificationModal();
+      } else {
+        alert(
+          "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
+        );
+      }
+    });
   }
 }
 
@@ -4533,12 +4520,16 @@ async function subscribeToPush() {
     const registration = await navigator.serviceWorker.register("/sw.js");
     await navigator.serviceWorker.ready;
 
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      console.warn("⚠️ Notifikasi ditolak pengguna.");
-      return false;
+    // Jika permission belum granted, minta izin
+    if (Notification.permission !== "granted") {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        console.warn("⚠️ Notifikasi ditolak pengguna.");
+        return false;
+      }
     }
 
+    // Unsubscribe subscription lama jika ada
     let subscription = await registration.pushManager.getSubscription();
     if (subscription) {
       await subscription.unsubscribe();
@@ -4546,12 +4537,14 @@ async function subscribeToPush() {
       subscription = null;
     }
 
+    // Buat subscription baru
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     console.log("✅ Dibuat subscription baru di browser.");
 
+    // Simpan ke server
     const response = await fetch("/api/save-subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4564,10 +4557,12 @@ async function subscribeToPush() {
       return true;
     } else {
       console.error("❌ Gagal simpan subscription ke server");
+      localStorage.removeItem("pushActive");
       return false;
     }
   } catch (err) {
     console.error("❌ Error subscribe push:", err);
+    localStorage.removeItem("pushActive");
     return false;
   }
 }
@@ -4633,16 +4628,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const pushBtn = document.getElementById("enablePushBtn");
   if (pushBtn) {
     pushBtn.addEventListener("click", async () => {
-      if (localStorage.getItem("pushActive") === "true") {
-        alert("✅ Notifikasi sudah aktif.");
-        return;
-      }
       const success = await subscribeToPush();
       if (success) {
-        localStorage.setItem("pushActive", "true");
-        alert(
-          "✅ Notifikasi push aktif! Anda akan menerima notifikasi di latar belakang.",
-        );
+        alert("✅ Notifikasi aktif! Token baru tersimpan.");
+        renderNotificationModal();
       } else {
         alert(
           "❌ Gagal mengaktifkan notifikasi. Pastikan browser mendukung dan izin diberikan.",
