@@ -112,7 +112,9 @@
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- STYLE KHUSUS INSTALASI PWA & FIX OVERLAPPING NOTCH -->
+    <!-- ================================================================ -->
+    <!-- STYLE UTAMA + PERBAIKAN FLASH PWA                                -->
+    <!-- ================================================================ -->
     <style>
       :root {
         --terminal-glowing: rgba(255, 255, 255, 0.95);
@@ -126,28 +128,52 @@
       /* =================================================================== */
       /* FIX GAP & OVERLAP SYSTEM BAR                                        */
       /* =================================================================== */
-      
-      /* 1. Mencegah Top Bar Terlalu Tinggi */
       .top-bar {
         padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
         height: auto !important;
         min-height: calc(54px + env(safe-area-inset-top, 0px)) !important;
         box-sizing: border-box !important;
       }
-      
-      /* 2. Menghasilkan Jarak Proporsional (Fix layout menempel pada image_4.png) */
       .content-wrapper {
-        padding-top: 20px !important; /* Memberikan ruang udara yang ideal dari batas header */
+        padding-top: 20px !important;
       }
-
-      /* 3. Perbaikan Bug Sidebar Melesat ke Atas */
       .sidebar {
         padding-top: calc(16px + env(safe-area-inset-top, 0px)) !important;
         box-sizing: border-box !important;
       }
 
       /* =================================================================== */
-      /* PWA SYSTEM UTILITIES                                                */
+      /* PWA LOCK SCREEN – default tampil                                    */
+      /* =================================================================== */
+      #pwa-lock-screen {
+        display: flex !important;
+      }
+      .app-wrapper {
+        display: none !important;
+      }
+
+      /* =================================================================== */
+      /* SAAT MODE STANDALONE (PWA) – langsung sembunyikan lock screen       */
+      /* =================================================================== */
+      @media all and (display-mode: standalone) {
+        #pwa-lock-screen {
+          display: none !important;
+        }
+        .app-wrapper {
+          display: flex !important;
+        }
+      }
+
+      /* Fallback untuk iOS (navigator.standalone) via class body */
+      body.pwa-mode #pwa-lock-screen {
+        display: none !important;
+      }
+      body.pwa-mode .app-wrapper {
+        display: flex !important;
+      }
+
+      /* =================================================================== */
+      /* STYLE LOCK SCREEN (tetap sama)                                      */
       /* =================================================================== */
       .pwa-lock-container {
         position: fixed;
@@ -166,7 +192,6 @@
         color: #ffffff;
         padding: calc(32px + env(safe-area-inset-top, 0px)) 16px 32px 16px;
         box-sizing: border-box;
-        display: block;
       }
 
       .lock-card {
@@ -359,7 +384,7 @@
     <div class="particles-container" id="particles"></div>
 
     <!-- ===== SKRIN DEPLOYMENT LAYAR KUNCI PWA ===== -->
-    <div id="pwa-lock-screen" class="pwa-lock-container" style="display: flex;">
+    <div id="pwa-lock-screen" class="pwa-lock-container">
       <div class="lock-card">
         <div class="corner-tag top-l"></div>
         <div class="corner-tag top-r"></div>
@@ -473,7 +498,7 @@
     </div>
 
     <!-- APP WRAPPER ORIGINAL -->
-    <div class="app-wrapper" style="display: none;">
+    <div class="app-wrapper">
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-glow"></div>
@@ -1037,81 +1062,51 @@
       })();
     </script>
 
-    <!-- ===== PWA SYSTEM DETECTOR ===== -->
+    <!-- ===== PWA SYSTEM DETECTOR (PERBAIKAN FLASH) ===== -->
     <script>
       (function() {
         'use strict';
-        
+
         let deferredPrompt = null;
         const installBtn = document.getElementById('btn-install-android');
-        
+
         function enforceSecurityLock() {
           const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
           const isIOSStandalone = window.navigator.standalone === true;
-          
+          const isPWA = isStandalone || isIOSStandalone;
+
           const lockScreen = document.getElementById('pwa-lock-screen');
           const appWrapper = document.querySelector('.app-wrapper');
-          
-          if (isStandalone || isIOSStandalone) {
-            if (lockScreen) lockScreen.style.setProperty('display', 'none', 'important');
-            if (appWrapper) appWrapper.style.setProperty('display', 'flex', 'important');
-            return; 
+
+          if (isPWA) {
+            // Tambahkan class ke body agar CSS fallback bekerja
+            document.body.classList.add('pwa-mode');
+            if (lockScreen) lockScreen.style.display = 'none';
+            if (appWrapper) appWrapper.style.display = 'flex';
           } else {
-            if (lockScreen) lockScreen.style.setProperty('display', 'block', 'important');
-            if (appWrapper) appWrapper.style.setProperty('display', 'none', 'important');
+            document.body.classList.remove('pwa-mode');
+            if (lockScreen) lockScreen.style.display = 'flex';
+            if (appWrapper) appWrapper.style.display = 'none';
           }
-
-          setInterval(() => {
-            const ticker = document.getElementById('live-latency-ticker');
-            if (ticker) {
-              const ms = (Math.random() * (0.06 - 0.02) + 0.02).toFixed(2);
-              ticker.textContent = `${ms}ms`;
-            }
-          }, 700);
-
-          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-          
-          document.addEventListener('DOMContentLoaded', function() {
-            const androidBtn = document.querySelector('.tab-btn[data-platform="android"]');
-            const iosBtn = document.querySelector('.tab-btn[data-platform="ios"]');
-            const androidPane = document.getElementById('pane-android');
-            const iosPane = document.getElementById('pane-ios');
-            const pwaNode = document.getElementById('pwa-pipeline-node');
-            
-            if (isIOS && androidBtn && iosBtn && androidPane && iosPane) {
-              androidBtn.classList.remove('active');
-              androidPane.classList.remove('active');
-              iosBtn.classList.add('active');
-              iosPane.classList.add('active');
-              if (pwaNode) pwaNode.classList.add('active');
-            }
-
-            const tabs = document.querySelectorAll('.tab-btn');
-            tabs.forEach(tab => {
-              tab.addEventListener('click', function() {
-                const target = this.getAttribute('data-platform');
-                tabs.forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.platform-pane').forEach(p => p.className = 'platform-pane');
-                
-                this.classList.add('active');
-                const targetPane = document.getElementById(`pane-${target}`);
-                if (targetPane) targetPane.className = 'platform-pane active';
-                
-                if (target === 'ios' && pwaNode) {
-                  pwaNode.classList.add('active');
-                } else if (pwaNode) {
-                  pwaNode.classList.remove('active');
-                }
-              });
-            });
-          });
         }
 
+        // Jalankan segera setelah DOM siap (sebelum paint)
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', enforceSecurityLock);
+        } else {
+          enforceSecurityLock();
+        }
+
+        // Juga jalankan jika mode berubah (misal dari browser ke standalone)
+        window.matchMedia('(display-mode: standalone)').addEventListener('change', enforceSecurityLock);
+
+        // Fallback: jalankan lagi setelah 100ms untuk memastikan
+        setTimeout(enforceSecurityLock, 100);
+
+        // Event PWA Install
         window.addEventListener('beforeinstallprompt', (e) => {
           e.preventDefault();
-          deferredPrompt = e; 
-          
+          deferredPrompt = e;
           if (installBtn) {
             installBtn.removeAttribute('disabled');
             installBtn.innerHTML = '<i class="fas fa-download"></i> PASANG KONSOL PWA';
@@ -1121,13 +1116,13 @@
         if (installBtn) {
           installBtn.addEventListener('click', async () => {
             if (!deferredPrompt) {
+              alert("Petunjuk Sistem:\n\nTombol ini hanya aktif jika Anda membuka halaman melalui Google Chrome atau browser yang mendukung PWA.\n\nJika sudah menggunakan Chrome, coba klik 'Tambahkan ke Layar Utama' melalui menu titik tiga.");
               return;
             }
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
             console.log(`User choice outcome: ${outcome}`);
             deferredPrompt = null;
-            
             installBtn.setAttribute('disabled', 'true');
             installBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Memasang...';
           });
@@ -1135,27 +1130,33 @@
 
         window.addEventListener('appinstalled', () => {
           deferredPrompt = null;
-          const lockScreen = document.getElementById('pwa-lock-screen');
-          const appWrapper = document.querySelector('.app-wrapper');
-          if (lockScreen) lockScreen.style.setProperty('display', 'none', 'important');
-          if (appWrapper) appWrapper.style.setProperty('display', 'flex', 'important');
+          enforceSecurityLock();
         });
 
-        setTimeout(() => {
-          if (!deferredPrompt && installBtn && installBtn.hasAttribute('disabled')) {
-            installBtn.removeAttribute('disabled');
-            installBtn.innerHTML = '<i class="fas fa-arrow-up-right-from-square"></i> Buka via Chrome / Browser Utama';
-            installBtn.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-            
-            installBtn.addEventListener('click', () => {
-              if (!deferredPrompt) {
-                alert("Petunjuk Sistem:\n\nTombol berputar tadi karena Anda tidak mengakses melalui Google Chrome/Browser resmi bawaan HP, atau PWA sudah terpasang.\n\nJika menggunakan Android, ketuk tombol Titik Tiga (⋮) di pojok kanan atas browser Anda saat ini, lalu pilih 'Buka di Chrome' atau 'Tambahkan ke Layar Utama'.");
-              }
-            });
+        // Update live latency ticker
+        setInterval(() => {
+          const ticker = document.getElementById('live-latency-ticker');
+          if (ticker) {
+            const ms = (Math.random() * (0.06 - 0.02) + 0.02).toFixed(2);
+            ticker.textContent = `${ms}ms`;
           }
-        }, 4000);
+        }, 700);
 
-        enforceSecurityLock();
+        // Tab switching di lock screen
+        document.addEventListener('DOMContentLoaded', function() {
+          const tabs = document.querySelectorAll('.tab-btn');
+          tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+              const target = this.getAttribute('data-platform');
+              tabs.forEach(t => t.classList.remove('active'));
+              document.querySelectorAll('.platform-pane').forEach(p => p.className = 'platform-pane');
+              this.classList.add('active');
+              const targetPane = document.getElementById(`pane-${target}`);
+              if (targetPane) targetPane.className = 'platform-pane active';
+            });
+          });
+        });
+
       })();
     </script>
 
