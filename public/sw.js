@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getsuzo-cache-v3'; 
+const CACHE_NAME = 'getsuzo-cache-v4'; 
 
 const urlsToCache = [
   '/',
@@ -7,11 +7,9 @@ const urlsToCache = [
   '/script.js'
 ];
 
-// ============ INSTALL & CACHE ============
 self.addEventListener("install", (event) => {
   console.log("[SW] Installed");
   
-  // Memaksa Service Worker baru untuk langsung aktif tanpa menunggu tab ditutup
   self.skipWaiting();
 
   event.waitUntil(
@@ -23,12 +21,9 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// ============ ACTIVATE (TAMBAHAN: AUTO DELETE CACHE LAMA) ============
 self.addEventListener("activate", (event) => {
   console.log("[SW] Activated");
   
-  // Fitur Tambahan: Otomatis menghapus cache versi lama (misal v1) di HP client
-  // ketika Anda mengubah CACHE_NAME menjadi v2
   const cacheWhitelist = [CACHE_NAME];
   
   event.waitUntil(
@@ -45,19 +40,15 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// ============ FETCH EVENT (DIUBAH MENJADI NETWORK-FIRST) ============
 self.addEventListener('fetch', (event) => {
-  // Hanya intercept request dokumen/aset internal saja
   if (event.request.mode === 'navigate' || 
       event.request.url.includes('style.css') || 
       event.request.url.includes('script.js') || 
       event.request.url.match(/\.(html|css|js)$/)) {
       
     event.respondWith(
-      // STRATEGI: Paksa browser mengambil kode teranyar langsung dari internet (Render)
       fetch(event.request)
         .then((networkResponse) => {
-          // Jika internet aman dan responnya valid, perbarui file di dalam cache
           if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -67,12 +58,10 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // JIKA OFFLINE / INTERNET MATI: Baru ambil file cadangan dari cache lokal HP
           return caches.match(event.request);
         })
     );
   } else {
-    // Untuk request luar seperti API, Chart.js, atau FontAwesome, biarkan berjalan normal
     event.respondWith(
       caches.match(event.request).then((response) => {
         return response || fetch(event.request);
@@ -81,7 +70,6 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// ============ TERIMA PUSH NOTIFICATION (TETAP AMAN) ============
 self.addEventListener("push", (event) => {
   let data = { title: "Notifikasi Baru", body: "Ada update." };
 
@@ -106,7 +94,6 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-// ============ KLIK NOTIFIKASI (TETAP AMAN) ============
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
