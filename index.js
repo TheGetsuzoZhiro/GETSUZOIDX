@@ -13,7 +13,6 @@ const sseClients = [];
 
 moment.tz.setDefault("Asia/Jakarta");
 
-// ============ VAPID ============
 const vapidPublicKey =
   "BCGyIOUseFBON2YXTAk-rcvncZ65jkbKqb2ShjOuvZhP08HLvaJJis5Bsx8ybuVVcZbXZow5GRrl9ykSiV0Y3B0";
 const vapidPrivateKey = "7PHNRENDWCkDl7JwoVYayqJDBkvSbzwZ2vxz1Cx7bSI";
@@ -23,7 +22,6 @@ webpush.setVapidDetails(
   vapidPrivateKey,
 );
 
-// ============ KONEKSI MONGODB ============
 const MONGO_URI =
   "mongodb+srv://zhironihboss_db_user:tzPCYPLUNw0fWrTz@cluster0.bfs8tiy.mongodb.net/getsuzo_db?retryWrites=true&w=majority&appName=Cluster0";
 
@@ -34,7 +32,6 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
-// ============ MONGOOSE SCHEMAS ============
 const SignalSchema = new mongoose.Schema(
   {
     stockCode: String,
@@ -96,44 +93,6 @@ const SubscriptionModel = mongoose.model(
   "push_subscriptions",
 );
 
-// ============ TOKEN STOCKBIT ============
-const TokenSchema = new mongoose.Schema(
-  {
-    _id: { type: String, default: "stockbit_token" },
-    token: { type: String, required: true },
-    updatedAt: { type: Date, default: Date.now },
-  },
-  { versionKey: false },
-);
-const TokenModel = mongoose.model(
-  "StockbitToken",
-  TokenSchema,
-  "stockbit_tokens",
-);
-
-let stockbitToken = null;
-
-async function fetchTokenFromMongo() {
-  try {
-    const doc = await TokenModel.findById("stockbit_token");
-    if (doc && doc.token) {
-      let token = doc.token.trim();
-      if (!token.startsWith("Bearer ")) {
-        token = `Bearer ${token}`;
-      }
-      stockbitToken = token;
-      console.log("✅ Token Stockbit dimuat dari MongoDB (Frontend)");
-      return true;
-    }
-    console.warn("⚠️ Token tidak ditemukan di MongoDB (Frontend)");
-    return false;
-  } catch (err) {
-    console.error("❌ Gagal ambil token:", err.message);
-    return false;
-  }
-}
-
-// ============ MARKET HELPERS ============
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
 
@@ -209,7 +168,6 @@ async function isMarketOpen() {
   }
 }
 
-// ============ EXPRESS APP ============
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -225,7 +183,6 @@ app.get("/api/sse/prices", (req, res) => {
   const client = { id: Date.now(), res };
   sseClients.push(client);
 
-  // Kirim harga terakhir yang tersimpan
   if (lastPrices.size > 0) {
     const updates = Array.from(lastPrices.values());
     const payload = JSON.stringify({ type: "price", updates });
@@ -246,14 +203,12 @@ app.post("/api/sse/price-update", (req, res) => {
     return res.status(400).json({ error: "Invalid updates" });
   }
 
-  // Simpan ke cache
   updates.forEach((u) => {
     if (u.symbol && u.price != null) {
       lastPrices.set(u.symbol, u);
     }
   });
 
-  // Kirim ke semua klien SSE
   const payload = JSON.stringify({ type: "price", updates });
   sseClients.forEach((client) => {
     try {
@@ -473,9 +428,6 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
 
-// =========================================================================
-// 🚀 WATCHDOG – Deteksi sinyal baru & perubahan status ke TP (tanpa SL)
-// =========================================================================
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
 const serverLastStatus = new Map();
@@ -592,7 +544,6 @@ async function checkDatabaseForNewSignals() {
         );
     }
 
-    // ---- HANYA TP YANG DIKIRIM (SL DIHAPUS) ----
     const tpSignals = allSignals.filter((s) => s.status === "TP");
     for (const s of tpSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
@@ -607,8 +558,6 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
-    // SL TIDAK DIKIRIM – blok SL dihapus
-
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
     allSignals.forEach((s) => {
@@ -621,10 +570,6 @@ async function checkDatabaseForNewSignals() {
     console.error("❌ [WATCHDOG] Gagal polling database:", err.message);
   }
 }
-
-// ============ START WATCHDOG & TOKEN REFRESH ============
-fetchTokenFromMongo();
-setInterval(fetchTokenFromMongo, 60 * 60 * 1000);
 
 checkDatabaseForNewSignals();
 setInterval(checkDatabaseForNewSignals, 30000);
