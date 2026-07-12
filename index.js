@@ -7,7 +7,7 @@ const webpush = require("web-push");
 const mongoose = require("mongoose");
 
 const sentPushesCache = new Map();
-const infoCache = new Map(); // PERMANEN: symbol => { symbol, longName, logoUrl }
+const infoCache = new Map(); 
 const lastPrices = new Map();
 const sseClients = [];
 
@@ -32,7 +32,7 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
-// ============ SCHEMAS ============
+
 const SignalSchema = new mongoose.Schema(
   {
     stockCode: String,
@@ -78,6 +78,11 @@ const SignalSchema = new mongoose.Schema(
   { versionKey: false },
 );
 
+// Index untuk percepatan query
+SignalSchema.index({ status: 1 });
+SignalSchema.index({ signalDate: -1 });
+SignalSchema.index({ stockCode: 1, signalDate: -1 });
+
 const SignalModel = mongoose.model("Signal", SignalSchema, "signals");
 
 const SubscriptionSchema = new mongoose.Schema(
@@ -94,7 +99,7 @@ const SubscriptionModel = mongoose.model(
   "push_subscriptions",
 );
 
-// ============ TOKEN STOCKBIT ============
+
 const TokenSchema = new mongoose.Schema(
   {
     _id: { type: String, default: "stockbit_token" },
@@ -109,7 +114,7 @@ const TokenModel = mongoose.model(
   "stockbit_tokens",
 );
 
-// ============ FUNGSI AMBIL TOKEN ============
+
 async function getStockbitToken() {
   try {
     const doc = await TokenModel.findById("stockbit_token");
@@ -127,7 +132,7 @@ async function getStockbitToken() {
   }
 }
 
-// ============ FUNGSI LIBUR & MARKET ============
+
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
 
@@ -197,20 +202,20 @@ async function isMarketOpen() {
       (hour > 9 || (hour === 9 && minute >= 0)) &&
       (hour < 12 || (hour === 12 && minute <= 0));
     const s2 =
-      (hour > 13 || (hour === 13 && minute >= 30)) &&
+      (hour > 13 || (hour === 13 && hour >= 30)) &&
       (hour < 15 || (hour === 15 && minute <= 49));
     return s1 || s2;
   }
 }
 
-// ============ EXPRESS APP ============
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ============ SSE PRICE ============
+
 app.get("/api/sse/prices", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -259,19 +264,16 @@ app.post("/api/sse/price-update", (req, res) => {
   res.json({ success: true, clients: sseClients.length });
 });
 
-// ============ STOCK INFO (STOCKBIT, CACHE PERMANEN) ============
+
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
 
-  // 1. Cek cache permanen – jika ada, langsung return (tidak pernah kadaluarsa)
   if (infoCache.has(symbol)) {
     return res.json(infoCache.get(symbol));
   }
 
-  // 2. Ambil token dari MongoDB
   const token = await getStockbitToken();
   if (!token) {
-    // Jika token tidak ada, return nama default (symbol) agar tidak error
     const fallback = {
       symbol,
       longName: symbol,
@@ -281,7 +283,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
     return res.json(fallback);
   }
 
-  // 3. Fetch dari Stockbit
   try {
     const url = `https://exodus.stockbit.com/emitten/${symbol}/info`;
     const response = await axios.get(url, {
@@ -308,7 +309,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       logoUrl: `https://assets.stockbit.com/logos/companies/${symbol}.png`,
     };
 
-    // Simpan ke cache permanen
     infoCache.set(symbol, result);
     res.json(result);
   } catch (err) {
@@ -316,7 +316,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       `[STOCKBIT] Gagal ambil info ${symbol}:`,
       err.response?.status || err.message,
     );
-    // Jika gagal, tetap simpan dengan nama default agar tidak fetch ulang terus
     const fallback = {
       symbol,
       longName: symbol,
@@ -327,19 +326,44 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 });
 
-// ============ SIGNALS ============
-app.get("/api/signals", async (req, res) => {
+
+// ===================== ENDPOINT KHUSUS RUNNING =====================
+app.get("/api/running", async (req, res) => {
   try {
-    const allSignals = await SignalModel.find({});
-    const running = allSignals.filter((s) => s.status === "RUNNING");
-    const closed = allSignals.filter((s) => s.status !== "RUNNING");
-    res.json({ running, closed });
+    const running = await SignalModel.find({
+      status: { $in: ["RUNNING", "TRAILING"] }
+    })
+      .sort({ signalDate: -1 })
+      .lean();
+    res.json({ running });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// ============ MARKET STATUS ============
+// ===================== ENDPOINT LAPORAN BERDASARKAN TANGGAL =====================
+app.get("/api/reports", async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    if (!start || !end) {
+      return res.status(400).json({ error: "Parameter start dan end wajib (YYYY-MM-DD)" });
+    }
+
+    const signals = await SignalModel.find({
+      $or: [
+        { signalDate: { $gte: start, $lte: end + " 23:59:59" } },
+        { closeDate: { $gte: start, $lte: end + " 23:59:59" } }
+      ]
+    }).lean();
+
+    res.json({ signals });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// ===================== ENDPOINT STATUS PASAR =====================
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
   const now = moment().tz("Asia/Jakarta");
@@ -392,7 +416,7 @@ app.get("/api/market-status", async (req, res) => {
   });
 });
 
-// ============ SUBSCRIPTION PUSH ============
+
 app.post("/api/save-subscription", async (req, res) => {
   const subscription = req.body;
   if (!subscription || !subscription.endpoint) {
@@ -449,7 +473,7 @@ app.post("/api/send-push", async (req, res) => {
   }
 });
 
-// ============ PUBLIC IP ============
+
 async function getPublicIP() {
   const sources = [
     "https://api.ipify.org?format=text",
@@ -479,7 +503,7 @@ app.get("/", (req, res) => {
   res.send("Server Frontend Read-Only Aktif!");
 });
 
-// ============ START SERVER ============
+
 app.listen(PORT, "0.0.0.0", async () => {
   const ip = await getPublicIP();
   console.log(`\n🌐 Frontend API server available at:`);
@@ -488,7 +512,8 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
 
-// ============ WATCHDOG ============
+
+// ===================== BACKEND WATCHDOG (TETAP) =====================
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
 const serverLastStatus = new Map();
@@ -537,9 +562,20 @@ async function triggerInternalPush(title, body) {
 
 async function checkDatabaseForNewSignals() {
   try {
-    const allSignals = await SignalModel.find({});
-    const running = allSignals.filter((s) => s.status === "RUNNING");
-    const closed = allSignals.filter((s) => s.status !== "RUNNING");
+    const running = await SignalModel.find(
+      { status: "RUNNING" },
+      { stockCode: 1, signalDate: 1, status: 1, signalType: 1, returnPercent: 1 }
+    ).lean();
+
+    const closed = await SignalModel.find(
+      { status: { $ne: "RUNNING" } },
+      { stockCode: 1, signalDate: 1, status: 1, returnPercent: 1 }
+    ).lean();
+
+    const tpSignals = await SignalModel.find(
+      { status: "TP" },
+      { stockCode: 1, signalDate: 1, status: 1, returnPercent: 1 }
+    ).lean();
 
     const currentRunningIds = running
       .map((s) => `${s.stockCode}-${s.signalDate}`)
@@ -553,12 +589,13 @@ async function checkDatabaseForNewSignals() {
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
       serverLastClosedIds = currentClosedIds;
-      allSignals.forEach((s) => {
+      const allData = [...running, ...closed];
+      allData.forEach((s) => {
         const key = `${s.stockCode}-${s.signalDate}`;
         serverLastStatus.set(key, s.status);
       });
       console.log(
-        "🔄 [WATCHDOG] Server siap. Memantau sinyal saham di background 24/7...",
+        "🔄 [WATCHDOG] Server siap. Memantau sinyal saham di background 24/7 (Efisien)..."
       );
       return;
     }
@@ -566,12 +603,12 @@ async function checkDatabaseForNewSignals() {
     const prevRunningArr = serverLastRunningIds.split(",");
     const currentRunningArr = currentRunningIds.split(",");
     const newRunning = currentRunningArr.filter(
-      (id) => !prevRunningArr.includes(id),
+      (id) => !prevRunningArr.includes(id)
     );
 
     if (newRunning.length > 0) {
       const newSignals = running.filter((s) =>
-        newRunning.includes(`${s.stockCode}-${s.signalDate}`),
+        newRunning.includes(`${s.stockCode}-${s.signalDate}`)
       );
       const groups = { session1: [], session2: [], bsjp: [], other: [] };
       newSignals.forEach((s) => {
@@ -586,26 +623,25 @@ async function checkDatabaseForNewSignals() {
       if (groups.session1.length)
         triggerInternalPush(
           "NEW SIGNALS SESI 1",
-          `${groups.session1.length} sinyal saham baru untuk SESI 1.`,
+          `${groups.session1.length} sinyal saham baru untuk SESI 1.`
         );
       if (groups.session2.length)
         triggerInternalPush(
           "NEW SIGNALS SESI 2",
-          `${groups.session2.length} sinyal saham baru untuk SESI 2.`,
+          `${groups.session2.length} sinyal saham baru untuk SESI 2.`
         );
       if (groups.bsjp.length)
         triggerInternalPush(
           "NEW SIGNALS BSJP",
-          `${groups.bsjp.length} sinyal saham baru untuk BSJP.`,
+          `${groups.bsjp.length} sinyal saham baru untuk BSJP.`
         );
       if (groups.other.length)
         triggerInternalPush(
           "NEW SIGNALS LAINNYA",
-          `${groups.other.length} sinyal saham baru.`,
+          `${groups.other.length} sinyal saham baru.`
         );
     }
 
-    const tpSignals = allSignals.filter((s) => s.status === "TP");
     for (const s of tpSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
       const prevStatus = serverLastStatus.get(key);
@@ -621,12 +657,12 @@ async function checkDatabaseForNewSignals() {
 
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
-    allSignals.forEach((s) => {
+    const allCurrent = [...running, ...closed];
+    allCurrent.forEach((s) => {
       const key = `${s.stockCode}-${s.signalDate}`;
-      if (!serverLastStatus.has(key)) {
-        serverLastStatus.set(key, s.status);
-      }
+      serverLastStatus.set(key, s.status);
     });
+
   } catch (err) {
     console.error("❌ [WATCHDOG] Gagal polling database:", err.message);
   }
