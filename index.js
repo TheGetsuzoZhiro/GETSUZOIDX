@@ -7,7 +7,7 @@ const webpush = require("web-push");
 const mongoose = require("mongoose");
 
 const sentPushesCache = new Map();
-const infoCache = new Map();
+const infoCache = new Map(); // PERMANEN: symbol => { symbol, longName, logoUrl }
 const lastPrices = new Map();
 const sseClients = [];
 
@@ -32,6 +32,7 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
+// ============ SCHEMAS ============
 const SignalSchema = new mongoose.Schema(
   {
     stockCode: String,
@@ -93,6 +94,40 @@ const SubscriptionModel = mongoose.model(
   "push_subscriptions",
 );
 
+// ============ TOKEN STOCKBIT ============
+const TokenSchema = new mongoose.Schema(
+  {
+    _id: { type: String, default: "stockbit_token" },
+    token: { type: String, required: true },
+    updatedAt: { type: Date, default: Date.now },
+  },
+  { versionKey: false },
+);
+const TokenModel = mongoose.model(
+  "StockbitToken",
+  TokenSchema,
+  "stockbit_tokens",
+);
+
+// ============ FUNGSI AMBIL TOKEN ============
+async function getStockbitToken() {
+  try {
+    const doc = await TokenModel.findById("stockbit_token");
+    if (doc && doc.token) {
+      let token = doc.token.trim();
+      if (!token.startsWith("Bearer ")) {
+        token = `Bearer ${token}`;
+      }
+      return token;
+    }
+    return null;
+  } catch (err) {
+    console.error("❌ Gagal ambil token Stockbit:", err.message);
+    return null;
+  }
+}
+
+// ============ FUNGSI LIBUR & MARKET ============
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
 
@@ -168,12 +203,14 @@ async function isMarketOpen() {
   }
 }
 
+// ============ EXPRESS APP ============
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// ============ SSE PRICE ============
 app.get("/api/sse/prices", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -222,33 +259,47 @@ app.post("/api/sse/price-update", (req, res) => {
   res.json({ success: true, clients: sseClients.length });
 });
 
+// ============ STOCK INFO (STOCKBIT, CACHE PERMANEN) ============
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
+
+  // 1. Cek cache permanen – jika ada, langsung return (tidak pernah kadaluarsa)
   if (infoCache.has(symbol)) {
-    const cached = infoCache.get(symbol);
-    if (Date.now() - cached.timestamp < 3600000) {
-      return res.json(cached.data);
-    }
+    return res.json(infoCache.get(symbol));
   }
 
+  // 2. Ambil token dari MongoDB
+  const token = await getStockbitToken();
+  if (!token) {
+    // Jika token tidak ada, return nama default (symbol) agar tidak error
+    const fallback = {
+      symbol,
+      longName: symbol,
+      logoUrl: `https://assets.stockbit.com/logos/companies/${symbol}.png`,
+    };
+    infoCache.set(symbol, fallback);
+    return res.json(fallback);
+  }
+
+  // 3. Fetch dari Stockbit
   try {
-    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${symbol}.JK`;
-    const response = await axios.get(searchUrl, {
-      headers: { "User-Agent": "Mozilla/5.0" },
+    const url = `https://exodus.stockbit.com/emitten/${symbol}/info`;
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: token,
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
+        Origin: "https://pro.stockbit.com",
+        Referer: "https://pro.stockbit.com/",
+      },
       timeout: 10000,
     });
 
+    const data = response.data?.data;
     let longName = symbol;
-    const quotes = response.data?.quotes;
-    if (quotes && quotes.length > 0) {
-      const match = quotes.find(
-        (q) => q.symbol && q.symbol.toUpperCase() === `${symbol}.JK`,
-      );
-      if (match) {
-        longName = match.longname || match.shortname || symbol;
-      } else {
-        longName = quotes[0].longname || quotes[0].shortname || symbol;
-      }
+    if (data && data.name) {
+      longName = data.name;
     }
 
     const result = {
@@ -257,21 +308,26 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       logoUrl: `https://assets.stockbit.com/logos/companies/${symbol}.png`,
     };
 
-    infoCache.set(symbol, { data: result, timestamp: Date.now() });
+    // Simpan ke cache permanen
+    infoCache.set(symbol, result);
     res.json(result);
-  } catch (error) {
+  } catch (err) {
     console.warn(
-      `Gagal fetch info ${symbol} dari Yahoo Search:`,
-      error.message,
+      `[STOCKBIT] Gagal ambil info ${symbol}:`,
+      err.response?.status || err.message,
     );
-    res.json({
+    // Jika gagal, tetap simpan dengan nama default agar tidak fetch ulang terus
+    const fallback = {
       symbol,
       longName: symbol,
       logoUrl: `https://assets.stockbit.com/logos/companies/${symbol}.png`,
-    });
+    };
+    infoCache.set(symbol, fallback);
+    res.json(fallback);
   }
 });
 
+// ============ SIGNALS ============
 app.get("/api/signals", async (req, res) => {
   try {
     const allSignals = await SignalModel.find({});
@@ -283,6 +339,7 @@ app.get("/api/signals", async (req, res) => {
   }
 });
 
+// ============ MARKET STATUS ============
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
   const now = moment().tz("Asia/Jakarta");
@@ -335,6 +392,7 @@ app.get("/api/market-status", async (req, res) => {
   });
 });
 
+// ============ SUBSCRIPTION PUSH ============
 app.post("/api/save-subscription", async (req, res) => {
   const subscription = req.body;
   if (!subscription || !subscription.endpoint) {
@@ -391,6 +449,7 @@ app.post("/api/send-push", async (req, res) => {
   }
 });
 
+// ============ PUBLIC IP ============
 async function getPublicIP() {
   const sources = [
     "https://api.ipify.org?format=text",
@@ -420,6 +479,7 @@ app.get("/", (req, res) => {
   res.send("Server Frontend Read-Only Aktif!");
 });
 
+// ============ START SERVER ============
 app.listen(PORT, "0.0.0.0", async () => {
   const ip = await getPublicIP();
   console.log(`\n🌐 Frontend API server available at:`);
@@ -428,6 +488,7 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
 
+// ============ WATCHDOG ============
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
 const serverLastStatus = new Map();
