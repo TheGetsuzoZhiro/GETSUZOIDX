@@ -161,7 +161,7 @@
         color: #ffffff;
         padding: calc(32px + env(safe-area-inset-top, 0px)) 16px 80px 16px;
         box-sizing: border-box;
-        display: block;
+        display: none;
       }
 
       .lock-card {
@@ -709,11 +709,25 @@
         }
       }
     </style>
+
+    <script>
+      (function () {
+        "use strict";
+        var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+        var style = document.createElement('style');
+        if (isStandalone) {
+          style.innerHTML = '#pwa-lock-screen { display: none !important; } .app-wrapper { display: flex !important; }';
+        } else {
+          style.innerHTML = '#pwa-lock-screen { display: block !important; } .app-wrapper { display: none !important; }';
+        }
+        document.head.appendChild(style);
+      })();
+    </script>
   </head>
   <body>
     <div class="particles-container" id="particles"></div>
 
-    <div id="pwa-lock-screen" class="pwa-lock-container" style="display: flex">
+    <div id="pwa-lock-screen" class="pwa-lock-container" style="display: none;">
       <div class="lock-card">
         <div class="corner-tag top-l"></div>
         <div class="corner-tag top-r"></div>
@@ -1444,27 +1458,6 @@
         const installBtn = document.getElementById("btn-install-android");
 
         function enforceSecurityLock() {
-          const isStandalone = window.matchMedia(
-            "(display-mode: standalone)",
-          ).matches;
-          const isIOSStandalone = window.navigator.standalone === true;
-
-          const lockScreen = document.getElementById("pwa-lock-screen");
-          const appWrapper = document.querySelector(".app-wrapper");
-
-          if (isStandalone || isIOSStandalone) {
-            if (lockScreen)
-              lockScreen.style.setProperty("display", "none", "important");
-            if (appWrapper)
-              appWrapper.style.setProperty("display", "flex", "important");
-            return;
-          } else {
-            if (lockScreen)
-              lockScreen.style.setProperty("display", "block", "important");
-            if (appWrapper)
-              appWrapper.style.setProperty("display", "none", "important");
-          }
-
           setInterval(() => {
             const ticker = document.getElementById("live-latency-ticker");
             if (ticker) {
