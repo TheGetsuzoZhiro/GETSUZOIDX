@@ -44,7 +44,6 @@ body {
   min-height: 100vh;
 }
 
-/* Sidebar */
 .sidebar {
   width: 300px;
   background: linear-gradient(
@@ -167,7 +166,6 @@ body {
   text-transform: uppercase;
 }
 
-/* Navigation */
 .navigation {
   flex: 1;
   padding: 2rem 1.5rem;
@@ -244,7 +242,6 @@ body {
   flex: 1;
 }
 
-/* Sidebar Bottom */
 .sidebar-bottom {
   padding: 1.5rem;
   border-top: 1px solid var(--glass-border);
@@ -353,7 +350,6 @@ body {
   opacity: 0.7;
 }
 
-/* Main Content */
 .content-area {
   flex: 1;
   margin-left: 300px;
@@ -509,7 +505,6 @@ body {
   min-height: calc(100vh - 80px);
 }
 
-/* Pull to Refresh Indicator */
 .pull-indicator {
   position: absolute;
   top: -50px;
@@ -540,7 +535,6 @@ body {
   }
 }
 
-/* Hero Section */
 .hero-banner {
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
@@ -609,23 +603,22 @@ body {
   font-size: 1.05rem;
 }
 
-/* FIXED FEATURE GRID FOR MOBILE: Vertical Stack */
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   margin-bottom: 3rem;
 }
 
 @media (min-width: 768px) {
   .feature-grid {
-    grid-template-columns: repeat(4, 1fr); /* 4 columns on desktop */
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 .feature-item {
   display: flex;
-  flex-direction: column; /* Icon on top, text below */
+  flex-direction: column;
   align-items: flex-start;
   gap: 0.75rem;
   padding: 1.25rem;
@@ -710,7 +703,6 @@ body {
   background: var(--glass-border);
 }
 
-/* Pro Widgets Grid */
 .pro-widgets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -759,7 +751,6 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* Sentiment Widget */
 .sentiment-bar-container {
   display: flex;
   flex-direction: column;
@@ -807,7 +798,6 @@ body {
   margin-top: 0.5rem;
 }
 
-/* Movers Widget */
 .movers-list {
   display: flex;
   flex-direction: column;
@@ -855,7 +845,6 @@ body {
   color: var(--danger);
 }
 
-/* Charts Grid */
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -952,7 +941,6 @@ body {
   color: var(--text-primary);
 }
 
-/* Views */
 .view {
   display: none;
   animation: fadeIn 0.4s ease;
@@ -973,7 +961,6 @@ body {
   }
 }
 
-/* Report Cards */
 .report-card {
   background: var(--glass-bg);
   backdrop-filter: blur(15px);
@@ -1049,7 +1036,6 @@ body {
   border: 1px solid var(--glass-border);
 }
 
-/* Signals Table */
 .signals-table {
   width: 100%;
   border-collapse: separate;
@@ -1134,7 +1120,6 @@ body {
   border-radius: 2px;
 }
 
-/* Loading State */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -1180,7 +1165,6 @@ body {
   animation-duration: 2s;
 }
 
-/* Responsive */
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);
@@ -1231,7 +1215,6 @@ body {
     padding: 2rem;
   }
 
-  /* Fix Market Status Text on Mobile */
   .market-text {
     display: none;
   }
@@ -1286,19 +1269,16 @@ body {
   }
 }
 
-/* Hapus animasi rotate pada sidebar-glow */
 .sidebar-glow {
-  display: none; /* efek berputar dihilangkan */
+  display: none;
 }
 
-/* Sidebar lebih kecil di mobile */
 .sidebar {
-  width: 260px; /* ukuran lebih kecil */
+  width: 260px;
   transform: translateX(-100%);
   transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
 }
 
-/* Di desktop tetap 280px (opsional) */
 @media (min-width: 1024px) {
   .sidebar {
     width: 280px;
@@ -1306,7 +1286,6 @@ body {
   }
 }
 
-/* Perbaikan ukuran hero banner di mobile */
 .hero-banner {
   padding: 1.5rem;
 }
@@ -1342,7 +1321,6 @@ body {
   font-size: 0.7rem;
 }
 
-/* Loading state - spinner */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -1388,7 +1366,6 @@ body {
   }
 }
 
-/* Perbaikan tabel sinyal di mobile */
 @media (max-width: 768px) {
   .signals-table {
     font-size: 0.7rem;
@@ -1422,11 +1399,6 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* =============================================
-   SIGNAL LIST — VISUAL OVERHAUL
-   ============================================= */
-
-/* Summary Bar */
 .sig-summary-bar {
   display: flex;
   align-items: center;
@@ -1475,7 +1447,6 @@ body {
   flex-shrink: 0;
 }
 
-/* Signal List */
 .sig-list-header {
   display: grid;
   grid-template-columns: 40px 1fr 120px 110px 90px 100px;
@@ -1561,7 +1532,6 @@ body {
   color: var(--danger);
 }
 
-/* Signal badges */
 .sig-badge {
   display: inline-block;
   padding: 0.3rem 0.75rem;
@@ -1588,9 +1558,6 @@ body {
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
-/* =============================================
-   SIGNAL DETAIL VIEW
-   ============================================= */
 .sig-detail-wrapper {
   display: flex;
   flex-direction: column;
@@ -1628,7 +1595,6 @@ body {
   border-color: var(--glass-highlight);
 }
 
-/* Hero */
 .sig-detail-hero {
   display: flex;
   justify-content: space-between;
@@ -1696,7 +1662,6 @@ body {
   margin-top: 0.25rem;
 }
 
-/* Section Cards */
 .sig-section-card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -1712,7 +1677,6 @@ body {
   margin-bottom: 1.25rem;
 }
 
-/* Price Levels */
 .sig-price-levels {
   display: flex;
   flex-direction: column;
@@ -1779,7 +1743,6 @@ body {
   background: var(--danger);
 }
 
-/* R:R row */
 .sig-rr-row {
   display: flex;
   gap: 1rem;
@@ -1813,7 +1776,6 @@ body {
   margin-top: 0.15rem;
 }
 
-/* Progress bar */
 .sig-progress-wrap {
   margin-top: 0.5rem;
 }
@@ -1857,7 +1819,6 @@ body {
   font-family: "JetBrains Mono", monospace;
 }
 
-/* Charts row */
 .sig-charts-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1903,7 +1864,6 @@ body {
   padding: 2rem;
 }
 
-/* Technical Grid */
 .sig-tech-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1958,7 +1918,6 @@ body {
   color: var(--text-secondary);
 }
 
-/* Bandarmologi */
 .sig-bandar-row {
   display: flex;
   gap: 1.5rem;
@@ -2029,7 +1988,6 @@ body {
   color: var(--danger);
 }
 
-/* Pattern */
 .sig-pattern-grid {
   display: flex;
   flex-direction: column;
@@ -2059,7 +2017,6 @@ body {
   color: var(--text-primary);
 }
 
-/* Analyst Opinion */
 .sig-opinion-text {
   font-size: 0.9rem;
   line-height: 1.7;
@@ -2070,7 +2027,6 @@ body {
   border-left: 3px solid rgba(255, 255, 255, 0.1);
 }
 
-/* News */
 .sig-news-list {
   display: flex;
   flex-direction: column;
@@ -2093,7 +2049,6 @@ body {
   margin-top: 0.45rem;
 }
 
-/* Powered */
 .sig-powered {
   text-align: center;
   font-size: 0.7rem;
@@ -2102,9 +2057,6 @@ body {
   opacity: 0.5;
 }
 
-/* =============================================
-   RESPONSIVE — SIGNAL VIEWS
-   ============================================= */
 @media (max-width: 768px) {
   .sig-list-header,
   .sig-list-row {
@@ -2149,9 +2101,6 @@ body {
   }
 }
 
-/* ===== SIGNAL ACTIVE - DAFTAR & DETAIL ===== */
-
-/* ----- DAFTAR SINYAL ----- */
 .sig-list-header {
   display: grid;
   grid-template-columns: 50px 1fr 120px;
@@ -2190,7 +2139,6 @@ body {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Ranking - Peringkat 1, 2, 3 dengan warna berbeda */
 .sig-list-row.rank-1 {
   border-color: rgba(245, 158, 11, 0.8) !important;
   background: linear-gradient(
@@ -2218,7 +2166,6 @@ body {
   );
 }
 
-/* Medali */
 .rank-medal {
   display: inline-flex;
   align-items: center;
@@ -2294,7 +2241,6 @@ body {
   font-weight: 600;
 }
 
-/* ===== TAG GROUP ===== */
 .emit-tag-group {
   display: flex;
   flex-wrap: wrap;
@@ -2310,7 +2256,6 @@ body {
   vertical-align: middle;
 }
 
-/* ===== TAG INDIVIDUAL ===== */
 .emit-tag {
   font-size: 0.65rem;
   color: var(--text-secondary);
@@ -2330,7 +2275,6 @@ body {
   opacity: 1;
 }
 
-/* Pemisah titik */
 .emit-tag:not(:last-child)::after {
   content: "·";
   margin-left: 0.4rem;
@@ -2342,7 +2286,6 @@ body {
   margin-left: 0.2rem;
 }
 
-/* Reset semua tag lama (timpa) */
 .tag,
 .emit-tag,
 .tag.breakout,
@@ -2397,7 +2340,6 @@ body {
   padding: 0;
 }
 
-/* ===== DETAIL SINYAL ===== */
 .pro-detail-container {
   display: flex;
   flex-direction: column;
@@ -2405,7 +2347,6 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
-/* Tombol Kembali */
 .sig-back-btn {
   display: inline-flex;
   align-items: center;
@@ -2433,7 +2374,6 @@ body {
   height: 18px;
 }
 
-/* Header Emiten */
 .emit-header {
   display: flex;
   align-items: center;
@@ -2476,7 +2416,6 @@ body {
   font-family: "JetBrains Mono", monospace;
 }
 
-/* Price Ladder (Entry, TP, SL) */
 .price-ladder {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2538,7 +2477,6 @@ body {
   color: var(--text-secondary);
 }
 
-/* Grid 2 kolom */
 .pro-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2571,7 +2509,6 @@ body {
   stroke-width: 2;
 }
 
-/* Broker Flow */
 .broker-flow-container {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 10px;
@@ -2682,7 +2619,6 @@ body {
   background: rgba(245, 158, 11, 0.05);
 }
 
-/* Foreign Flow */
 .foreign-flow-container {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 10px;
@@ -2757,7 +2693,6 @@ body {
   text-align: right;
 }
 
-/* Pattern Visual */
 .pattern-visual {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 10px;
@@ -2771,7 +2706,6 @@ body {
   max-height: 80px;
 }
 
-/* Teknikal */
 .pro-indicator-list {
   display: flex;
   flex-direction: column;
@@ -2829,7 +2763,6 @@ body {
   color: var(--text-primary);
 }
 
-/* Analyst Opinion & News */
 .pro-text-box {
   background: rgba(0, 0, 0, 0.15);
   border-left: 3px solid rgba(255, 255, 255, 0.08);
@@ -2862,9 +2795,7 @@ body {
   opacity: 0.3;
 }
 
-/* ===== RESPONSIVE - PONSEL ===== */
 @media (max-width: 768px) {
-  /* Ranking - ukuran lebih kecil */
   .rank-medal {
     width: 26px;
     height: 26px;
@@ -2875,7 +2806,6 @@ body {
     height: 22px;
   }
 
-  /* Daftar sinyal */
   .sig-list-header {
     grid-template-columns: 40px 1fr 90px;
     font-size: 0.55rem;
@@ -2902,7 +2832,6 @@ body {
     padding: 0.05rem 0.3rem;
   }
 
-  /* Detail - Header */
   .emit-ticker {
     font-size: 1.5rem;
   }
@@ -2919,7 +2848,6 @@ body {
     justify-content: flex-start;
   }
 
-  /* Price Ladder - tetap 3 kolom, lebih kecil */
   .price-ladder {
     grid-template-columns: repeat(3, 1fr) !important;
     padding: 0.5rem;
@@ -2938,7 +2866,6 @@ body {
     font-size: 0.6rem;
   }
 
-  /* Grid 2 kolom jadi 1 */
   .pro-grid-2 {
     grid-template-columns: 1fr;
     gap: 0.75rem;
@@ -2948,7 +2875,6 @@ body {
     gap: 0.5rem;
   }
 
-  /* Broker Flow - tetap 3 kolom (Buy | Signal | Sell) dengan ukuran kecil */
   .broker-flow-grid {
     grid-template-columns: 1fr auto 1fr !important;
     gap: 0.25rem;
@@ -2974,7 +2900,6 @@ body {
     font-size: 0.5rem;
   }
 
-  /* Foreign Flow */
   .foreign-row {
     flex-wrap: wrap;
     gap: 0.3rem;
@@ -2992,7 +2917,6 @@ body {
     min-width: 40px;
   }
 
-  /* Teknikal */
   .pro-ind-label {
     width: 50px;
     font-size: 0.55rem;
@@ -3005,7 +2929,6 @@ body {
     gap: 0.4rem;
   }
 
-  /* Text & News */
   .pro-text-box {
     font-size: 0.7rem;
     padding: 0.5rem;
@@ -3014,7 +2937,6 @@ body {
     font-size: 0.7rem;
   }
 
-  /* Tombol kembali */
   .sig-back-btn {
     font-size: 0.7rem;
     padding: 0.3rem 0.7rem;
@@ -3057,7 +2979,6 @@ body {
   border-radius: 4px !important;
 }
 
-/* ===== CONFIDENCE SCORE BADGE (di list view) ===== */
 .conf-score-badge {
   display: inline-block;
   font-size: 0.6rem;
@@ -3073,7 +2994,6 @@ body {
   opacity: 0.8;
 }
 
-/* Opsional: warna berdasarkan skor (sesuai tema) */
 .conf-score-badge[data-score="high"] {
   color: #10b981;
   border-color: rgba(16, 185, 129, 0.2);
@@ -3090,10 +3010,9 @@ body {
   border-color: rgba(239, 68, 68, 0.2);
 }
 
-/* === LIST VIEW: nama saham + score sejajar, tanggal di bawah === */
 .sig-list-name {
   display: flex;
-  flex-direction: column; /* baris vertikal */
+  flex-direction: column;
   flex: 1;
   min-width: 0;
   gap: 0.1rem;
@@ -3119,7 +3038,6 @@ body {
   white-space: nowrap;
 }
 
-/* Badge confidence */
 .conf-score-badge {
   display: inline-block;
   font-size: 0.6rem;
@@ -3135,7 +3053,6 @@ body {
   white-space: nowrap;
 }
 
-/* === LIST VIEW: FIX MOBILE === */
 .sig-list {
   display: flex;
   flex-direction: column;
@@ -3172,19 +3089,18 @@ body {
 
 .sig-list-name {
   flex: 1;
-  min-width: 0; /* penting untuk flex */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
 }
 
 .sig-list-signal {
-  flex-shrink: 0; /* JANGAN DIKECILKAN */
+  flex-shrink: 0;
   text-align: right;
   margin-left: 0.3rem;
 }
 
-/* Responsive: di mobile, kolom signal tetap muncul dengan ukuran kecil */
 @media (max-width: 480px) {
   .sig-list-row {
     padding: 0.4rem 0.5rem;
@@ -3215,19 +3131,17 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Perbesar row list */
 .sig-list-row {
   padding: 0.9rem 0.75rem;
-  margin-bottom: 0.2rem; /* sedikit jarak antar row */
+  margin-bottom: 0.2rem;
 }
 
-/* Di mobile, tetap perbesar */
 @media (max-width: 480px) {
   .sig-list-row {
-    padding: 0.7rem 0.5rem; /* lebih besar dari sebelumnya */
+    padding: 0.7rem 0.5rem;
   }
   .sig-list-name strong {
-    font-size: 0.95rem; /* perbesar nama saham */
+    font-size: 0.95rem;
   }
   .sig-list-no {
     width: 2rem;
@@ -3283,7 +3197,6 @@ body {
   padding: 2px;
 }
 
-/* ===== LIST VIEW ===== */
 .sig-list-row {
   display: flex;
   align-items: stretch;
@@ -3397,7 +3310,6 @@ body {
   margin-top: 0.05rem;
 }
 
-/* Responsive mobile */
 @media (max-width: 480px) {
   .sig-list-row {
     padding: 0.5rem 0.5rem;
@@ -3432,7 +3344,7 @@ body {
     font-size: 0.45rem;
   }
 }
-/* ===== LIST ROW ===== */
+
 .sig-list-row {
   display: flex;
   align-items: center;
@@ -3445,7 +3357,7 @@ body {
   transition:
     background 0.2s,
     border-color 0.2s;
-  min-height: 72px; /* FIXED height agar semua row sama */
+  min-height: 72px;
   height: auto;
   box-sizing: border-box;
 }
@@ -3455,7 +3367,6 @@ body {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-/* ===== LOGO ===== */
 .sig-list-logo {
   width: 40px;
   height: 40px;
@@ -3501,7 +3412,6 @@ body {
   border: none;
 }
 
-/* ===== INFO SAHAM ===== */
 .sig-list-name {
   flex: 1;
   min-width: 0;
@@ -3541,7 +3451,6 @@ body {
   line-height: 1.3;
 }
 
-/* ===== CONFIDENCE SCORE ===== */
 .conf-score-badge {
   font-size: 0.7rem;
   font-weight: 600;
@@ -3556,7 +3465,6 @@ body {
   white-space: nowrap;
 }
 
-/* ===== HARGA ===== */
 .sig-right {
   display: flex;
   align-items: center;
@@ -3573,7 +3481,6 @@ body {
   white-space: nowrap;
 }
 
-/* ===== HEADER (tanpa nomor) ===== */
 .sig-list-header {
   display: flex;
   align-items: center;
@@ -3590,7 +3497,6 @@ body {
   font-weight: 500;
 }
 
-/* ===== RESPONSIVE MOBILE ===== */
 @media (max-width: 480px) {
   .sig-list-row {
     padding: 0.5rem 0.5rem;
@@ -3621,7 +3527,7 @@ body {
     font-size: 0.75rem;
   }
 }
-/* Perkecil jarak antar card */
+
 .pro-card {
   margin-bottom: 0.5rem !important;
 }
@@ -3632,7 +3538,6 @@ body {
   margin-bottom: 0.5rem !important;
 }
 
-/* Mobile */
 @media (max-width: 480px) {
   .pro-card {
     margin-bottom: 0.4rem !important;
@@ -3647,12 +3552,10 @@ body {
   }
 }
 
-/* ===== DROPDOWN SUB MENU ===== */
 .nav-dropdown {
   position: relative;
 }
 
-/* Menu induk "Sinyal Aktif" */
 #signalsParent .nav-arrow {
   margin-left: auto;
   font-size: 0.6rem;
@@ -3662,7 +3565,6 @@ body {
   transform: rotate(180deg);
 }
 
-/* Container dropdown - menyatu dengan induk */
 .nav-sub {
   list-style: none;
   padding: 0;
@@ -3678,7 +3580,6 @@ body {
   display: block;
 }
 
-/* Item sub-menu */
 .nav-sub-link {
   display: flex;
   align-items: center;
@@ -3695,7 +3596,6 @@ body {
   cursor: pointer;
 }
 
-/* Ikon Font Awesome pada sub-menu */
 .nav-sub-link i {
   width: 1.2rem;
   text-align: center;
@@ -3710,7 +3610,7 @@ body {
 .nav-sub-link:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
-  border-left-color: #ffffff; /* oranye untuk fire */
+  border-left-color: #ffffff;
 }
 .nav-sub-link:hover i {
   opacity: 1;
@@ -3731,10 +3631,10 @@ body {
   position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 8px; /* kotak dengan sudut melengkung, bukan lingkaran */
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
-  background: #1a1a24; /* fallback jika gambar gagal */
+  background: #1a1a24;
 }
 
 .user-avatar img {
@@ -3744,7 +3644,6 @@ body {
   display: block;
 }
 
-/* Indikator status online – tetap bulat */
 .status-pulse {
   position: absolute;
   bottom: 2px;
@@ -3772,35 +3671,32 @@ body {
   }
 }
 
-/* Menu induk - saat terbuka, sudut bawah rata */
 #signalsParent {
-  border-radius: 12px !important; /* default */
+  border-radius: 12px !important;
   transition: border-radius 0.2s;
 }
 
 #signalsParent.open {
-  border-radius: 12px 12px 0 0 !important; /* bawah rata */
+  border-radius: 12px 12px 0 0 !important;
 }
 
-/* Container dropdown - menyatu dengan induk */
 .nav-sub {
   list-style: none;
   padding: 0;
   margin: 0;
   display: none;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 0 0 12px 12px; /* hanya sudut bawah */
+  border-radius: 0 0 12px 12px;
   overflow: hidden;
   border: 1px solid var(--glass-border);
-  border-top: none; /* hilangkan border atas agar menyambung */
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); /* efek dropdown */
+  border-top: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .nav-sub.open {
   display: block;
 }
 
-/* Item sub-menu - tidak ada border lagi, hanya background */
 .nav-sub-link {
   display: flex;
   align-items: center;
@@ -3817,7 +3713,6 @@ body {
   cursor: pointer;
 }
 
-/* Hover dan active - tanpa border tambahan */
 .nav-sub-link:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
@@ -3830,7 +3725,6 @@ body {
   border-left-color: #ffffff;
 }
 
-/* Ikon tetap */
 .nav-sub-link i {
   width: 1.2rem;
   text-align: center;
@@ -3883,7 +3777,6 @@ body {
   color: #ffffff !important;
 }
 
-/* ===== NOTIFICATION PANEL ===== */
 .notif-panel-overlay {
   position: fixed;
   top: 0;
@@ -4084,7 +3977,6 @@ body {
   border-color: rgba(239, 68, 68, 0.3);
 }
 
-/* Responsive */
 @media (max-width: 480px) {
   .notif-panel {
     width: 95%;
@@ -4096,248 +3988,453 @@ body {
 }
 
 .notif-banner {
-        position: relative;
-        display: none; /* dikontrol oleh JS */
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin: 0.75rem 1.25rem 1.25rem 1.25rem;
-        padding: 0.85rem 1.25rem;
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(12px) saturate(1.2);
-        -webkit-backdrop-filter: blur(12px) saturate(1.2);
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 16px;
-        box-shadow: 
-          0 8px 32px rgba(0, 0, 0, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.04);
-        transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        z-index: 50;
-        flex-wrap: wrap;
-      }
-      .notif-banner::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -10%;
-        width: 60%;
-        height: 200%;
-        background: radial-gradient(ellipse at 30% 20%, rgba(139, 92, 246, 0.06), transparent 70%);
-        pointer-events: none;
-        border-radius: 50%;
-        filter: blur(40px);
-        z-index: 0;
-      }
-      .notif-banner::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 10%;
-        width: 80%;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-        opacity: 0.6;
-      }
-      .notif-banner-content {
-        display: flex;
-        align-items: center;
-        gap: 0.9rem;
-        flex: 1 1 60%;
-        min-width: 200px;
-        position: relative;
-        z-index: 1;
-      }
+  position: relative;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.75rem 1.25rem 1.25rem 1.25rem;
+  padding: 0.85rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 50;
+  flex-wrap: wrap;
+}
+.notif-banner::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -10%;
+  width: 60%;
+  height: 200%;
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(139, 92, 246, 0.06),
+    transparent 70%
+  );
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(40px);
+  z-index: 0;
+}
+.notif-banner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  opacity: 0.6;
+}
+.notif-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex: 1 1 60%;
+  min-width: 200px;
+  position: relative;
+  z-index: 1;
+}
 
-      /* ===== IKON DENGAN EFEK DENYUT ===== */
-      .notif-banner-icon {
-        flex-shrink: 0;
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
-        background: rgba(139, 92, 246, 0.08);
-        border: 1px solid rgba(139, 92, 246, 0.15);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.3rem;
-        color: #c4b5fd;
-        transition: all 0.3s;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(139, 92, 246, 0.05);
-        position: relative;
-      }
-      /* Pulse rings */
-      .notif-banner-icon .pulse-ring {
-        position: absolute;
-        inset: -4px;
-        border-radius: 16px;
-        border: 1.5px solid rgba(139, 92, 246, 0.2);
-        animation: pulse-ring 2s ease-out infinite;
-        pointer-events: none;
-      }
-      .notif-banner-icon .pulse-ring:nth-child(2) {
-        animation-delay: 0.6s;
-      }
-      @keyframes pulse-ring {
-        0% {
-          transform: scale(1);
-          opacity: 0.6;
-        }
-        100% {
-          transform: scale(1.45);
-          opacity: 0;
-        }
-      }
-      /* Ikon berdenyut */
-      .notif-banner-icon i {
-        animation: pulse-icon 2s ease-in-out infinite;
-        filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.25));
-      }
-      @keyframes pulse-icon {
-        0%, 100% {
-          transform: scale(1);
-        }
-        50% {
-          transform: scale(1.12);
-        }
-      }
+.notif-banner-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #c4b5fd;
+  transition: all 0.3s;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    0 0 20px rgba(139, 92, 246, 0.05);
+  position: relative;
+}
 
-      /* Teks */
-      .notif-banner-message {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 0.1rem;
-      }
-      .notif-banner-title {
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 600;
-        font-size: 0.95rem;
-        color: #f1f1f1;
-        letter-spacing: -0.01em;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-      }
-      /* BADGE - ikon FA + teks, tanpa emoji */
-      .notif-banner-title .badge-new {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        font-size: 0.5rem;
-        font-weight: 600;
-        background: rgba(139, 92, 246, 0.2);
-        color: #c4b5fd;
-        padding: 0.1rem 0.6rem 0.1rem 0.5rem;
-        border-radius: 20px;
-        border: 1px solid rgba(139, 92, 246, 0.15);
-        letter-spacing: 0.3px;
-        text-transform: uppercase;
-      }
-      .notif-banner-title .badge-new i {
-        font-size: 0.5rem;
-        color: #a78bfa;
-      }
+.notif-banner-icon .pulse-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(139, 92, 246, 0.2);
+  animation: pulse-ring 2s ease-out infinite;
+  pointer-events: none;
+}
+.notif-banner-icon .pulse-ring:nth-child(2) {
+  animation-delay: 0.6s;
+}
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
 
-      .notif-banner-desc {
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 400;
-        font-size: 0.78rem;
-        color: rgba(255, 255, 255, 0.55);
-        line-height: 1.4;
-        margin: 0;
-        padding-right: 0.5rem;
-      }
-      .notif-banner-desc strong {
-        color: rgba(255, 255, 255, 0.8);
-        font-weight: 500;
-      }
+.notif-banner-icon i {
+  animation: pulse-icon 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.25));
+}
+@keyframes pulse-icon {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
 
-      .notif-banner-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        flex-shrink: 0;
-        position: relative;
-        z-index: 1;
-      }
-      .notif-banner-btn {
-        font-family: 'Space Grotesk', sans-serif;
-        font-weight: 600;
-        font-size: 0.8rem;
-        padding: 0.45rem 1.2rem;
-        border: none;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        color: #f1f1f1;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        cursor: pointer;
-        transition: all 0.25s ease;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        white-space: nowrap;
-        letter-spacing: 0.2px;
-      }
-      .notif-banner-btn i {
-        font-size: 0.75rem;
-        opacity: 0.7;
-      }
-      .notif-banner-btn:hover {
-        background: rgba(255, 255, 255, 0.14);
-        border-color: rgba(255, 255, 255, 0.15);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-      }
-      .notif-banner-btn:active {
-        transform: scale(0.97);
-      }
-      .notif-banner-close {
-        background: transparent;
-        border: none;
-        color: rgba(255, 255, 255, 0.25);
-        font-size: 1.1rem;
-        padding: 0.2rem 0.3rem;
-        cursor: pointer;
-        border-radius: 8px;
-        transition: all 0.2s;
-        line-height: 1;
-      }
-      .notif-banner-close:hover {
-        color: rgba(255, 255, 255, 0.6);
-        background: rgba(255, 255, 255, 0.04);
-      }
+.notif-banner-message {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.notif-banner-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f1f1f1;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 
-      /* status warna */
-      .status-open { color: #4caf50; }
-      .status-closed { color: #f44336; }
-      .status-holiday { color: #ff9800; }
+.notif-banner-title .badge-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.5rem;
+  font-weight: 600;
+  background: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+  padding: 0.1rem 0.6rem 0.1rem 0.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.notif-banner-title .badge-new i {
+  font-size: 0.5rem;
+  color: #a78bfa;
+}
 
-      /* Responsif */
-      @media (max-width: 768px) {
-        .notif-banner {
-          margin: 0.5rem 0.75rem 1rem 0.75rem;
-          padding: 0.7rem 1rem;
-          border-radius: 14px;
-          gap: 0.6rem;
-        }
-        .notif-banner-content { gap: 0.6rem; flex: 1 1 100%; }
-        .notif-banner-icon { width: 38px; height: 38px; font-size: 1rem; }
-        .notif-banner-title { font-size: 0.85rem; }
-        .notif-banner-title .badge-new { font-size: 0.45rem; padding: 0.05rem 0.5rem 0.05rem 0.4rem; }
-        .notif-banner-title .badge-new i { font-size: 0.45rem; }
-        .notif-banner-desc { font-size: 0.7rem; }
-        .notif-banner-actions { width: 100%; justify-content: flex-end; margin-top: 0.15rem; }
-        .notif-banner-btn { font-size: 0.75rem; padding: 0.35rem 0.9rem; }
-        .notif-banner-close { font-size: 1rem; }
-      }
-      @media (max-width: 480px) {
-        .notif-banner { padding: 0.6rem 0.7rem; margin: 0.3rem 0.5rem 0.8rem 0.5rem; }
-        .notif-banner-icon { width: 32px; height: 32px; font-size: 0.85rem; }
-        .notif-banner-title { font-size: 0.75rem; }
-        .notif-banner-desc { font-size: 0.6rem; }
-        .notif-banner-btn { font-size: 0.65rem; padding: 0.25rem 0.7rem; }
-      }
+.notif-banner-desc {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+  margin: 0;
+  padding-right: 0.5rem;
+}
+.notif-banner-desc strong {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.notif-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.notif-banner-btn {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.45rem 1.2rem;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #f1f1f1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+.notif-banner-btn i {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+.notif-banner-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.notif-banner-btn:active {
+  transform: scale(0.97);
+}
+.notif-banner-close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 1.1rem;
+  padding: 0.2rem 0.3rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+.notif-banner-close:hover {
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.status-open {
+  color: #4caf50;
+}
+.status-closed {
+  color: #f44336;
+}
+.status-holiday {
+  color: #ff9800;
+}
+
+@media (max-width: 768px) {
+  .notif-banner {
+    margin: 0.5rem 0.75rem 1rem 0.75rem;
+    padding: 0.7rem 1rem;
+    border-radius: 14px;
+    gap: 0.6rem;
+  }
+  .notif-banner-content {
+    gap: 0.6rem;
+    flex: 1 1 100%;
+  }
+  .notif-banner-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+  }
+  .notif-banner-title {
+    font-size: 0.85rem;
+  }
+  .notif-banner-title .badge-new {
+    font-size: 0.45rem;
+    padding: 0.05rem 0.5rem 0.05rem 0.4rem;
+  }
+  .notif-banner-title .badge-new i {
+    font-size: 0.45rem;
+  }
+  .notif-banner-desc {
+    font-size: 0.7rem;
+  }
+  .notif-banner-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0.15rem;
+  }
+  .notif-banner-btn {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.9rem;
+  }
+  .notif-banner-close {
+    font-size: 1rem;
+  }
+}
+@media (max-width: 480px) {
+  .notif-banner {
+    padding: 0.6rem 0.7rem;
+    margin: 0.3rem 0.5rem 0.8rem 0.5rem;
+  }
+  .notif-banner-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
+  .notif-banner-title {
+    font-size: 0.75rem;
+  }
+  .notif-banner-desc {
+    font-size: 0.6rem;
+  }
+  .notif-banner-btn {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.7rem;
+  }
+}
+
+.sig-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.sig-list-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 0.2s;
+}
+
+.sig-list-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sig-list-name {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+}
+
+.sig-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.sig-stock-info {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+}
+
+.sig-stock-top {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.sig-stock-code {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sig-stock-longname {
+  font-size: 0.6rem;
+  color: var(--text-secondary, #a1a1aa);
+  opacity: 0.8;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  display: block;
+  margin-top: 0.1rem;
+}
+
+.sig-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+
+.stock-price {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+}
+
+.sig-right span:last-child {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sig-status-stamp {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .sig-list-row {
+    padding: 0.4rem 0.5rem;
+    gap: 0.4rem;
+  }
+  .sig-stock-code {
+    font-size: 0.75rem;
+  }
+  .sig-stock-longname {
+    font-size: 0.5rem;
+    line-height: 1.3;
+  }
+  .stock-price {
+    font-size: 0.75rem;
+  }
+  .sig-right {
+    gap: 0.3rem;
+    padding-left: 0.3rem;
+  }
+  .sig-right span:last-child {
+    font-size: 0.55rem;
+  }
+  .sig-status-stamp {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sig-list-row {
+    padding: 0.3rem 0.4rem;
+    gap: 0.3rem;
+  }
+  .sig-stock-code {
+    font-size: 0.7rem;
+  }
+  .sig-stock-longname {
+    font-size: 0.45rem;
+  }
+  .stock-price {
+    font-size: 0.7rem;
+  }
+}
