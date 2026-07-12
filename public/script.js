@@ -1,5 +1,5 @@
 const apiBase = "/api";
-// ============ SSE PRICE STREAM ============
+
 let sseConnection = null;
 const localPrices = new Map();
 
@@ -36,6 +36,7 @@ function connectPriceSSE() {
 
   console.log("✅ SSE price stream connected");
 }
+
 let refreshInterval = null;
 let lastSignalCount = 0;
 let equityChart = null,
@@ -45,15 +46,12 @@ let pollingInterval = null;
 let currentTab = "home";
 let detailCharts = { rsi: null, macd: null, bandar: null };
 let _allRunning = [];
-let _allClosed = [];
 let currentSignalFilter = "none";
 
-// ========== STATUS DETAIL VIEW ==========
 let isDetailView = false;
 let currentDetailIndex = null;
-let bsjpRefreshInterval = null; // untuk BSJP auto-refresh
+let bsjpRefreshInterval = null;
 
-// ========== STATE UNTUK DAILY & SIGNAL LIST ==========
 let dailyRendered = false;
 let signalListRendered = false;
 let currentFilterState = {
@@ -64,10 +62,103 @@ let currentFilterState = {
 };
 let currentDateRange = null;
 
-// ========== NOTIFICATION HISTORY ==========
 let notificationHistory = [];
 const NOTIF_KEY = "notificationHistory";
 
+// ===================== CACHE UNTUK HOME =====================
+let signalCache = new Map();
+
+// ===================== FUNGSI FETCH REPORTS (tetap) =====================
+async function fetchReportsByDate(start, end) {
+  try {
+    const res = await fetch(`/api/reports?start=${start}&end=${end}`);
+    if (!res.ok) throw new Error("Gagal fetch laporan");
+    const data = await res.json();
+    return data.signals || [];
+  } catch (err) {
+    console.error("Error fetch reports:", err);
+    return [];
+  }
+}
+
+// ===================== FUNGSI FETCH RUNNING =====================
+async function fetchRunning() {
+  try {
+    const res = await fetch("/api/running");
+    if (!res.ok) throw new Error("Gagal fetch running");
+    const data = await res.json();
+    _allRunning = data.running || [];
+    return _allRunning;
+  } catch (err) {
+    console.error("Error fetch running:", err);
+    _allRunning = [];
+    return [];
+  }
+}
+
+// ===================== INISIALISASI CACHE =====================
+async function initSignalCache() {
+  const today = getTodayWIB();
+  const start = "1970-01-01";
+  const signals = await fetchReportsByDate(start, today);
+  signals.forEach(s => {
+    const key = `${s.stockCode}-${s.signalDate}`;
+    signalCache.set(key, s);
+  });
+  console.log(`📦 Cache initialized with ${signalCache.size} signals`);
+  return signalCache;
+}
+
+// ===================== UPDATE CACHE INCREMENTAL =====================
+async function updateSignalCache() {
+  const today = getTodayWIB();
+
+  // Ambil semua running
+  const runningRes = await fetch("/api/running");
+  const runningData = await runningRes.json();
+  const runningList = runningData.running || [];
+
+  // Ambil closed hari ini (termasuk yang baru selesai)
+  const closedToday = await fetchReportsByDate(today, today);
+
+  // Gabungkan
+  const newSignals = [...runningList, ...closedToday];
+
+  let updatedCount = 0;
+  newSignals.forEach(s => {
+    const key = `${s.stockCode}-${s.signalDate}`;
+    const existing = signalCache.get(key);
+    if (!existing) {
+      signalCache.set(key, s);
+      updatedCount++;
+    } else if (existing.status !== s.status || existing.returnPercent !== s.returnPercent) {
+      // Update jika ada perubahan status atau return
+      signalCache.set(key, s);
+      updatedCount++;
+    }
+  });
+
+  if (updatedCount > 0) {
+    console.log(`🔄 Cache updated: ${updatedCount} changes`);
+    renderHomeFromCache();
+  }
+  return signalCache;
+}
+
+// ===================== RENDER HOME DARI CACHE =====================
+function renderHomeFromCache() {
+  const allSignals = Array.from(signalCache.values());
+  const running = allSignals.filter(s => s.status === "RUNNING" || s.status === "TRAILING");
+  const closed = allSignals.filter(s => s.status !== "RUNNING" && s.status !== "TRAILING");
+
+  updateTotalSignals(running, closed);
+  updateChartsFromSignals({ running, closed });
+  // Update total sinyal di hero
+  const totalEl = document.getElementById("totalSignals");
+  if (totalEl) totalEl.textContent = allSignals.length;
+}
+
+// ===================== FUNGSI LAINNYA (tidak berubah banyak) =====================
 function loadNotifications() {
   try {
     const data = localStorage.getItem(NOTIF_KEY);
@@ -130,7 +221,6 @@ function clearAllNotifications() {
   renderNotificationModal();
 }
 
-// ========== HELPER TIMEZONE ==========
 function getTodayWIB() {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -142,7 +232,6 @@ function getTodayWIB() {
   return formatter.format(now);
 }
 
-// ========== HELPERS ==========
 function triggerHaptic() {
   if (navigator.vibrate) navigator.vibrate(30);
 }
@@ -271,7 +360,6 @@ function fmtPriceNoRp(num) {
   return num != null ? Number(num).toLocaleString("id-ID") : "–";
 }
 
-// ========== HARGA & INFO ==========
 const infoCache = new Map();
 
 async function fetchStockPrice(symbol) {
@@ -300,14 +388,11 @@ async function fetchStockInfo(symbol) {
   }
 }
 
-// ========== LOADING ==========
 function showLoading(containerId) {
   const c = document.getElementById(containerId);
   if (c)
     c.innerHTML = `<div class="loading-state"><div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div><p>Loading...</p></div>`;
 }
-
-// ========== FUNGSI BERBASIS SIGNALS ==========
 
 function filterSignalsByDate(signals, startDate, endDate) {
   if (!signals || !signals.length) return [];
@@ -466,7 +551,6 @@ function getDateRangeFromFilterState() {
   return { start: startStr, end: endStr };
 }
 
-// ========== RENDER DAILY RETURN CHART ==========
 let returnChartInstance = null;
 
 function renderDailyReturnChartFromSignals(signals) {
@@ -574,14 +658,18 @@ function renderDailyReturnChartFromSignals(signals) {
   });
 }
 
-// ========== UPDATE DAILY CONTENT ==========
 async function updateDailyContent() {
-  await fetchSignals(false);
-  const allSignals = [..._allRunning, ..._allClosed];
   const { start, end } = getDateRangeFromFilterState();
-  const filtered = filterSignalsByDate(allSignals, start, end);
-  const agg = aggregateSignals(filtered);
+  currentDateRange = { start, end };
 
+  const signals = await fetchReportsByDate(start, end);
+  if (!signals.length) {
+    const statsContainer = document.getElementById("statsGridContainer");
+    if (statsContainer) statsContainer.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--text-secondary);padding:1rem;">Tidak ada data pada periode ini.</div>`;
+    return;
+  }
+
+  const agg = aggregateSignals(signals);
   const dateRange = getDateRangeText(
     currentFilterState.type,
     currentFilterState.customStart,
@@ -619,15 +707,22 @@ async function updateDailyContent() {
 
   const positionsContainer = document.getElementById("positionsContainer");
   if (positionsContainer) {
-    if (agg.positions.length) {
+    const runningSignals = _allRunning || [];
+    if (runningSignals.length) {
       const posWithPrice = await Promise.all(
-        agg.positions.map(async (p) => {
-          const price = await fetchStockPrice(p.stock);
+        runningSignals.map(async (p) => {
+          const price = await fetchStockPrice(p.stockCode);
           let currentReturn = 0;
-          if (price && p.entry) {
-            currentReturn = ((price - p.entry) / p.entry) * 100;
+          if (price && p.entryPrice) {
+            currentReturn = ((price - p.entryPrice) / p.entryPrice) * 100;
           }
-          return { ...p, current: price, return: currentReturn };
+          return {
+            stock: p.stockCode,
+            entry: p.entryPrice,
+            current: price,
+            return: currentReturn,
+            hold: p.holdingDays || 0,
+          };
         }),
       );
 
@@ -681,10 +776,9 @@ async function updateDailyContent() {
     }
   }
 
-  renderDailyReturnChartFromSignals(filtered);
+  renderDailyReturnChartFromSignals(signals);
   renderDailyCharts(agg);
 
-  currentDateRange = { start, end };
   const listBody = document.getElementById("signalListBody");
   if (listBody && listBody.style.display !== "none") {
     const activeBtn = document.querySelector(".perf-filter-btn.active");
@@ -696,7 +790,6 @@ async function updateDailyContent() {
   }
 }
 
-// ========== RENDER DAILY ==========
 function renderDaily() {
   const c = document.getElementById("daily");
   if (!c) return;
@@ -704,211 +797,204 @@ function renderDaily() {
   c.innerHTML = `<div class="loading-state"><div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div><p>Loading...</p></div>`;
   dailyRendered = false;
 
-  fetchSignals(false)
-    .then(() => {
-      const allSignals = [..._allRunning, ..._allClosed];
-      if (!allSignals.length) {
-        c.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal.</p></div>`;
-        dailyRendered = false;
-        return;
-      }
+  const { start, end } = getDateRangeFromFilterState();
+  currentDateRange = { start, end };
 
-      const { start, end } = getDateRangeFromFilterState();
-      currentDateRange = { start, end };
-      const filtered = filterSignalsByDate(allSignals, start, end);
-      const agg = aggregateSignals(filtered);
-      const dateRange = getDateRangeText(
-        currentFilterState.type,
-        currentFilterState.customStart,
-        currentFilterState.customEnd,
-      );
+  fetchReportsByDate(start, end).then((signals) => {
+    if (!signals.length) {
+      c.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal pada periode ini.</p></div>`;
+      dailyRendered = false;
+      return;
+    }
 
-      let html = `
-        <div id="dailyContentWrapper">
-          <div class="pro-detail-container">
-            <div id="tradeSummaryContainer" style="margin-bottom:0.5rem;"></div>
+    const agg = aggregateSignals(signals);
+    const dateRange = getDateRangeText(
+      currentFilterState.type,
+      currentFilterState.customStart,
+      currentFilterState.customEnd,
+    );
 
-            <div id="reportHeader" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:1.5rem; padding-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-              <div class="emit-left">
-                <span class="emit-ticker" style="font-size:1.5rem;">
-                  <i class="fas fa-chart-line" style="color:#3b82f6; margin-right:0.5rem;"></i> Trade Summary
-                </span>
-                <span id="reportDateRange" style="font-size:0.8rem; color:var(--text-secondary); font-family:'JetBrains Mono',monospace;">${dateRange}</span>
-              </div>
-              <div class="emit-right">
-                <span class="emit-date"><i class="far fa-calendar-alt" style="margin-right:0.3rem;"></i> ${new Date().toLocaleString("id-ID")}</span>
-              </div>
+    let html = `
+      <div id="dailyContentWrapper">
+        <div class="pro-detail-container">
+          <div id="tradeSummaryContainer" style="margin-bottom:0.5rem;"></div>
+
+          <div id="reportHeader" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:1.5rem; padding-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div class="emit-left">
+              <span class="emit-ticker" style="font-size:1.5rem;">
+                <i class="fas fa-chart-line" style="color:#3b82f6; margin-right:0.5rem;"></i> Trade Summary
+              </span>
+              <span id="reportDateRange" style="font-size:0.8rem; color:var(--text-secondary); font-family:'JetBrains Mono',monospace;">${dateRange}</span>
             </div>
-
-            <div id="statsGridContainer" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
-              ${createStatCard("Sinyal Baru", agg.totalSignals, "#3b82f6", "fa-solid fa-bell")}
-              ${createStatCard("TP", agg.tp, "#10b981", "fa-solid fa-check-circle")}
-              ${createStatCard("SL", agg.sl, "#ef4444", "fa-solid fa-times-circle")}
-              ${createStatCard("Running", agg.running, "#f59e0b", "fa-solid fa-play-circle")}
-              ${createStatCard("Win Rate", agg.winRate.toFixed(1) + "%", "#8b5cf6", "fa-solid fa-trophy")}
-              ${createStatCard("Total Return", agg.totalReturn.toFixed(2) + "%", agg.totalReturn >= 0 ? "#10b981" : "#ef4444", "fa-solid fa-arrow-trend-up")}
+            <div class="emit-right">
+              <span class="emit-date"><i class="far fa-calendar-alt" style="margin-right:0.3rem;"></i> ${new Date().toLocaleString("id-ID")}</span>
             </div>
+          </div>
 
-            <div id="bestWorstContainer" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
-              <div class="pro-card" style="border-left: 3px solid #10b981;">
-                <div class="pro-card-title"><i class="fa-solid fa-crown" style="color:#fbbf24; margin-right:0.3rem;"></i> Best Trade</div>
-                ${agg.bestTrade ? `<div style="font-size:1.2rem; font-weight:700; color:#10b981;">${agg.bestTrade.stock} <span style="font-size:0.9rem; font-weight:400; color:var(--text-secondary);">+${agg.bestTrade.return.toFixed(2)}%</span></div>` : '<div style="color:var(--text-secondary); opacity:0.5;">Belum ada</div>'}
-              </div>
-              <div class="pro-card" style="border-left: 3px solid #ef4444;">
-                <div class="pro-card-title"><i class="fa-solid fa-skull" style="color:#ef4444; margin-right:0.3rem;"></i> Worst Trade</div>
-                ${agg.worstTrade ? `<div style="font-size:1.2rem; font-weight:700; color:#ef4444;">${agg.worstTrade.stock} <span style="font-size:0.9rem; font-weight:400; color:var(--text-secondary);">${agg.worstTrade.return.toFixed(2)}%</span></div>` : '<div style="color:var(--text-secondary); opacity:0.5;">Belum ada</div>'}
-              </div>
+          <div id="statsGridContainer" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
+            ${createStatCard("Sinyal Baru", agg.totalSignals, "#3b82f6", "fa-solid fa-bell")}
+            ${createStatCard("TP", agg.tp, "#10b981", "fa-solid fa-check-circle")}
+            ${createStatCard("SL", agg.sl, "#ef4444", "fa-solid fa-times-circle")}
+            ${createStatCard("Running", agg.running, "#f59e0b", "fa-solid fa-play-circle")}
+            ${createStatCard("Win Rate", agg.winRate.toFixed(1) + "%", "#8b5cf6", "fa-solid fa-trophy")}
+            ${createStatCard("Total Return", agg.totalReturn.toFixed(2) + "%", agg.totalReturn >= 0 ? "#10b981" : "#ef4444", "fa-solid fa-arrow-trend-up")}
+          </div>
+
+          <div id="bestWorstContainer" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+            <div class="pro-card" style="border-left: 3px solid #10b981;">
+              <div class="pro-card-title"><i class="fa-solid fa-crown" style="color:#fbbf24; margin-right:0.3rem;"></i> Best Trade</div>
+              ${agg.bestTrade ? `<div style="font-size:1.2rem; font-weight:700; color:#10b981;">${agg.bestTrade.stock} <span style="font-size:0.9rem; font-weight:400; color:var(--text-secondary);">+${agg.bestTrade.return.toFixed(2)}%</span></div>` : '<div style="color:var(--text-secondary); opacity:0.5;">Belum ada</div>'}
             </div>
-
-            <div class="pro-card" style="margin-bottom:1.5rem;">
-              <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
-              <div style="height:180px;" id="dailyReturnChartWrapper">
-                <canvas id="dailyReturnChart"></canvas>
-              </div>
+            <div class="pro-card" style="border-left: 3px solid #ef4444;">
+              <div class="pro-card-title"><i class="fa-solid fa-skull" style="color:#ef4444; margin-right:0.3rem;"></i> Worst Trade</div>
+              ${agg.worstTrade ? `<div style="font-size:1.2rem; font-weight:700; color:#ef4444;">${agg.worstTrade.stock} <span style="font-size:0.9rem; font-weight:400; color:var(--text-secondary);">${agg.worstTrade.return.toFixed(2)}%</span></div>` : '<div style="color:var(--text-secondary); opacity:0.5;">Belum ada</div>'}
             </div>
+          </div>
 
-            <div class="pro-grid-2" style="margin-bottom:1.5rem;">
-              <div class="pro-card">
-                <div class="pro-card-title"><i class="fa-solid fa-chart-pie" style="margin-right:0.3rem;"></i> Win Rate</div>
-                <div style="height:140px; position:relative;">
-                  <canvas id="dailyWinRateChart"></canvas>
-                </div>
-              </div>
+          <div class="pro-card" style="margin-bottom:1.5rem;">
+            <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
+            <div style="height:180px;" id="dailyReturnChartWrapper">
+              <canvas id="dailyReturnChart"></canvas>
             </div>
+          </div>
 
-            <div style="margin-top:2rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.5rem;">
-              <div style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; padding:0.4rem 0.6rem; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); transition:0.2s;" id="signalListToggle">
-                <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
-                  <i class="fas fa-list-ul" style="color:#8b5cf6;"></i> Daftar Saham
-                  <span id="signalTotalCount" style="font-size:0.7rem; color:var(--text-secondary); background:rgba(255,255,255,0.05); padding:0.1rem 0.5rem; border-radius:12px;">0</span>
-                </span>
-                <i class="fas fa-chevron-up" id="signalListChevron" style="font-size:0.7rem; opacity:0.5; transition:transform 0.2s; margin-left:auto;"></i>
-              </div>
-              <div id="signalListBody" style="display:block; margin-top:0.75rem;">
-                <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.75rem; padding:0.2rem 0;">
-                  <button class="perf-filter-btn active" data-status="TP" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
-                    <i class="fa-solid fa-arrow-trend-up" style="font-size:0.6rem;"></i> TP
-                  </button>
-                  <button class="perf-filter-btn" data-status="SL" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
-                    <i class="fa-solid fa-arrow-trend-down" style="font-size:0.6rem;"></i> SL
-                  </button>
-                  <button class="perf-filter-btn" data-status="RUNNING" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
-                    <i class="fa-solid fa-play" style="font-size:0.6rem;"></i> Running
-                  </button>
-                  <button class="perf-filter-btn" data-status="ALL" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
-                    <i class="fa-solid fa-table-cells-large" style="font-size:0.6rem;"></i> All
-                  </button>
-                </div>
-                <div id="signalListContainer"></div>
+          <div class="pro-grid-2" style="margin-bottom:1.5rem;">
+            <div class="pro-card">
+              <div class="pro-card-title"><i class="fa-solid fa-chart-pie" style="margin-right:0.3rem;"></i> Win Rate</div>
+              <div style="height:140px; position:relative;">
+                <canvas id="dailyWinRateChart"></canvas>
               </div>
             </div>
           </div>
+
+          <div style="margin-top:2rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.5rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; padding:0.4rem 0.6rem; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); transition:0.2s;" id="signalListToggle">
+              <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+                <i class="fas fa-list-ul" style="color:#8b5cf6;"></i> Daftar Saham
+                <span id="signalTotalCount" style="font-size:0.7rem; color:var(--text-secondary); background:rgba(255,255,255,0.05); padding:0.1rem 0.5rem; border-radius:12px;">0</span>
+              </span>
+              <i class="fas fa-chevron-up" id="signalListChevron" style="font-size:0.7rem; opacity:0.5; transition:transform 0.2s; margin-left:auto;"></i>
+            </div>
+            <div id="signalListBody" style="display:block; margin-top:0.75rem;">
+              <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.75rem; padding:0.2rem 0;">
+                <button class="perf-filter-btn active" data-status="TP" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                  <i class="fa-solid fa-arrow-trend-up" style="font-size:0.6rem;"></i> TP
+                </button>
+                <button class="perf-filter-btn" data-status="SL" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                  <i class="fa-solid fa-arrow-trend-down" style="font-size:0.6rem;"></i> SL
+                </button>
+                <button class="perf-filter-btn" data-status="RUNNING" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                  <i class="fa-solid fa-play" style="font-size:0.6rem;"></i> Running
+                </button>
+                <button class="perf-filter-btn" data-status="ALL" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                  <i class="fa-solid fa-table-cells-large" style="font-size:0.6rem;"></i> All
+                </button>
+              </div>
+              <div id="signalListContainer"></div>
+            </div>
+          </div>
         </div>
-        <div id="dailyDetailContainer" style="display:none; margin-top:1.5rem;"></div>
-      `;
+      </div>
+      <div id="dailyDetailContainer" style="display:none; margin-top:1.5rem;"></div>
+    `;
 
-      c.innerHTML = html;
-      dailyRendered = true;
+    c.innerHTML = html;
+    dailyRendered = true;
 
-      renderTradeSummary();
+    renderTradeSummary();
 
-      const summaryContainer = document.getElementById("tradeSummaryContainer");
-      if (summaryContainer) {
-        summaryContainer.addEventListener("click", function (e) {
-          const toggle = e.target.closest("#tradeSummaryToggle");
-          if (toggle) {
-            e.stopPropagation();
-            currentFilterState.isOpen = !currentFilterState.isOpen;
-            renderTradeSummary();
-            return;
-          }
-          const filterBtn = e.target.closest(".filter-btn");
-          if (filterBtn) {
-            e.stopPropagation();
-            const filter = filterBtn.dataset.filter;
-            if (filter === "custom") {
-              currentFilterState.type = "custom";
-              currentFilterState.isOpen = false;
-              renderTradeSummary();
-              updateDailyContent();
-              return;
-            }
-            currentFilterState.type = filter;
-            currentFilterState.customStart = null;
-            currentFilterState.customEnd = null;
+    const summaryContainer = document.getElementById("tradeSummaryContainer");
+    if (summaryContainer) {
+      summaryContainer.addEventListener("click", function (e) {
+        const toggle = e.target.closest("#tradeSummaryToggle");
+        if (toggle) {
+          e.stopPropagation();
+          currentFilterState.isOpen = !currentFilterState.isOpen;
+          renderTradeSummary();
+          return;
+        }
+        const filterBtn = e.target.closest(".filter-btn");
+        if (filterBtn) {
+          e.stopPropagation();
+          const filter = filterBtn.dataset.filter;
+          if (filter === "custom") {
+            currentFilterState.type = "custom";
             currentFilterState.isOpen = false;
             renderTradeSummary();
             updateDailyContent();
             return;
           }
-          const applyBtn = e.target.closest("#applyCustomFilter");
-          if (applyBtn) {
-            e.stopPropagation();
-            const start = document.getElementById("customStartDate")?.value;
-            const end = document.getElementById("customEndDate")?.value;
-            if (start && end) {
-              currentFilterState.type = "custom";
-              currentFilterState.customStart = start;
-              currentFilterState.customEnd = end;
-              currentFilterState.isOpen = false;
-              renderTradeSummary();
-              updateDailyContent();
-            } else {
-              alert("Pilih tanggal mulai dan akhir");
-            }
-          }
-        });
-      }
-
-      setTimeout(() => {
-        renderDailyReturnChartFromSignals(filtered);
-        renderDailyCharts(agg);
-      }, 150);
-
-      const listToggle = document.getElementById("signalListToggle");
-      const listBody = document.getElementById("signalListBody");
-      const chevron = document.getElementById("signalListChevron");
-      if (listToggle && listBody && chevron) {
-        listToggle.addEventListener("click", function (e) {
-          e.stopPropagation();
-          const isOpen = listBody.style.display !== "none";
-          listBody.style.display = isOpen ? "none" : "block";
-          chevron.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
-          if (!isOpen) {
-            const activeBtn = document.querySelector(".perf-filter-btn.active");
-            if (activeBtn) {
-              renderPerformanceSignalList(activeBtn.dataset.status);
-            } else {
-              renderPerformanceSignalList("TP");
-            }
-          }
-        });
-      }
-
-      c.querySelectorAll(".perf-filter-btn").forEach((btn) => {
-        btn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          const status = this.dataset.status;
-          c.querySelectorAll(".perf-filter-btn").forEach((b) =>
-            b.classList.remove("active"),
-          );
-          this.classList.add("active");
-          renderPerformanceSignalList(status);
-        });
-      });
-
-      setTimeout(() => {
-        const activeBtn = document.querySelector(".perf-filter-btn.active");
-        if (activeBtn && listBody && listBody.style.display !== "none") {
-          renderPerformanceSignalList(activeBtn.dataset.status);
+          currentFilterState.type = filter;
+          currentFilterState.customStart = null;
+          currentFilterState.customEnd = null;
+          currentFilterState.isOpen = false;
+          renderTradeSummary();
+          updateDailyContent();
+          return;
         }
-      }, 300);
-    })
-    .catch((err) => {
-      console.error("Gagal render daily:", err);
-      c.innerHTML = `<div class="loading-state"><p style="color:var(--danger);">Gagal memuat data sinyal</p></div>`;
-      dailyRendered = false;
+        const applyBtn = e.target.closest("#applyCustomFilter");
+        if (applyBtn) {
+          e.stopPropagation();
+          const start = document.getElementById("customStartDate")?.value;
+          const end = document.getElementById("customEndDate")?.value;
+          if (start && end) {
+            currentFilterState.type = "custom";
+            currentFilterState.customStart = start;
+            currentFilterState.customEnd = end;
+            currentFilterState.isOpen = false;
+            renderTradeSummary();
+            updateDailyContent();
+          } else {
+            alert("Pilih tanggal mulai dan akhir");
+          }
+        }
+      });
+    }
+
+    setTimeout(() => {
+      renderDailyReturnChartFromSignals(signals);
+      renderDailyCharts(agg);
+    }, 150);
+
+    const listToggle = document.getElementById("signalListToggle");
+    const listBody = document.getElementById("signalListBody");
+    const chevron = document.getElementById("signalListChevron");
+    if (listToggle && listBody && chevron) {
+      listToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        const isOpen = listBody.style.display !== "none";
+        listBody.style.display = isOpen ? "none" : "block";
+        chevron.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+        if (!isOpen) {
+          const activeBtn = document.querySelector(".perf-filter-btn.active");
+          if (activeBtn) {
+            renderPerformanceSignalList(activeBtn.dataset.status);
+          } else {
+            renderPerformanceSignalList("TP");
+          }
+        }
+      });
+    }
+
+    c.querySelectorAll(".perf-filter-btn").forEach((btn) => {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        const status = this.dataset.status;
+        c.querySelectorAll(".perf-filter-btn").forEach((b) =>
+          b.classList.remove("active"),
+        );
+        this.classList.add("active");
+        renderPerformanceSignalList(status);
+      });
     });
+
+    setTimeout(() => {
+      const activeBtn = document.querySelector(".perf-filter-btn.active");
+      if (activeBtn && listBody && listBody.style.display !== "none") {
+        renderPerformanceSignalList(activeBtn.dataset.status);
+      }
+    }, 300);
+  });
 }
 
 function renderTradeSummary() {
@@ -949,37 +1035,17 @@ function renderTradeSummary() {
   if (isOpen) {
     html += `
       <div style="display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap; margin-top:0.3rem; padding:0.3rem 0.4rem; background:rgba(255,255,255,0.02); border-radius:6px;">
-        <button class="filter-btn" data-filter="today" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "today"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Today</button>
-        <button class="filter-btn" data-filter="7days" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "7days"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">7 Hari</button>
-        <button class="filter-btn" data-filter="1month" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "1month"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">1 Bulan</button>
-        <button class="filter-btn" data-filter="custom" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "custom"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Custom</button>
+        <button class="filter-btn" data-filter="today" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "today" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Today</button>
+        <button class="filter-btn" data-filter="7days" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "7days" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">7 Hari</button>
+        <button class="filter-btn" data-filter="1month" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "1month" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">1 Bulan</button>
+        <button class="filter-btn" data-filter="custom" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "custom" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Custom</button>
     `;
     if (currentFilterState.type === "custom") {
       html += `
         <div style="display:flex; gap:0.2rem; align-items:center; flex-wrap:wrap;">
-          <input type="date" id="customStartDate" value="${
-            currentFilterState.customStart || ""
-          }" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
+          <input type="date" id="customStartDate" value="${currentFilterState.customStart || ""}" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
           <span style="color:var(--text-secondary); font-size:0.55rem;">s/d</span>
-          <input type="date" id="customEndDate" value="${
-            currentFilterState.customEnd || ""
-          }" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
+          <input type="date" id="customEndDate" value="${currentFilterState.customEnd || ""}" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
           <button id="applyCustomFilter" style="padding:0.15rem 0.4rem; border-radius:4px; background:rgba(59,130,246,0.2); border:1px solid #3b82f6; color:#3b82f6; cursor:pointer; font-size:0.55rem;">Terapkan</button>
         </div>
       `;
@@ -1097,19 +1163,19 @@ function renderDailyCharts(parsed) {
   }
 }
 
-// ========== SHOW DETAIL DI DALAM TAB DAILY ==========
 async function showDailySignalDetail(stockCode, signalDate) {
   let signal = null;
-  const allCached = [..._allRunning, ..._allClosed];
+  const allCached = Array.from(signalCache.values());
   signal = allCached.find(
     (s) => s.stockCode === stockCode && s.signalDate === signalDate,
   );
   if (!signal) {
     try {
-      const res = await fetch("/api/signals");
-      if (!res.ok) throw new Error("Gagal fetch");
+      // fallback: fetch langsung dari database via reports
+      const today = getTodayWIB();
+      const res = await fetch(`/api/reports?start=1970-01-01&end=${today}`);
       const data = await res.json();
-      const all = [...(data.running || []), ...(data.closed || [])];
+      const all = data.signals || [];
       signal = all.find(
         (s) => s.stockCode === stockCode && s.signalDate === signalDate,
       );
@@ -1270,7 +1336,6 @@ function renderStrategyFlowForSignal(s) {
   `;
 }
 
-// ========== BSJP DETAIL ==========
 function renderBsjpDetail(s, container, onBack) {
   let stockInfo = { longName: s.stockCode, logoUrl: null };
   let currentPrice = null;
@@ -1618,10 +1683,10 @@ function renderBsjpDetailContent(
 
   bsjpRefreshInterval = setInterval(async () => {
     try {
-      const res = await fetch("/api/signals");
+      const res = await fetch("/api/running");
       if (!res.ok) return;
       const data = await res.json();
-      const all = [...(data.running || []), ...(data.closed || [])];
+      const all = data.running || [];
       const updated = all.find(
         (sig) =>
           sig.stockCode === s.stockCode && sig.signalDate === s.signalDate,
@@ -1650,7 +1715,6 @@ function renderBsjpDetailContent(
   }, 10000);
 }
 
-// ========== RENDER SIGNAL DETAIL (UTAMA) ==========
 async function renderSignalDetailToContainer(signal, container, onBack) {
   const s = signal;
 
@@ -2027,7 +2091,6 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   });
 }
 
-// ========== RENDER PERFORMANCE SIGNAL LIST ==========
 async function renderPerformanceSignalList(status) {
   const container = document.getElementById("signalListContainer");
   if (!container) return;
@@ -2041,15 +2104,10 @@ async function renderPerformanceSignalList(status) {
   container.innerHTML = `<div style="text-align:center;color:var(--text-secondary);padding:1rem;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>`;
 
   try {
-    const res = await fetch("/api/signals");
-    if (!res.ok) throw new Error("Gagal fetch signals");
-    const data = await res.json();
+    const signals = await fetchReportsByDate(start, end);
+    const allSignals = signals || [];
 
-    const running = data.running || [];
-    const closed = data.closed || [];
-    const allSignals = [...running, ...closed];
-
-    const filteredByDate = allSignals.filter((s) => {
+    let filteredByDate = allSignals.filter((s) => {
       let dateToCheck = null;
       if (s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS") {
         dateToCheck = s.closeDate ? s.closeDate.split(" ")[0] : null;
@@ -2122,12 +2180,8 @@ async function renderPerformanceSignalList(status) {
   }
 }
 
-// ========== SORTED SIGNALS ==========
 function getSortedSignals() {
-  const allSignals = [
-    ..._allRunning.map((s) => ({ ...s, _type: "running" })),
-    ..._allClosed.map((s) => ({ ...s, _type: "closed" })),
-  ];
+  const allSignals = Array.from(signalCache.values());
   const priority = {
     "STRONG BUY": 1,
     BUY: 2,
@@ -2149,7 +2203,6 @@ function getSortedSignals() {
   return allSignals;
 }
 
-// ========== SESI WAKTU ==========
 function getSessionFromDate(signalDate) {
   if (!signalDate) return null;
   const date = new Date(signalDate);
@@ -2161,7 +2214,6 @@ function getSessionFromDate(signalDate) {
   return null;
 }
 
-// ========== SIGNAL ROWS ==========
 function getColorFromCode(code) {
   const colors = [
     "#10b981",
@@ -2187,7 +2239,6 @@ const missedSvg = `<img src="https://stockbit.com/assets/img/missed.png" alt="MI
 const hitSvgrow = `<img src="https://stockbit.com/assets/img/correct.png" alt="HIT" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
 const missedSvgrow = `<img src="https://stockbit.com/assets/img/missed.png" alt="MISSED" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
 
-// ========== FUNGSI RENDER SIGNAL ROWS (perbaikan gain 0) ==========
 function renderSignalRows(signals, priceMap, infoMap) {
   let rows = "";
   signals.forEach((s) => {
@@ -2266,7 +2317,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
         const gainPct = (gainAbs / s.entryPrice) * 100;
         const absGain = Math.abs(gainAbs).toFixed(0);
         const absPct = Math.abs(gainPct).toFixed(2);
-        // Tampilkan gain dengan warna dan icon, jika gain 0 -> netral
+
         if (Math.abs(gainAbs) < 0.01) {
           gainColor = "var(--text-secondary)";
           gainStr = `0 (0.00%)`;
@@ -2387,52 +2438,23 @@ function renderSignalRows(signals, priceMap, infoMap) {
   return rows;
 }
 
-// ========== SHOW SIGNAL LIST ==========
 async function showSignalList() {
   isDetailView = false;
   currentDetailIndex = null;
   const container = document.getElementById("signals");
   if (!container) return;
 
-  if (currentSignalFilter === "none" || currentSignalFilter === null) {
-    container.innerHTML = `...`;
+  const runningSignals = _allRunning;
+  if (!runningSignals.length) {
+    container.innerHTML = `<div class="loading-state"><p>Belum ada sinyal running.</p></div>`;
     signalListRendered = false;
     return;
   }
 
-  const allSignals = getSortedSignals();
-
-  if (!allSignals.length) {
-    container.innerHTML = `<div class="loading-state"><p>Belum ada sinyal.</p></div>`;
-    signalListRendered = false;
-    return;
-  }
-
-  let filteredSignals = [];
-  let filterType = currentSignalFilter;
-  if (filterType === "today") {
-    const today = getTodayWIB();
-    filteredSignals = allSignals.filter(
-      (s) => s.signalDate && s.signalDate.startsWith(today),
-    );
-  } else if (filterType === "running") {
-    filteredSignals = allSignals.filter(
-      (s) => s.status === "RUNNING" || s.status === "TRAILING",
-    );
-  } else {
-    filteredSignals = allSignals;
-  }
-
-  if (!filteredSignals.length) {
-    container.innerHTML = `<div class="loading-state"><p>Tidak ada sinyal untuk filter ini.</p></div>`;
-    signalListRendered = false;
-    return;
-  }
-
-  const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
+  const symbols = [...new Set(runningSignals.map(s => s.stockCode))];
   const [priceResults, infoResults] = await Promise.all([
-    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
-    Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
+    Promise.all(symbols.map(sym => fetchStockPrice(sym))),
+    Promise.all(symbols.map(sym => fetchStockInfo(sym)))
   ]);
   const priceMap = {};
   const infoMap = {};
@@ -2441,177 +2463,44 @@ async function showSignalList() {
     infoMap[sym] = infoResults[idx];
   });
 
-  let totalGainPct = 0;
-  let totalRunningCount = 0;
-  filteredSignals.forEach((s) => {
-    let gainPct = 0;
-    if (s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS") {
-      gainPct = s.returnPercent || 0;
-      if (gainPct !== 0) {
-        totalGainPct += gainPct;
-        totalRunningCount++;
-      }
-    } else if (
-      (s.status === "RUNNING" || s.status === "TRAILING") &&
-      s.entryPrice &&
-      priceMap[s.stockCode]
-    ) {
-      const currentPrice = priceMap[s.stockCode];
-      gainPct = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
-      if (gainPct !== 0) {
-        totalGainPct += gainPct;
-        totalRunningCount++;
-      }
+  let totalGain = 0, totalCount = 0;
+  runningSignals.forEach(s => {
+    if (s.entryPrice && priceMap[s.stockCode]) {
+      const gain = ((priceMap[s.stockCode] - s.entryPrice) / s.entryPrice) * 100;
+      if (gain !== 0) { totalGain += gain; totalCount++; }
     }
   });
+  const avgGain = totalCount > 0 ? totalGain / totalCount : 0;
+  const gainStr = totalCount > 0 ? (avgGain >= 0 ? "+" : "") + avgGain.toFixed(2) + "%" : "—";
+  const gainColor = avgGain >= 0 ? "#10b981" : "#ef4444";
 
-  let avgGainPct = totalRunningCount > 0 ? totalGainPct / totalRunningCount : 0;
-  let totalGainStr = "";
-  let totalGainColor = "";
-  let arrowIconTotal = "";
-  if (totalRunningCount > 0) {
-    const sign = avgGainPct >= 0 ? "+" : "";
-    totalGainStr = `${sign}${avgGainPct.toFixed(2)}%`;
-    totalGainColor = avgGainPct >= 0 ? "#10b981" : "#ef4444";
-    if (avgGainPct > 0.01) {
-      arrowIconTotal = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
-    } else if (avgGainPct < -0.01) {
-      arrowIconTotal = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
-    }
-  } else {
-    totalGainStr = "—";
-    totalGainColor = "var(--text-secondary)";
-    arrowIconTotal = "";
-  }
-
-  let html = "";
-
-  if (filterType === "today") {
-    const session1 = filteredSignals.filter(
-      (s) => getSessionFromDate(s.signalDate) === 1 && s.signalType !== "BSJP",
-    );
-    const session2 = filteredSignals.filter(
-      (s) => getSessionFromDate(s.signalDate) === 2 && s.signalType !== "BSJP",
-    );
-    const bsjpToday = filteredSignals.filter((s) => s.signalType === "BSJP");
-    const other = filteredSignals.filter(
-      (s) =>
-        getSessionFromDate(s.signalDate) === null && s.signalType !== "BSJP",
-    );
-
-    html += `
-      <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
-        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-          SINYAL HARI INI
-          <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${filteredSignals.length})</span>
-        </span>
-        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-          GAIN: ${arrowIconTotal} <span style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
-        </span>
-      </div>
-    `;
-
-    if (session1.length) {
-      html += `<div class="session-header">SESI 1</div>`;
-      html += `<div class="sig-list">${renderSignalRows(session1, priceMap, infoMap)}</div>`;
-    }
-
-    if (session2.length) {
-      html += `<div class="session-header">SESI 2</div>`;
-      html += `<div class="sig-list">${renderSignalRows(session2, priceMap, infoMap)}</div>`;
-    }
-
-    if (bsjpToday.length) {
-      html += `<div class="session-header" style="color:var(--text-primary);">BSJP</div>`;
-      html += `<div class="sig-list">${renderSignalRows(bsjpToday, priceMap, infoMap)}</div>`;
-    }
-
-    if (other.length) {
-      html += `<div class="session-header">LAINNYA</div>`;
-      html += `<div class="sig-list">${renderSignalRows(other, priceMap, infoMap)}</div>`;
-    }
-  } else if (filterType === "running") {
-    const runningBiasa = filteredSignals.filter((s) => s.signalType !== "BSJP");
-    const runningBsjp = filteredSignals.filter((s) => s.signalType === "BSJP");
-    const allRunning = [...runningBiasa, ...runningBsjp];
-
-    let totalGain = 0,
-      totalCount = 0;
-    allRunning.forEach((s) => {
-      if (s.entryPrice && priceMap[s.stockCode]) {
-        const gain =
-          ((priceMap[s.stockCode] - s.entryPrice) / s.entryPrice) * 100;
-        if (gain !== 0) {
-          totalGain += gain;
-          totalCount++;
-        }
-      }
-    });
-    const avgTotalGain = totalCount > 0 ? totalGain / totalCount : 0;
-    const totalGainStr =
-      totalCount > 0
-        ? (avgTotalGain >= 0 ? "+" : "") + avgTotalGain.toFixed(2) + "%"
-        : "—";
-    const totalGainColor = avgTotalGain >= 0 ? "#10b981" : "#ef4444";
-
-    if (allRunning.length) {
-      html += `
-        <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
-          <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-            ALL RUNNING
-            <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${allRunning.length})</span>
-          </span>
-          <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-            GAIN: <span style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
-          </span>
-        </div>
-        <div class="sig-list">${renderSignalRows(runningBiasa, priceMap, infoMap)}</div>
-      `;
-
-      if (runningBsjp.length) {
-        html += `
-          <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem; color:var(--text-primary);">
-            <span style="font-weight:600; font-size:0.9rem;">
-              BSJP
-              <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${runningBsjp.length})</span>
-            </span>
-          </div>
-          <div class="sig-list">${renderSignalRows(runningBsjp, priceMap, infoMap)}</div>
-        `;
-      }
-    }
-  } else {
-    html += `
-      <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
-        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-          SAHAM
-          <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${filteredSignals.length})</span>
-        </span>
-        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-          GAIN: ${arrowIconTotal} <span style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
-        </span>
-      </div>
-      <div class="sig-list">${renderSignalRows(filteredSignals, priceMap, infoMap)}</div>
-    `;
-  }
+  let html = `
+    <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
+      <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+        ALL RUNNING
+        <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${runningSignals.length})</span>
+      </span>
+      <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+        GAIN: <span style="font-weight:600; color:${gainColor};">${gainStr}</span>
+      </span>
+    </div>
+    <div class="sig-list">${renderSignalRows(runningSignals, priceMap, infoMap)}</div>
+  `;
 
   container.innerHTML = html;
   signalListRendered = true;
 
-  container.querySelectorAll(".sig-list-row").forEach((row) => {
-    row.addEventListener("click", function (e) {
+  container.querySelectorAll(".sig-list-row").forEach(row => {
+    row.addEventListener("click", function() {
       const stock = this.dataset.stock;
       const date = this.dataset.date;
-      if (stock && date) {
-        showSignalDetailByStock(stock, date);
-      }
+      if (stock && date) showSignalDetailByStock(stock, date);
     });
   });
 }
 
-// ========== SHOW DETAIL BY STOCK ==========
 async function showSignalDetailByStock(stockCode, signalDate) {
-  const allSignals = getSortedSignals();
+  const allSignals = Array.from(signalCache.values());
   const idx = allSignals.findIndex(
     (s) => s.stockCode === stockCode && s.signalDate === signalDate,
   );
@@ -2642,7 +2531,7 @@ function formatFullDateTime(dateStr) {
 async function showSignalDetail(index) {
   isDetailView = true;
   currentDetailIndex = index;
-  const allSignals = getSortedSignals();
+  const allSignals = Array.from(signalCache.values());
   const s = allSignals[index];
   if (!s) return;
 
@@ -3357,7 +3246,6 @@ ${headerResetStyle}
   });
 }
 
-// ========== RENDER BROKER FLOW ==========
 function renderBrokerFlow(
   topBuyers,
   topSellers,
@@ -3458,7 +3346,6 @@ function renderBrokerFlow(
   containerEl.innerHTML = html;
 }
 
-// ========== PATTERN VISUAL ==========
 function renderPatternVisual(patternText, container = document) {
   const containerEl =
     container.getElementById("patternVisualContainer") ||
@@ -3525,7 +3412,6 @@ function renderPatternVisual(patternText, container = document) {
   containerEl.innerHTML = svg;
 }
 
-// ========== RENDER INDICATOR ROW ==========
 function renderIndRow(label, displayVal, compareVal, entryVal) {
   let fillClass = "bg-neutral",
     width = "50%";
@@ -3541,7 +3427,6 @@ function renderIndRow(label, displayVal, compareVal, entryVal) {
   return `<div class="pro-ind-row"><span class="pro-ind-label">${label}</span><div class="pro-ind-track"><div class="pro-ind-fill ${fillClass}" style="width:${width};"></div></div><span class="pro-ind-val">${displayVal}</span></div>`;
 }
 
-// ========== CHARTS ==========
 function renderDetailCharts(s, container = document) {
   if (detailCharts.rsi) {
     try {
@@ -3625,419 +3510,7 @@ function renderDetailCharts(s, container = document) {
   }
 }
 
-// ========== FETCH DATA ==========
-async function fetchReports() {
-  const activeTab = document.querySelector(".view.active")?.id;
-  if (activeTab === "daily") {
-    if (dailyRendered) {
-      await fetchSignals(false);
-      await updateDailyContent();
-    } else {
-      renderDaily();
-    }
-  } else if (activeTab === "home") {
-    await fetchSignals(false);
-    updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
-  }
-}
-
-async function fetchSignals(showLoadingIndicator = true) {
-  if (isDetailView) {
-    try {
-      const res = await fetch(`${apiBase}/signals`);
-      if (!res.ok) throw new Error("Gagal fetch signals");
-      const data = await res.json();
-      _allRunning = data.running || [];
-      _allClosed = data.closed || [];
-      updateTotalSignals(_allRunning, _allClosed);
-      updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
-      checkSignalChanges(_allRunning, _allClosed);
-    } catch (err) {
-      console.warn("Background fetch error:", err);
-    }
-    return;
-  }
-
-  if (showLoadingIndicator && currentTab === "signals" && !isDetailView)
-    showLoading("signals");
-  try {
-    const res = await fetch(`${apiBase}/signals`);
-    if (!res.ok) throw new Error("Gagal fetch signals");
-    const data = await res.json();
-    const running = data.running || [];
-    const closed = data.closed || [];
-
-    _allRunning = running;
-    _allClosed = closed;
-
-    if (currentTab === "signals") {
-      if (isDetailView) {
-        isDetailView = false;
-        currentDetailIndex = null;
-        if (window.location.hash.startsWith("#detail-")) {
-          history.pushState(null, "", window.location.pathname);
-        }
-      }
-      if (signalListRendered) {
-        await updateSignalList();
-      } else {
-        await showSignalList();
-      }
-    } else if (!isDetailView) {
-      await showSignalList();
-    }
-
-    updateTotalSignals(running, closed);
-    updateChartsFromSignals({ running, closed });
-    checkSignalChanges(running, closed);
-  } catch (err) {
-    console.error(err);
-    if (currentTab === "signals" && !isDetailView) {
-      document.getElementById("signals").innerHTML = `
-        <div class="loading-state" style="text-align:center; padding:2rem;">
-          <div style="display:flex; flex-direction:column; align-items:center; gap:1rem;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width:48px; height:48px;">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <p style="color:#ef4444; font-weight:500; margin:0;">Gagal memuat sinyal</p>
-            <button onclick="fetchSignals()" class="retry-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:0.6rem 1.2rem;border-radius:8px;color:var(--text-primary);cursor:pointer;display:flex;align-items:center;gap:0.5rem;transition:0.2s;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px;">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
-              Coba Lagi
-            </button>
-          </div>
-        </div>
-      `;
-      signalListRendered = false;
-    }
-  }
-}
-
-function updateTotalSignals(running, closed) {
-  const total = (running ? running.length : 0) + (closed ? closed.length : 0);
-  const el = document.getElementById("totalSignals");
-  if (el) el.innerText = total;
-}
-
-function checkSignalChanges(running, closed) {
-  const prevRunningIds = localStorage.getItem("lastRunningIds") || "";
-  const prevClosedIds = localStorage.getItem("lastClosedIds") || "";
-
-  const currentRunningIds = running
-    .map((s) => `${s.stockCode}-${s.signalDate}`)
-    .sort()
-    .join(",");
-  const currentClosedIds = closed
-    .map((s) => `${s.stockCode}-${s.signalDate}`)
-    .sort()
-    .join(",");
-
-  const prevRunningArr = prevRunningIds ? prevRunningIds.split(",") : [];
-  const currentRunningArr = currentRunningIds
-    ? currentRunningIds.split(",")
-    : [];
-
-  const newRunning = currentRunningArr.filter(
-    (id) => !prevRunningArr.includes(id),
-  );
-
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
-  }).format(new Date());
-
-  if (newRunning.length > 0) {
-    const newSignals = running.filter((s) =>
-      newRunning.includes(`${s.stockCode}-${s.signalDate}`),
-    );
-
-    const groups = { session1: [], session2: [], bsjp: [], other: [] };
-    newSignals.forEach((s) => {
-      if (s.signalType === "BSJP") {
-        groups.bsjp.push(s);
-      } else {
-        const session = getSessionFromDate(s.signalDate);
-        if (session === 1) groups.session1.push(s);
-        else if (session === 2) groups.session2.push(s);
-        else groups.other.push(s);
-      }
-    });
-
-    function handleGroupNotification(groupName, signals, cacheKey) {
-      if (!signals || signals.length === 0) return;
-      const title = `NEW SIGNALS ${groupName}`;
-      const body = `${signals.length} sinyal saham baru terdeteksi untuk ${groupName}.`;
-      addNotification(title, body, "signal");
-    }
-
-    handleGroupNotification("SESI 1", groups.session1, "sesi1");
-    handleGroupNotification("SESI 2", groups.session2, "sesi2");
-    handleGroupNotification("BSJP", groups.bsjp, "bsjp");
-    handleGroupNotification("LAINNYA", groups.other, "other");
-  }
-
-  const prevClosedArr = prevClosedIds ? prevClosedIds.split(",") : [];
-  const currentClosedArr = currentClosedIds ? currentClosedIds.split(",") : [];
-  const newClosed = currentClosedArr.filter(
-    (id) => !prevClosedArr.includes(id),
-  );
-
-  if (newClosed.length > 0) {
-    const closedSignals = closed.filter((s) =>
-      newClosed.includes(`${s.stockCode}-${s.signalDate}`),
-    );
-
-    closedSignals.forEach((s) => {
-      const status = s.status;
-      const ret = s.returnPercent || 0;
-      const sign = ret >= 0 ? "+" : "";
-      const emoji = status === "TP" ? "✅" : "❌";
-      addNotification(
-        "Signal Closed",
-        `${emoji} ${s.stockCode} Selesai ${sign}${ret.toFixed(2)}%`,
-        "closed",
-      );
-    });
-
-    closedSignals.forEach((s) => {
-      if (s.status === "TP") {
-        const ret = s.returnPercent || 0;
-        const sign = ret >= 0 ? "+" : "";
-        const entry = s.entryPrice || 0;
-        const exit = s.exitPrice || s.tp1 || 0;
-        const title = `✅ TP: ${s.stockCode}`;
-        const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}% (Entry ${fmtPriceNoRp(entry)} ➔ Exit ${fmtPriceNoRp(exit)})`;
-      }
-    });
-  }
-
-  localStorage.setItem("lastRunningIds", currentRunningIds);
-  localStorage.setItem("lastClosedIds", currentClosedIds);
-}
-
-// ========== NOTIFICATION UI ==========
-function renderNotificationModal() {
-  const oldModal = document.getElementById("notificationModal");
-  if (oldModal) oldModal.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "notificationModal";
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    animation: fadeIn 0.2s ease;
-  `;
-
-  const modalContent = document.createElement("div");
-  modalContent.style.cssText = `
-    background: rgba(30, 30, 40, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    max-width: 500px;
-    width: 100%;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    overflow: hidden;
-  `;
-
-  const header = document.createElement("div");
-  header.style.cssText = `
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    flex-shrink: 0;
-  `;
-  header.innerHTML = `
-    <span style="font-weight:600; font-size:1rem; color:var(--text-primary);">
-      <i class="fas fa-bell" style="color:#8b5cf6; margin-right:0.4rem;"></i> Notifications
-      <span style="font-size:0.7rem; color:var(--text-secondary); opacity:0.5;">(${notificationHistory.length})</span>
-    </span>
-    <div style="display:flex; gap:0.5rem;">
-      <button id="markAllReadBtn" style="background:rgba(255,255,255,0.05); border:none; color:var(--text-secondary); cursor:pointer; font-size:0.7rem; padding:0.2rem 0.6rem; border-radius:6px; transition:0.2s;">
-        <i class="fas fa-check-double"></i> Read All
-      </button>
-      <button id="clearNotifBtn" style="background:rgba(239,68,68,0.1); border:none; color:#ef4444; cursor:pointer; font-size:0.7rem; padding:0.2rem 0.6rem; border-radius:6px; transition:0.2s;">
-        <i class="fas fa-trash"></i> Clear
-      </button>
-      <button id="closeNotifModal" style="background:rgba(255,255,255,0.05); border:none; color:var(--text-secondary); cursor:pointer; font-size:0.9rem; padding:0.2rem 0.6rem; border-radius:6px; transition:0.2s;">
-        ✕
-      </button>
-    </div>
-  `;
-
-  const body = document.createElement("div");
-  body.style.cssText = `
-    padding: 0.5rem 1.25rem 1.25rem;
-    overflow-y: auto;
-    flex: 1;
-  `;
-
-  if (notificationHistory.length === 0) {
-    body.innerHTML = `
-      <div style="text-align:center; color:var(--text-secondary); opacity:0.4; padding:2rem 0;">
-        <i class="fas fa-bell-slash" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>
-        No notifications yet
-      </div>
-    `;
-  } else {
-    let listHtml = "";
-    notificationHistory.forEach((n) => {
-      const isRead = n.read ? "opacity:0.5;" : "";
-      listHtml += `
-        <div style="padding:0.6rem 0; border-bottom:1px solid rgba(255,255,255,0.04); ${isRead}">
-          <div style="display:flex; align-items:center; gap:0.4rem;">
-            <span style="font-size:0.7rem; color:${n.type === "closed" ? "#ef4444" : "#8b5cf6"};">${n.type === "closed" ? "💹" : "🔔"}</span>
-            <span style="font-weight:600; font-size:0.8rem; color:var(--text-primary);">${escapeHtml(n.title)}</span>
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.1rem;">${escapeHtml(n.body)}</div>
-          <div style="font-size:0.55rem; color:var(--text-secondary); opacity:0.4; margin-top:0.2rem;">${n.timestamp}</div>
-        </div>
-      `;
-    });
-    body.innerHTML = listHtml;
-  }
-
-  modalContent.appendChild(header);
-  modalContent.appendChild(body);
-  modal.appendChild(modalContent);
-  document.body.appendChild(modal);
-
-  document.getElementById("closeNotifModal").addEventListener("click", () => {
-    modal.remove();
-    markAllAsRead();
-  });
-
-  document.getElementById("markAllReadBtn").addEventListener("click", () => {
-    markAllAsRead();
-    renderNotificationModal();
-  });
-
-  document.getElementById("clearNotifBtn").addEventListener("click", () => {
-    if (confirm("Clear all notifications?")) {
-      clearAllNotifications();
-      renderNotificationModal();
-    }
-  });
-
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      modal.remove();
-      markAllAsRead();
-    }
-  });
-}
-
-// ========== UPDATE SIGNAL LIST (PARSIAL) ==========
-async function updateSignalList() {
-  if (isDetailView) return;
-  if (!signalListRendered) {
-    await showSignalList();
-    return;
-  }
-  const container = document.getElementById("signals");
-  if (!container) return;
-
-  const allSignals = getSortedSignals();
-  if (!allSignals.length) return;
-  let filteredSignals = [];
-  let filterType = currentSignalFilter;
-  if (filterType === "today") {
-    const today = getTodayWIB();
-    filteredSignals = allSignals.filter(
-      (s) => s.signalDate && s.signalDate.startsWith(today),
-    );
-  } else if (filterType === "running") {
-    filteredSignals = allSignals.filter(
-      (s) => s.status === "RUNNING" || s.status === "TRAILING",
-    );
-  } else {
-    filteredSignals = allSignals;
-  }
-  if (!filteredSignals.length) return;
-
-  const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
-  const [priceResults] = await Promise.all([
-    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
-  ]);
-  const priceMap = {};
-  symbols.forEach((sym, idx) => {
-    priceMap[sym] = priceResults[idx];
-  });
-
-  const rows = container.querySelectorAll(".sig-list-row");
-  rows.forEach((row) => {
-    const stock = row.dataset.stock;
-    const signal = filteredSignals.find((s) => s.stockCode === stock);
-    if (!signal) return;
-    const price = priceMap[stock];
-    const priceEl = row.querySelector(".stock-price");
-    const gainEl = row.querySelector(".sig-right span:last-child");
-    if (priceEl && price != null) {
-      let displayPrice = fmtPriceNoRp(price);
-      let arrowPrice = "";
-      if (signal.status === "RUNNING" || signal.status === "TRAILING") {
-        const gainAbs = price - signal.entryPrice;
-        if (gainAbs > 0) {
-          arrowPrice = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>`;
-        } else if (gainAbs < 0) {
-          arrowPrice = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>`;
-        }
-      }
-      priceEl.innerHTML = `${arrowPrice} ${displayPrice}`;
-    }
-    if (
-      gainEl &&
-      (signal.status === "RUNNING" || signal.status === "TRAILING") &&
-      signal.entryPrice &&
-      price
-    ) {
-      const gainAbs = price - signal.entryPrice;
-      const gainPct = (gainAbs / signal.entryPrice) * 100;
-      const absGain = Math.abs(gainAbs).toFixed(0);
-      const absPct = Math.abs(gainPct).toFixed(2);
-      let gainStr = "";
-      let gainColor = "";
-      if (Math.abs(gainAbs) < 0.01) {
-        gainStr = `0 (0.00%)`;
-        gainColor = "var(--text-secondary)";
-      } else if (gainAbs > 0) {
-        gainStr = `+${absGain} (+${absPct}%)`;
-        gainColor = "#10b981";
-      } else {
-        gainStr = `-${absGain} (-${absPct}%)`;
-        gainColor = "#ef4444";
-      }
-      gainEl.style.color = gainColor;
-      if (gainAbs > 0) {
-        gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> ${gainStr}`;
-      } else if (gainAbs < 0) {
-        gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> ${gainStr}`;
-      } else {
-        gainEl.innerHTML = gainStr;
-      }
-    }
-  });
-}
-
-// ========== CHARTS FROM SIGNALS ==========
+// ===================== UPDATE FUNGSI UNTUK HOME =====================
 function updateChartsFromSignals(data) {
   updateEquityChart(data);
   updateWinRateChart(data);
@@ -4228,7 +3701,6 @@ function updateSignalChart(data) {
   });
 }
 
-// ========== NOTIFIKASI ==========
 function sendNotification(title, body) {
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted") {
@@ -4239,16 +3711,24 @@ function sendNotification(title, body) {
   }
 }
 
-// ========== POLLING ==========
+function updateTotalSignals(running, closed) {
+  const total = (running ? running.length : 0) + (closed ? closed.length : 0);
+  const el = document.getElementById("totalSignals");
+  if (el) el.innerText = total;
+}
+
+// ===================== POLLING =====================
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
-  pollingInterval = setInterval(() => {
+  pollingInterval = setInterval(async () => {
     const activeTab = document.querySelector(".view.active")?.id;
-    if (activeTab === "daily" || activeTab === "home") {
-      fetchReports();
-    }
-    if (activeTab === "signals" || activeTab === "home") {
-      fetchSignals(false);
+    if (activeTab === "home") {
+      await updateSignalCache();
+    } else if (activeTab === "daily") {
+      updateDailyContent();
+    } else if (activeTab === "signals") {
+      await fetchRunning();
+      showSignalList();
     }
     updateLastUpdate();
   }, 30000);
@@ -4265,7 +3745,6 @@ function updateLastUpdate() {
     });
 }
 
-// ========== CLOCK ==========
 function updateClock() {
   const clockEl = document.getElementById("clockDisplay");
   if (clockEl)
@@ -4285,7 +3764,6 @@ function updateClock() {
   }
 }
 
-// ========== FUNGSI FILTER SINYAL ==========
 function selectSignalFilter(filter) {
   isDetailView = false;
   currentDetailIndex = null;
@@ -4311,10 +3789,9 @@ function selectSignalFilter(filter) {
   document.getElementById("signals").classList.add("active");
   currentTab = "signals";
   signalListRendered = false;
-  fetchSignals(true);
+  fetchRunning().then(() => showSignalList());
 }
 
-// ========== UI ==========
 function initTabs() {
   const btns = document.querySelectorAll(".nav-link, .nav-sub-link");
   const views = document.querySelectorAll(".view");
@@ -4323,9 +3800,7 @@ function initTabs() {
   const titles = {
     home: { t: "Dashboard Overview", s: "Real-time monitoring & analysis" },
     daily: { t: "Laporan Harian", s: "Daily reports" },
-    weekly: { t: "Laporan Mingguan", s: "Weekly summary" },
-    monthly: { t: "Laporan Bulanan", s: "Monthly analytics" },
-    signals: { t: "Sinyal Aktif", s: "All signals" },
+    signals: { t: "Sinyal Aktif", s: "All running signals" },
     "signals-today": { t: "Sinyal Hari Ini", s: "Today's signals" },
     "signals-running": { t: "All Running", s: "Active positions" },
   };
@@ -4381,15 +3856,14 @@ function initTabs() {
       }
       if (tabId === "daily") {
         if (!dailyRendered) showLoading("daily");
-        fetchReports();
+        renderDaily();
       }
       if (tabId === "signals") {
         signalListRendered = false;
-        fetchSignals(true);
+        fetchRunning().then(() => showSignalList());
       }
       if (tabId === "home") {
-        fetchReports();
-        fetchSignals(false);
+        renderHomeFromCache();
       }
       document.querySelector(".sidebar")?.classList.remove("open");
       document.querySelector(".overlay")?.classList.remove("active");
@@ -4449,8 +3923,8 @@ function initPullToRefresh() {
   wrapper.addEventListener("touchend", () => {
     if (startY > 0 && endY > 0 && endY - startY > 100 && window.scrollY === 0) {
       triggerHaptic();
-      fetchReports();
-      fetchSignals(true);
+      fetchRunning().then(() => {});
+      updateSignalCache().then(() => {});
       setTimeout(() => {
         indicator.classList.remove("visible");
         indicator.style.transform = "translateX(-50%) translateY(0)";
@@ -4494,7 +3968,6 @@ function createParticles() {
   document.head.appendChild(style);
 }
 
-// ============ WEB PUSH CLIENT ==========
 const VAPID_PUBLIC_KEY =
   "BCGyIOUseFBON2YXTAk-rcvncZ65jkbKqb2ShjOuvZhP08HLvaJJis5Bsx8ybuVVcZbXZow5GRrl9ykSiV0Y3B0";
 
@@ -4519,7 +3992,6 @@ async function subscribeToPush() {
     const registration = await navigator.serviceWorker.register("/sw.js");
     await navigator.serviceWorker.ready;
 
-    // Jika permission belum granted, minta izin
     if (Notification.permission !== "granted") {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -4528,7 +4000,6 @@ async function subscribeToPush() {
       }
     }
 
-    // Unsubscribe subscription lama jika ada
     let subscription = await registration.pushManager.getSubscription();
     if (subscription) {
       await subscription.unsubscribe();
@@ -4536,14 +4007,12 @@ async function subscribeToPush() {
       subscription = null;
     }
 
-    // Buat subscription baru
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     console.log("✅ Dibuat subscription baru di browser.");
 
-    // Simpan ke server
     const response = await fetch("/api/save-subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4577,7 +4046,7 @@ function updatePriceElement(symbol, price) {
 
     if (price != null) {
       let arrow = "";
-      const allSignals = getSortedSignals();
+      const allSignals = Array.from(signalCache.values());
       const signal = allSignals.find((s) => s.stockCode === symbol);
       if (
         signal &&
@@ -4607,7 +4076,6 @@ function updatePriceElement(symbol, price) {
             '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
         }
       } else if (signal && (signal.status === "TP" || signal.status === "SL")) {
-        // Jangan update untuk sinyal yang sudah closed
         return;
       }
       priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
@@ -4617,8 +4085,8 @@ function updatePriceElement(symbol, price) {
   });
 }
 
-// ========== INIT ==========
-document.addEventListener("DOMContentLoaded", () => {
+// ===================== INIT =====================
+document.addEventListener("DOMContentLoaded", async () => {
   loadNotifications();
   updateNotifBadge();
   createParticles();
@@ -4656,6 +4124,20 @@ document.addEventListener("DOMContentLoaded", () => {
   initPullToRefresh();
   initNotifications();
 
+  // Inisialisasi cache & render home
+  await initSignalCache();
+  renderHomeFromCache();
+
+  // Ambil running untuk tab signals
+  await fetchRunning();
+  showSignalList();
+
+  startPolling();
+  connectPriceSSE();
+  setInterval(updateClock, 1000);
+  updateClock();
+  updateLastUpdate();
+
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash;
     if (hash === "#signals-today") {
@@ -4679,9 +4161,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document
         .querySelector('.nav-link[data-tab="home"]')
         ?.classList.add("active");
-      fetchReports();
-      fetchSignals(false);
-      showSignalList();
+      renderHomeFromCache();
     } else {
       window.location.hash = "home";
     }
@@ -4706,15 +4186,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   showLoading("daily");
   showLoading("signals");
-  fetchReports();
-  fetchSignals(false);
-  showSignalList();
-
-  startPolling();
-  connectPriceSSE();
-  setInterval(updateClock, 1000);
-  updateClock();
-  updateLastUpdate();
+  renderDaily();
 
   if (window.location.hash.startsWith("#detail-")) {
     window.location.hash = "home";
