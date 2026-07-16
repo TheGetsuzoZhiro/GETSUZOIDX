@@ -3663,7 +3663,7 @@ async function fetchSignals(showLoadingIndicator = true) {
 
   if (showLoadingIndicator && currentTab === "signals" && !isDetailView)
     showLoading("signals");
-  
+
   try {
     const res = await fetch(`${apiBase}/signals`);
     if (!res.ok) throw new Error("Gagal fetch signals");
@@ -4042,7 +4042,6 @@ async function updateSignalList() {
     }
   });
 }
-
 
 function updateChartsFromSignals(data) {
   updateEquityChart(data);
@@ -4706,29 +4705,21 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector('.nav-link[data-tab="home"]')?.classList.add("active");
 
   showLoading("daily");
-showLoading("signals");
+  showLoading("signals");
 
-fetchReports();
+  fetchReports();
+  fetchSignals(false);
+  showSignalList();
 
-fetchSignals(false);
+  startPolling();
+  connectPriceSSE();
+  setInterval(updateClock, 1000);
+  updateClock();
+  updateLastUpdate();
 
-const hash = window.location.hash;
-if (hash === "#signals" || hash === "#signals-today" || hash === "#signals-running") {
-  let filter = "all";
-  if (hash === "#signals-today") filter = "today";
-  else if (hash === "#signals-running") filter = "running";
-  selectSignalFilter(filter);
-}
-
-startPolling();
-connectPriceSSE();
-setInterval(updateClock, 1000);
-updateClock();
-updateLastUpdate();
-
-if (window.location.hash.startsWith("#detail-")) {
-  window.location.hash = "home";
-}
+  if (window.location.hash.startsWith("#detail-")) {
+    window.location.hash = "home";
+  }
 });
 
 if ("serviceWorker" in navigator) {
