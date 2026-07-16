@@ -4606,8 +4606,7 @@ function updatePriceElement(symbol, price) {
           arrow =
             '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
         }
-      } else if (signal && (signal.status === "TP" || signal.status === "SL")) {
-        
+      } else if (signal && (signal.status === "TP" || signal.status === "SL" || signal.status === "STOP LOSS")) {
         return;
       }
       priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
@@ -4616,7 +4615,6 @@ function updatePriceElement(symbol, price) {
     }
   });
 }
-
 
 document.addEventListener("DOMContentLoaded", () => {
   loadNotifications();
