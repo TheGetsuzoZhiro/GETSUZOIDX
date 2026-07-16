@@ -4567,9 +4567,16 @@ async function subscribeToPush() {
 }
 
 function updatePriceElement(symbol, price) {
-  const rows = document.querySelectorAll(
-    `.sig-list-row[data-stock="${symbol}"]`,
-  );
+  const rows = document.querySelectorAll(`.sig-list-row[data-stock="${symbol}"]`);
+  if (!rows.length) return;
+
+  const allSignals = getSortedSignals();
+  const signal = allSignals.find((s) => s.stockCode === symbol);
+  if (!signal) return;
+
+  const isRunning = signal.status === "RUNNING" || signal.status === "TRAILING";
+  if (!isRunning) return;
+
   rows.forEach((row) => {
     const priceEl = row.querySelector(".stock-price");
     const gainEl = row.querySelector(".sig-right span:last-child");
@@ -4577,37 +4584,26 @@ function updatePriceElement(symbol, price) {
 
     if (price != null) {
       let arrow = "";
-      const allSignals = getSortedSignals();
-      const signal = allSignals.find((s) => s.stockCode === symbol);
-      if (
-        signal &&
-        (signal.status === "RUNNING" || signal.status === "TRAILING")
-      ) {
-        const gain = ((price - signal.entryPrice) / signal.entryPrice) * 100;
-        if (Math.abs(gain) < 0.01) {
-          if (gainEl) {
-            gainEl.innerHTML = `0 (0.00%)`;
-            gainEl.style.color = "var(--text-secondary)";
-          }
-        } else if (gain > 0) {
-          const absGain = Math.abs(gain).toFixed(2);
-          if (gainEl) {
-            gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
-            gainEl.style.color = "#10b981";
-          }
-          arrow =
-            '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
-        } else {
-          const absGain = Math.abs(gain).toFixed(2);
-          if (gainEl) {
-            gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
-            gainEl.style.color = "#ef4444";
-          }
-          arrow =
-            '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
+      const gain = ((price - signal.entryPrice) / signal.entryPrice) * 100;
+      if (Math.abs(gain) < 0.01) {
+        if (gainEl) {
+          gainEl.innerHTML = `0 (0.00%)`;
+          gainEl.style.color = "var(--text-secondary)";
         }
-      } else if (signal && (signal.status === "TP" || signal.status === "SL" || signal.status === "STOP LOSS")) {
-        return;
+      } else if (gain > 0) {
+        const absGain = Math.abs(gain).toFixed(2);
+        if (gainEl) {
+          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
+          gainEl.style.color = "#10b981";
+        }
+        arrow = '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
+      } else {
+        const absGain = Math.abs(gain).toFixed(2);
+        if (gainEl) {
+          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
+          gainEl.style.color = "#ef4444";
+        }
+        arrow = '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
       }
       priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
     } else {
