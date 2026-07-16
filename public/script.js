@@ -3952,8 +3952,10 @@ async function updateSignalList() {
   }
   const container = document.getElementById("signals");
   if (!container) return;
+
   const allSignals = getSortedSignals();
   if (!allSignals.length) return;
+
   let filteredSignals = [];
   let filterType = currentSignalFilter;
   if (filterType === "today") {
@@ -3969,6 +3971,7 @@ async function updateSignalList() {
     filteredSignals = allSignals;
   }
   if (!filteredSignals.length) return;
+
   const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
   const [priceResults] = await Promise.all([
     Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
@@ -3977,17 +3980,25 @@ async function updateSignalList() {
   symbols.forEach((sym, idx) => {
     priceMap[sym] = priceResults[idx];
   });
+
   const rows = container.querySelectorAll(".sig-list-row");
   rows.forEach((row) => {
     const stock = row.dataset.stock;
-    const signal = filteredSignals.find((s) => s.stockCode === stock);
+    const date = row.dataset.date;
+    if (!stock || !date) return;
+
+    const signal = filteredSignals.find(
+      (s) => s.stockCode === stock && s.signalDate === date
+    );
     if (!signal) return;
     const price = priceMap[stock];
     const priceEl = row.querySelector(".stock-price");
     const gainEl = row.querySelector(".sig-right span:last-child");
     if (!priceEl) return;
+
     const isRunning = signal.status === "RUNNING" || signal.status === "TRAILING";
     if (!isRunning) return;
+
     if (price != null) {
       let displayPrice = fmtPriceNoRp(price);
       let arrowPrice = "";
@@ -4559,48 +4570,46 @@ async function subscribeToPush() {
 }
 
 function updatePriceElement(symbol, price) {
-  const rows = document.querySelectorAll(`.sig-list-row[data-stock="${symbol}"]`);
-  if (!rows.length) return;
+  const runningSignals = _allRunning.filter((s) => s.stockCode === symbol);
+  if (!runningSignals.length) return;
 
-  const allSignals = getSortedSignals();
-  const signal = allSignals.find((s) => s.stockCode === symbol);
-  if (!signal) return;
+  runningSignals.forEach((signal) => {
+    const rows = document.querySelectorAll(
+      `.sig-list-row[data-stock="${symbol}"][data-date="${signal.signalDate}"]`
+    );
+    rows.forEach((row) => {
+      const priceEl = row.querySelector(".stock-price");
+      const gainEl = row.querySelector(".sig-right span:last-child");
+      if (!priceEl) return;
 
-  const isRunning = signal.status === "RUNNING" || signal.status === "TRAILING";
-  if (!isRunning) return;
-
-  rows.forEach((row) => {
-    const priceEl = row.querySelector(".stock-price");
-    const gainEl = row.querySelector(".sig-right span:last-child");
-    if (!priceEl) return;
-
-    if (price != null) {
-      let arrow = "";
-      const gain = ((price - signal.entryPrice) / signal.entryPrice) * 100;
-      if (Math.abs(gain) < 0.01) {
-        if (gainEl) {
-          gainEl.innerHTML = `0 (0.00%)`;
-          gainEl.style.color = "var(--text-secondary)";
+      if (price != null) {
+        let arrow = "";
+        const gain = ((price - signal.entryPrice) / signal.entryPrice) * 100;
+        if (Math.abs(gain) < 0.01) {
+          if (gainEl) {
+            gainEl.innerHTML = `0 (0.00%)`;
+            gainEl.style.color = "var(--text-secondary)";
+          }
+        } else if (gain > 0) {
+          const absGain = Math.abs(gain).toFixed(2);
+          if (gainEl) {
+            gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
+            gainEl.style.color = "#10b981";
+          }
+          arrow = '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
+        } else {
+          const absGain = Math.abs(gain).toFixed(2);
+          if (gainEl) {
+            gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
+            gainEl.style.color = "#ef4444";
+          }
+          arrow = '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
         }
-      } else if (gain > 0) {
-        const absGain = Math.abs(gain).toFixed(2);
-        if (gainEl) {
-          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
-          gainEl.style.color = "#10b981";
-        }
-        arrow = '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
+        priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
       } else {
-        const absGain = Math.abs(gain).toFixed(2);
-        if (gainEl) {
-          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
-          gainEl.style.color = "#ef4444";
-        }
-        arrow = '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
+        priceEl.textContent = "—";
       }
-      priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
-    } else {
-      priceEl.textContent = "—";
-    }
+    });
   });
 }
 
