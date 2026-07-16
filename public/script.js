@@ -4254,7 +4254,7 @@ function startPolling() {
       fetchSignals(false);
     }
     updateLastUpdate();
-  }, 30000);
+  }, 10000);
 }
 
 function updateLastUpdate() {
@@ -4570,7 +4570,10 @@ async function subscribeToPush() {
 }
 
 function updatePriceElement(symbol, price) {
-  const runningSignals = _allRunning.filter((s) => s.stockCode === symbol);
+  const allSignals = getSortedSignals();
+  const runningSignals = allSignals.filter(
+    (s) => s.stockCode === symbol && (s.status === "RUNNING" || s.status === "TRAILING")
+  );
   if (!runningSignals.length) return;
 
   runningSignals.forEach((signal) => {
