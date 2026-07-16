@@ -4247,10 +4247,10 @@ function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
     const activeTab = document.querySelector(".view.active")?.id;
-    if (activeTab === "daily" || activeTab === "home") {
+    if (activeTab === "home") {
       fetchReports();
     }
-    if (activeTab === "signals" || activeTab === "home") {
+    if (activeTab === "signals" || activeTab === "home" || activeTab === "daily") {
       fetchSignals(false);
     }
     updateLastUpdate();
