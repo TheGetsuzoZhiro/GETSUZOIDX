@@ -1125,6 +1125,8 @@ async function showDailySignalDetail(stockCode, signalDate) {
   const wrapper = document.getElementById("dailyContentWrapper");
   const listBody = document.getElementById("signalListBody");
   const detailContainer = document.getElementById("dailyDetailContainer");
+  const activeFilterBtn = document.querySelector(".perf-filter-btn.active");
+  const activeStatus = activeFilterBtn ? activeFilterBtn.dataset.status : "TP";
 
   if (wrapper) wrapper.style.display = "none";
   if (listBody) listBody.style.display = "none";
@@ -1138,6 +1140,7 @@ async function showDailySignalDetail(stockCode, signalDate) {
       const listToggle = document.getElementById("signalListToggle");
       if (listToggle)
         listToggle.scrollIntoView({ behavior: "smooth", block: "start" });
+      renderPerformanceSignalList(activeStatus);
     });
     detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -3678,11 +3681,7 @@ async function fetchSignals(showLoadingIndicator = true) {
           history.pushState(null, "", window.location.pathname);
         }
       }
-      if (signalListRendered) {
-        await updateSignalList();
-      } else {
-        await showSignalList();
-      }
+      await showSignalList();
     } else if (!isDetailView) {
       await showSignalList();
     }
