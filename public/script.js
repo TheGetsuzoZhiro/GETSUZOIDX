@@ -4706,20 +4706,29 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector('.nav-link[data-tab="home"]')?.classList.add("active");
 
   showLoading("daily");
-  showLoading("signals");
-  fetchReports();
-  fetchSignals(false);
-  showSignalList();
+showLoading("signals");
 
-  startPolling();
-  connectPriceSSE();
-  setInterval(updateClock, 1000);
-  updateClock();
-  updateLastUpdate();
+fetchReports();
 
-  if (window.location.hash.startsWith("#detail-")) {
-    window.location.hash = "home";
-  }
+fetchSignals(false);
+
+const hash = window.location.hash;
+if (hash === "#signals" || hash === "#signals-today" || hash === "#signals-running") {
+  let filter = "all";
+  if (hash === "#signals-today") filter = "today";
+  else if (hash === "#signals-running") filter = "running";
+  selectSignalFilter(filter);
+}
+
+startPolling();
+connectPriceSSE();
+setInterval(updateClock, 1000);
+updateClock();
+updateLastUpdate();
+
+if (window.location.hash.startsWith("#detail-")) {
+  window.location.hash = "home";
+}
 });
 
 if ("serviceWorker" in navigator) {
