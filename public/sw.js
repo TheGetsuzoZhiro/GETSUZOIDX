@@ -1,4 +1,4 @@
-const CACHE_NAME = 'getsuzo-cache-v21'; 
+const CACHE_NAME = 'getsuzo-cache-v22'; 
 
 const urlsToCache = [
   '/',
