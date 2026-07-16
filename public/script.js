@@ -3663,6 +3663,7 @@ async function fetchSignals(showLoadingIndicator = true) {
 
   if (showLoadingIndicator && currentTab === "signals" && !isDetailView)
     showLoading("signals");
+  
   try {
     const res = await fetch(`${apiBase}/signals`);
     if (!res.ok) throw new Error("Gagal fetch signals");
@@ -3681,9 +3682,11 @@ async function fetchSignals(showLoadingIndicator = true) {
           history.pushState(null, "", window.location.pathname);
         }
       }
-      await showSignalList();
-    } else if (!isDetailView) {
-      await showSignalList();
+      if (signalListRendered) {
+        await updateSignalList();
+      } else {
+        await showSignalList();
+      }
     }
 
     updateTotalSignals(running, closed);
