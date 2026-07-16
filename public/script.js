@@ -3945,7 +3945,6 @@ function renderNotificationModal() {
   });
 }
 
-
 async function updateSignalList() {
   if (isDetailView) return;
   if (!signalListRendered) {
@@ -3954,7 +3953,6 @@ async function updateSignalList() {
   }
   const container = document.getElementById("signals");
   if (!container) return;
-
   const allSignals = getSortedSignals();
   if (!allSignals.length) return;
   let filteredSignals = [];
@@ -3972,7 +3970,6 @@ async function updateSignalList() {
     filteredSignals = allSignals;
   }
   if (!filteredSignals.length) return;
-
   const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
   const [priceResults] = await Promise.all([
     Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
@@ -3981,7 +3978,6 @@ async function updateSignalList() {
   symbols.forEach((sym, idx) => {
     priceMap[sym] = priceResults[idx];
   });
-
   const rows = container.querySelectorAll(".sig-list-row");
   rows.forEach((row) => {
     const stock = row.dataset.stock;
@@ -3990,49 +3986,46 @@ async function updateSignalList() {
     const price = priceMap[stock];
     const priceEl = row.querySelector(".stock-price");
     const gainEl = row.querySelector(".sig-right span:last-child");
-    if (priceEl && price != null) {
+    if (!priceEl) return;
+    const isRunning = signal.status === "RUNNING" || signal.status === "TRAILING";
+    if (!isRunning) return;
+    if (price != null) {
       let displayPrice = fmtPriceNoRp(price);
       let arrowPrice = "";
-      if (signal.status === "RUNNING" || signal.status === "TRAILING") {
-        const gainAbs = price - signal.entryPrice;
-        if (gainAbs > 0) {
-          arrowPrice = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>`;
-        } else if (gainAbs < 0) {
-          arrowPrice = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>`;
-        }
+      const gainAbs = price - signal.entryPrice;
+      if (gainAbs > 0) {
+        arrowPrice = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>`;
+      } else if (gainAbs < 0) {
+        arrowPrice = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>`;
       }
       priceEl.innerHTML = `${arrowPrice} ${displayPrice}`;
-    }
-    if (
-      gainEl &&
-      (signal.status === "RUNNING" || signal.status === "TRAILING") &&
-      signal.entryPrice &&
-      price
-    ) {
-      const gainAbs = price - signal.entryPrice;
-      const gainPct = (gainAbs / signal.entryPrice) * 100;
-      const absGain = Math.abs(gainAbs).toFixed(0);
-      const absPct = Math.abs(gainPct).toFixed(2);
-      let gainStr = "";
-      let gainColor = "";
-      if (Math.abs(gainAbs) < 0.01) {
-        gainStr = `0 (0.00%)`;
-        gainColor = "var(--text-secondary)";
-      } else if (gainAbs > 0) {
-        gainStr = `+${absGain} (+${absPct}%)`;
-        gainColor = "#10b981";
-      } else {
-        gainStr = `-${absGain} (-${absPct}%)`;
-        gainColor = "#ef4444";
+      if (gainEl && signal.entryPrice) {
+        const gainPct = (gainAbs / signal.entryPrice) * 100;
+        const absGain = Math.abs(gainAbs).toFixed(0);
+        const absPct = Math.abs(gainPct).toFixed(2);
+        let gainStr = "";
+        let gainColor = "";
+        if (Math.abs(gainAbs) < 0.01) {
+          gainStr = `0 (0.00%)`;
+          gainColor = "var(--text-secondary)";
+        } else if (gainAbs > 0) {
+          gainStr = `+${absGain} (+${absPct}%)`;
+          gainColor = "#10b981";
+        } else {
+          gainStr = `-${absGain} (-${absPct}%)`;
+          gainColor = "#ef4444";
+        }
+        gainEl.style.color = gainColor;
+        if (gainAbs > 0) {
+          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> ${gainStr}`;
+        } else if (gainAbs < 0) {
+          gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> ${gainStr}`;
+        } else {
+          gainEl.innerHTML = gainStr;
+        }
       }
-      gainEl.style.color = gainColor;
-      if (gainAbs > 0) {
-        gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> ${gainStr}`;
-      } else if (gainAbs < 0) {
-        gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> ${gainStr}`;
-      } else {
-        gainEl.innerHTML = gainStr;
-      }
+    } else {
+      priceEl.textContent = "—";
     }
   });
 }
