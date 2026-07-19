@@ -905,6 +905,7 @@
           </div>
         </div>
 
+        <!-- ================= SIDEBAR NAVIGATION UPDATE ================= -->
         <nav class="navigation">
           <button class="nav-link active" data-tab="home">
             <div class="nav-icon">
@@ -938,6 +939,7 @@
             <span class="nav-text">Performance</span>
           </button>
 
+          <!-- Dropdown 1: Getsuzo Signals (Normal & BSJP) -->
           <div class="nav-dropdown">
             <button class="nav-link" data-tab="signals" id="signalsParent">
               <div class="nav-icon">
@@ -975,15 +977,20 @@
             </ul>
           </div>
 
+          <!-- Dropdown 2: Technical Signals (Khusus Kategori Technical) -->
           <div class="nav-dropdown">
-            <button class="nav-link" data-tab="signals" id="signalsParent">
+            <button
+              class="nav-link"
+              data-tab="technical-signals"
+              id="technicalParent"
+            >
               <div class="nav-icon">
                 <i class="fas fa-chart-line"></i>
               </div>
               <span class="nav-text">Technical Signals</span>
               <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
             </button>
-            <ul class="nav-sub" id="signalSubMenu">
+            <ul class="nav-sub" id="technicalSubMenu">
               <li>
                 <a
                   class="nav-sub-link"
@@ -1014,6 +1021,9 @@
             </ul>
           </div>
         </nav>
+
+        <!-- ================= CONTENT AREA UPDATE ================= -->
+        <!-- Cari tag <section id="signals" class="view">...</section>, lalu paste kode di bawah ini tepat di bawahnya -->
 
         <div class="sidebar-bottom">
           <a
@@ -1326,6 +1336,16 @@
                 <div class="loader-ring"></div>
               </div>
               <p>Loading active signals...</p>
+            </div>
+          </section>
+          <section id="technical-signals" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading technical signals...</p>
             </div>
           </section>
         </div>
