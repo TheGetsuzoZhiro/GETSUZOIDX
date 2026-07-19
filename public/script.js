@@ -327,6 +327,7 @@ function aggregateSignals(signals) {
     tp: 0,
     sl: 0,
     running: 0,
+    waiting: 0,
     winRate: 0,
     totalReturn: 0,
     bestTrade: null,
@@ -340,13 +341,19 @@ function aggregateSignals(signals) {
   const runningSignals = signals.filter(
     (s) => s.status === "RUNNING" || s.status === "TRAILING",
   );
+  const waitingSignals = signals.filter(
+    (s) => s.status === "WAITING_ENTRY",
+  );
 
   result.tp = closed.filter((s) => s.status === "TP").length;
   result.sl = closed.filter(
     (s) => s.status === "SL" || s.status === "STOP LOSS",
   ).length;
-  result.totalSignals = closed.length + runningSignals.length;
+  
+  // totalSignals mencakup semua status (closed + running + waiting)
+  result.totalSignals = closed.length + runningSignals.length + waitingSignals.length;
   result.running = runningSignals.length;
+  result.waiting = waitingSignals.length;
 
   const totalClosed = result.tp + result.sl;
   result.winRate =
@@ -464,109 +471,216 @@ function getDateRangeFromFilterState() {
 
 let returnChartInstance = null;
 
-function renderDailyReturnChartFromSignals(signals) {
-  const wrapper = document.getElementById("dailyReturnChartWrapper");
-  if (!wrapper) return;
+async function renderDaily() {
+  const c = document.getElementById("daily");
+  if (!c) return;
 
-  if (returnChartInstance) {
-    returnChartInstance.destroy();
-    returnChartInstance = null;
-  }
+  c.innerHTML = `<div class="loading-state"><div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div><p>Loading...</p></div>`;
+  dailyRendered = false;
 
-  const closed = signals
-    .filter(
-      (s) => s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS",
-    )
-    .sort((a, b) => (a.closeDate || "").localeCompare(b.closeDate || ""));
+  await fetchSignals(false);
+  
+  // ===== FILTER: keluarkan WAITING_ENTRY dan EXPIRED =====
+  const allSignals = [..._allRunning, ..._allClosed].filter(
+    s => s.status !== 'WAITING_ENTRY' && s.status !== 'EXPIRED'
+  );
 
-  if (!closed.length) {
-    wrapper.innerHTML =
-      '<div style="text-align:center;color:var(--text-secondary);padding:4rem 1.5rem;font-size:0.9rem;">Tidak ada data untuk ditampilkan.</div>';
+  if (!allSignals.length) {
+    c.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal (exclude waiting & expired).</p></div>`;
+    dailyRendered = false;
     return;
   }
 
-  wrapper.innerHTML = '<canvas id="dailyReturnChart"></canvas>';
-  const ctx = document.getElementById("dailyReturnChart");
+  const { start, end } = getDateRangeFromFilterState();
+  currentDateRange = { start, end };
+  const filtered = filterSignalsByDate(allSignals, start, end);
+  const agg = aggregateSignals(filtered);
+  const dateRange = getDateRangeText(
+    currentFilterState.type,
+    currentFilterState.customStart,
+    currentFilterState.customEnd,
+  );
 
-  const labels = closed.map((s, idx) => `T${idx + 1}`);
-  let cumulative = 0;
-  const dataPoints = closed.map((s) => {
-    cumulative += s.returnPercent || 0;
-    return cumulative;
+  let html = `
+    <div id="dailyContentWrapper">
+      <div class="pro-detail-container">
+        <div id="tradeSummaryContainer" style="margin-bottom:0.5rem;"></div>
+
+        <div id="reportHeader" style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:1.5rem; padding-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div class="emit-left">
+            <span class="emit-ticker" style="font-size:1.5rem;">
+              <i class="fas fa-chart-line" style="color:#3b82f6; margin-right:0.5rem;"></i> Trade Summary
+            </span>
+            <span id="reportDateRange" style="font-size:0.8rem; color:var(--text-secondary); font-family:'JetBrains Mono',monospace;">${dateRange}</span>
+          </div>
+          <div class="emit-right">
+            <span class="emit-date"><i class="far fa-calendar-alt" style="margin-right:0.3rem;"></i> ${new Date().toLocaleString("id-ID")}</span>
+          </div>
+        </div>
+
+        <div id="statsGridContainer" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
+          ${createStatCard("Sinyal Baru", agg.totalSignals, "#3b82f6", "fa-solid fa-bell")}
+          ${createStatCard("TP", agg.tp, "#10b981", "fa-solid fa-check-circle")}
+          ${createStatCard("SL", agg.sl, "#ef4444", "fa-solid fa-times-circle")}
+          ${createStatCard("Running", agg.running, "#f59e0b", "fa-solid fa-play-circle")}
+          ${createStatCard("Win Rate", agg.winRate.toFixed(1) + "%", "#8b5cf6", "fa-solid fa-trophy")}
+          ${createStatCard("Total Return", agg.totalReturn.toFixed(2) + "%", agg.totalReturn >= 0 ? "#10b981" : "#ef4444", "fa-solid fa-arrow-trend-up")}
+        </div>
+
+        <div id="bestWorstContainer" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
+          <div class="pro-card" style="border-left: 3px solid #10b981;">
+            <div class="pro-card-title"><i class="fa-solid fa-crown" style="color:#fbbf24; margin-right:0.3rem;"></i> Best Trade</div>
+            ${agg.bestTrade ? `<div style="font-size:1.2rem; font-weight:700; color:#10b981;">${agg.bestTrade.stock} <span style="font-size:0.9rem; font-weight:400; color:var(--text-secondary);">+${agg.bestTrade.return.toFixed(2)}%</span></div>` : '<div style="color:var(--text-secondary); opacity:0.5;">Belum ada</div>'}
+          </div>
+          <div class="pro-card" style="border-left: 3px solid #ef4444;">
+            <div class="pro-card-title"><i class="fa-solid fa-skull" style="color:#ef4444; margin-right:0.3rem;"></i> Worst Trade</div>
+            ${agg.worstTrade ? `<div style="font-size:1.2rem; font-weight:700; color:#ef4444;">${agg.worstTrade.stock} <span style="font-size:0.9rem; font-weight:400; color:var(--text-secondary);">${agg.worstTrade.return.toFixed(2)}%</span></div>` : '<div style="color:var(--text-secondary); opacity:0.5;">Belum ada</div>'}
+          </div>
+        </div>
+
+        <div class="pro-card" style="margin-bottom:1.5rem;">
+          <div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:0.3rem;"></i> Cumulative Return Gain</div>
+          <div style="height:180px;" id="dailyReturnChartWrapper">
+            <canvas id="dailyReturnChart"></canvas>
+          </div>
+        </div>
+
+        <div class="pro-grid-2" style="margin-bottom:1.5rem;">
+          <div class="pro-card">
+            <div class="pro-card-title"><i class="fa-solid fa-chart-pie" style="margin-right:0.3rem;"></i> Win Rate</div>
+            <div style="height:140px; position:relative;">
+              <canvas id="dailyWinRateChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:2rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.5rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; padding:0.4rem 0.6rem; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06); transition:0.2s;" id="signalListToggle">
+            <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+              <i class="fas fa-list-ul" style="color:#8b5cf6;"></i> Daftar Saham
+              <span id="signalTotalCount" style="font-size:0.7rem; color:var(--text-secondary); background:rgba(255,255,255,0.05); padding:0.1rem 0.5rem; border-radius:12px;">0</span>
+            </span>
+            <i class="fas fa-chevron-up" id="signalListChevron" style="font-size:0.7rem; opacity:0.5; transition:transform 0.2s; margin-left:auto;"></i>
+          </div>
+          <div id="signalListBody" style="display:block; margin-top:0.75rem;">
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.75rem; padding:0.2rem 0;">
+              <button class="perf-filter-btn active" data-status="TP" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                <i class="fa-solid fa-arrow-trend-up" style="font-size:0.6rem;"></i> TP
+              </button>
+              <button class="perf-filter-btn" data-status="SL" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                <i class="fa-solid fa-arrow-trend-down" style="font-size:0.6rem;"></i> SL
+              </button>
+              <button class="perf-filter-btn" data-status="RUNNING" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                <i class="fa-solid fa-play" style="font-size:0.6rem;"></i> Running
+              </button>
+              <button class="perf-filter-btn" data-status="ALL" style="padding:0.25rem 0.7rem; cursor:pointer; font-size:0.7rem; transition:0.2s; display:flex; align-items:center; gap:0.3rem;">
+                <i class="fa-solid fa-table-cells-large" style="font-size:0.6rem;"></i> All
+              </button>
+            </div>
+            <div id="signalListContainer"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="dailyDetailContainer" style="display:none; margin-top:1.5rem;"></div>
+  `;
+
+  c.innerHTML = html;
+  dailyRendered = true;
+
+  renderTradeSummary();
+
+  const summaryContainer = document.getElementById("tradeSummaryContainer");
+  if (summaryContainer) {
+    summaryContainer.addEventListener("click", function (e) {
+      const toggle = e.target.closest("#tradeSummaryToggle");
+      if (toggle) {
+        e.stopPropagation();
+        currentFilterState.isOpen = !currentFilterState.isOpen;
+        renderTradeSummary();
+        return;
+      }
+      const filterBtn = e.target.closest(".filter-btn");
+      if (filterBtn) {
+        e.stopPropagation();
+        const filter = filterBtn.dataset.filter;
+        if (filter === "custom") {
+          currentFilterState.type = "custom";
+          currentFilterState.isOpen = false;
+          renderTradeSummary();
+          updateDailyContent();
+          return;
+        }
+        currentFilterState.type = filter;
+        currentFilterState.customStart = null;
+        currentFilterState.customEnd = null;
+        currentFilterState.isOpen = false;
+        renderTradeSummary();
+        updateDailyContent();
+        return;
+      }
+      const applyBtn = e.target.closest("#applyCustomFilter");
+      if (applyBtn) {
+        e.stopPropagation();
+        const start = document.getElementById("customStartDate")?.value;
+        const end = document.getElementById("customEndDate")?.value;
+        if (start && end) {
+          currentFilterState.type = "custom";
+          currentFilterState.customStart = start;
+          currentFilterState.customEnd = end;
+          currentFilterState.isOpen = false;
+          renderTradeSummary();
+          updateDailyContent();
+        } else {
+          alert("Pilih tanggal mulai dan akhir");
+        }
+      }
+    });
+  }
+
+  setTimeout(() => {
+    renderDailyReturnChartFromSignals(filtered);
+    renderDailyCharts(agg);
+  }, 150);
+
+  const listToggle = document.getElementById("signalListToggle");
+  const listBody = document.getElementById("signalListBody");
+  const chevron = document.getElementById("signalListChevron");
+  if (listToggle && listBody && chevron) {
+    listToggle.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const isOpen = listBody.style.display !== "none";
+      listBody.style.display = isOpen ? "none" : "block";
+      chevron.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+      if (!isOpen) {
+        const activeBtn = document.querySelector(".perf-filter-btn.active");
+        if (activeBtn) {
+          renderPerformanceSignalList(activeBtn.dataset.status);
+        } else {
+          renderPerformanceSignalList("TP");
+        }
+      }
+    });
+  }
+
+  c.querySelectorAll(".perf-filter-btn").forEach((btn) => {
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      const status = this.dataset.status;
+      c.querySelectorAll(".perf-filter-btn").forEach((b) =>
+        b.classList.remove("active"),
+      );
+      this.classList.add("active");
+      renderPerformanceSignalList(status);
+    });
   });
 
-  const labelsWithStart = ["Start", ...labels];
-  const dataWithStart = [0, ...dataPoints];
-
-  const finalValue = cumulative;
-  const isPositive = finalValue >= 0;
-  const chartColor = isPositive ? "#10b981" : "#ef4444";
-  const chartBg = isPositive ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)";
-
-  returnChartInstance = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: labelsWithStart,
-      datasets: [
-        {
-          label: "Cumulative Return %",
-          data: dataWithStart,
-          borderColor: chartColor,
-          backgroundColor: chartBg,
-          borderWidth: 2.5,
-          fill: true,
-          tension: 0.3,
-          pointRadius: 0,
-          pointHoverRadius: 6,
-          pointHoverBackgroundColor: "#ffffff",
-          pointHoverBorderColor: chartColor,
-          pointHoverBorderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: "index",
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          enabled: true,
-          backgroundColor: "rgba(0,0,0,0.9)",
-          titleColor: "#ffffff",
-          bodyColor: chartColor,
-          borderColor: chartColor + "44",
-          borderWidth: 1,
-          cornerRadius: 10,
-          padding: 12,
-          callbacks: {
-            label: function (context) {
-              const val = context.parsed.y;
-              return "Return: " + (val >= 0 ? "+" : "") + val.toFixed(2) + "%";
-            },
-          },
-        },
-      },
-      scales: {
-        y: {
-          grid: { color: "rgba(255,255,255,0.05)" },
-          ticks: {
-            color: "#71717a",
-            callback: function (value) {
-              return (value >= 0 ? "+" : "") + value.toFixed(2) + "%";
-            },
-          },
-        },
-        x: {
-          grid: { display: false },
-          ticks: { color: "#71717a", maxRotation: 45, autoSkip: true },
-        },
-      },
-    },
-  });
+  setTimeout(() => {
+    const activeBtn = document.querySelector(".perf-filter-btn.active");
+    if (activeBtn && listBody && listBody.style.display !== "none") {
+      renderPerformanceSignalList(activeBtn.dataset.status);
+    }
+  }, 300);
 }
 
 async function updateDailyContent() {
@@ -1125,15 +1239,28 @@ async function showDailySignalDetail(stockCode, signalDate) {
 
   if (detailContainer) {
     detailContainer.style.display = "block";
-    await renderSignalDetailToContainer(signal, detailContainer, () => {
-      if (detailContainer) detailContainer.style.display = "none";
-      if (wrapper) wrapper.style.display = "block";
-      if (listBody) listBody.style.display = "";
-      const listToggle = document.getElementById("signalListToggle");
-      if (listToggle)
-        listToggle.scrollIntoView({ behavior: "smooth", block: "start" });
-      renderPerformanceSignalList(activeStatus);
-    });
+    
+    // ===== CEK JENIS SINYAL =====
+    if (signal.signalType === "TECHNICAL") {
+      renderTechnicalSignalDetail(signal, detailContainer);
+      // Pasang tombol back untuk TECHNICAL
+      const backBtn = detailContainer.querySelector("#techBackBtn");
+      if (backBtn) {
+        backBtn.addEventListener("click", () => {
+          detailContainer.style.display = "none";
+          if (wrapper) wrapper.style.display = "block";
+          if (listBody) listBody.style.display = "";
+          renderPerformanceSignalList(activeStatus);
+        });
+      }
+    } else {
+      await renderSignalDetailToContainer(signal, detailContainer, () => {
+        if (detailContainer) detailContainer.style.display = "none";
+        if (wrapper) wrapper.style.display = "block";
+        if (listBody) listBody.style.display = "";
+        renderPerformanceSignalList(activeStatus);
+      });
+    }
     detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
@@ -2041,7 +2168,11 @@ async function renderPerformanceSignalList(status) {
 
     const running = data.running || [];
     const closed = data.closed || [];
-    const allSignals = [...running, ...closed];
+    
+    // ===== FILTER: keluarkan WAITING_ENTRY dan EXPIRED =====
+    const allSignals = [...running, ...closed].filter(
+      s => s.status !== 'WAITING_ENTRY' && s.status !== 'EXPIRED'
+    );
 
     const filteredByDate = allSignals.filter((s) => {
       let dateToCheck = null;
