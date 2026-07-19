@@ -2944,7 +2944,7 @@ async function updateTechnicalSignalList() {
   }
 }
 // ============================================================
-// TECHNICAL SIGNAL DETAIL - Professional style like BSJP
+// TECHNICAL SIGNAL DETAIL - Professional style like BSJP (Enhanced)
 // ============================================================
 function renderTechnicalSignalDetail(s, container) {
   // Ambil current price untuk gain
@@ -3139,22 +3139,44 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Detail Strategi (seperti di BSJP)
+  // Detail Strategi (seperti di BSJP) - dengan penjelasan setup
+  const buySetupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
+  let setupIcon = "fa-arrow-trend-up";
+  let setupColor = "#10b981";
+  let setupDesc = "Memanfaatkan pullback ke area support untuk entry dengan risk-reward optimal.";
+  if (buySetupText.toLowerCase().includes("breakout")) {
+    setupIcon = "fa-rocket";
+    setupColor = "#3b82f6";
+    setupDesc = "Breakout di atas resistance dengan retest support untuk konfirmasi valid.";
+  } else if (buySetupText.toLowerCase().includes("support")) {
+    setupIcon = "fa-hand-holding-heart";
+    setupColor = "#8b5cf6";
+    setupDesc = "Entry di area support dengan potensi reversal dan target profit bertahap.";
+  }
+
   const strategyDetail = `
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
-      <div style="display:flex; align-items:start;">
-        <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Entry dilakukan saat harga berada di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
+      <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem;">
+        <i class="fa-solid ${setupIcon}" style="color:${setupColor}; font-size:0.8rem;"></i>
+        <span style="font-weight:600; color:var(--text-primary); font-size:0.7rem;">${buySetupText}</span>
       </div>
-      <div style="display:flex; align-items:start;">
+      <div style="display:flex; align-items:start; margin-left:0.1rem;">
+        <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>${setupDesc}</span>
+      </div>
+      <div style="display:flex; align-items:start; margin-left:0.1rem;">
         <i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Entry di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
+      </div>
+      <div style="display:flex; align-items:start; margin-left:0.1rem;">
+        <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Target pertama <strong>TP 1</strong> di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
       </div>
-      <div style="display:flex; align-items:start;">
-        <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+      <div style="display:flex; align-items:start; margin-left:0.1rem;">
+        <i class="fa-regular fa-circle-check" style="color:#fbbf24; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Target kedua <strong>TP 2</strong> di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
       </div>
-      <div style="display:flex; align-items:start;">
+      <div style="display:flex; align-items:start; margin-left:0.1rem;">
         <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
       </div>
@@ -3197,7 +3219,7 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Buy Area dan Target Ranges (dalam grid card)
+  // Buy Area dan Target Ranges (dalam grid card) dengan icon
   const buyAreaDisplay = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
@@ -3228,11 +3250,15 @@ function renderTechnicalSignalDetail(s, container) {
       </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div style="background:rgba(0,0,0,0.2); padding:0.5rem 0.6rem; border-radius:6px; border-left:2px solid #10b981;">
-          <span style="font-size:0.6rem; color:var(--text-secondary);">Target Area 1</span>
+          <span style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-flag" style="color:#10b981; font-size:0.6rem;"></i> Target Area 1
+          </span>
           <div style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:#10b981;">${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}</div>
         </div>
         <div style="background:rgba(0,0,0,0.2); padding:0.5rem 0.6rem; border-radius:6px; border-left:2px solid #f59e0b;">
-          <span style="font-size:0.6rem; color:var(--text-secondary);">Target Area 2</span>
+          <span style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-flag-checkered" style="color:#f59e0b; font-size:0.6rem;"></i> Target Area 2
+          </span>
           <div style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:#f59e0b;">${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}</div>
         </div>
       </div>
