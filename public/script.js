@@ -2944,15 +2944,12 @@ async function updateTechnicalSignalList() {
   }
 }
 // ============================================================
-// TECHNICAL SIGNAL DETAIL - Professional style like BSJP (Enhanced)
+// TECHNICAL SIGNAL DETAIL - Modern & Premium (like BSJP)
 // ============================================================
 function renderTechnicalSignalDetail(s, container) {
   // Ambil current price untuk gain
   let currentPrice = localPrices.get(s.stockCode) || null;
-  let gainAbs = 0,
-    gainPct = 0,
-    gainStr = "—",
-    gainColor = "var(--text-secondary)";
+  let gainAbs = 0, gainPct = 0, gainStr = "—", gainColor = "var(--text-secondary)";
   let arrowIcon = "";
 
   const isRunning = s.status === "RUNNING" || s.status === "TRAILING";
@@ -2980,10 +2977,8 @@ function renderTechnicalSignalDetail(s, container) {
     const sign = ret >= 0 ? "+" : "";
     gainStr = `${sign}${ret.toFixed(2)}%`;
     gainColor = ret >= 0 ? "#10b981" : "#ef4444";
-    if (ret > 0.01)
-      arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
-    else if (ret < -0.01)
-      arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+    if (ret > 0.01) arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+    else if (ret < -0.01) arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
   }
 
   let displayPrice = "—";
@@ -2991,27 +2986,19 @@ function renderTechnicalSignalDetail(s, container) {
   if (isClosed && s.exitPrice) {
     displayPrice = Number(s.exitPrice).toLocaleString("id-ID");
     const ret = s.returnPercent || 0;
-    if (ret > 0)
-      priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
-    else if (ret < 0)
-      priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    if (ret > 0) priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    else if (ret < 0) priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
   } else if (isRunning && currentPrice != null) {
     displayPrice = Number(currentPrice).toLocaleString("id-ID");
-    if (gainAbs > 0)
-      priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
-    else if (gainAbs < 0)
-      priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    if (gainAbs > 0) priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    else if (gainAbs < 0) priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
   } else {
-    displayPrice = s.entryPrice
-      ? Number(s.entryPrice).toLocaleString("id-ID")
-      : "—";
+    displayPrice = s.entryPrice ? Number(s.entryPrice).toLocaleString("id-ID") : "—";
   }
 
   let statusStamp = "";
-  if (s.status === "TP")
-    statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${hitSvg}</span>`;
-  else if (s.status === "SL" || s.status === "STOP LOSS")
-    statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${missedSvg}</span>`;
+  if (s.status === "TP") statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${hitSvg}</span>`;
+  else if (s.status === "SL" || s.status === "STOP LOSS") statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${missedSvg}</span>`;
 
   const logoUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
   const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
@@ -3024,15 +3011,33 @@ function renderTechnicalSignalDetail(s, container) {
     longName = infoCache.get(s.stockCode).data.longName || s.stockCode;
   }
 
+  // Setup type dengan icon dan deskripsi
+  const setupType = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
+  let setupIcon = "fa-arrow-trend-up";
+  let setupColor = "#10b981";
+  let setupDesc = "Entry area support dengan potensi reversal dan target profit bertahap.";
+  
+  if (setupType.toLowerCase().includes("breakout")) {
+    setupIcon = "fa-rocket";
+    setupColor = "#3b82f6";
+    setupDesc = "Entry pada breakout resistance dengan target ekspansi lanjutan.";
+  } else if (setupType.toLowerCase().includes("support")) {
+    setupIcon = "fa-hand-holding-heart";
+    setupColor = "#10b981";
+    setupDesc = "Entry area support dengan potensi reversal dan target profit bertahap.";
+  } else if (setupType.toLowerCase().includes("retest")) {
+    setupIcon = "fa-rotate-left";
+    setupColor = "#f59e0b";
+    setupDesc = "Retest support/resistance setelah breakout, entry pada area konfirmasi.";
+  }
+
   // Build Strategy Flow untuk Technical
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp1 = s.tp1 || 0;
   const tp2 = s.tp2 || s.target2Low || 0;
 
-  let slPercent = 0,
-    tp1Percent = 0,
-    tp2Percent = 0;
+  let slPercent = 0, tp1Percent = 0, tp2Percent = 0;
   if (entry > 0 && sl > 0) slPercent = ((sl - entry) / entry) * 100;
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
@@ -3046,8 +3051,7 @@ function renderTechnicalSignalDetail(s, container) {
   if (s.status === "SL" && !s.breakEven) step1State = "failed";
 
   const step2Active = s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
-  const step2State =
-    s.status === "SL" && s.breakEven ? "warning" : s.status === "TP" ? "success" : "default";
+  const step2State = s.status === "SL" && s.breakEven ? "warning" : s.status === "TP" ? "success" : "default";
 
   const step3Active = s.status === "TRAILING" || s.status === "TP";
   let step3State = "default";
@@ -3056,27 +3060,10 @@ function renderTechnicalSignalDetail(s, container) {
 
   function stepCircle(active, label, desc, icon, state = "default") {
     let bg, border, color, shadow;
-    if (state === "failed") {
-      bg = "#ef4444";
-      border = "#ef4444";
-      color = "#fff";
-      shadow = "0 0 0 4px rgba(239,68,68,0.2)";
-    } else if (state === "warning") {
-      bg = "#f59e0b";
-      border = "#f59e0b";
-      color = "#fff";
-      shadow = "0 0 0 4px rgba(245,158,11,0.2)";
-    } else if (state === "success" || active) {
-      bg = "#10b981";
-      border = "#10b981";
-      color = "#fff";
-      shadow = "0 0 0 4px rgba(16,185,129,0.2)";
-    } else {
-      bg = "#2a2a2a";
-      border = "rgba(255,255,255,0.1)";
-      color = "var(--text-secondary)";
-      shadow = "0 0 0 4px #121212";
-    }
+    if (state === "failed") { bg = "#ef4444"; border = "#ef4444"; color = "#fff"; shadow = "0 0 0 4px rgba(239,68,68,0.2)"; }
+    else if (state === "warning") { bg = "#f59e0b"; border = "#f59e0b"; color = "#fff"; shadow = "0 0 0 4px rgba(245,158,11,0.2)"; }
+    else if (state === "success" || active) { bg = "#10b981"; border = "#10b981"; color = "#fff"; shadow = "0 0 0 4px rgba(16,185,129,0.2)"; }
+    else { bg = "#2a2a2a"; border = "rgba(255,255,255,0.1)"; color = "var(--text-secondary)"; shadow = "0 0 0 4px #121212"; }
     let descColor = "var(--text-secondary)";
     if (state === "failed") descColor = "#ef4444";
     else if (state === "warning") descColor = "#f59e0b";
@@ -3113,15 +3100,10 @@ function renderTechnicalSignalDetail(s, container) {
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
         <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Technical Strategy Flow</span>
-        ${
-          s.status === "RUNNING"
-            ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-            : s.status === "TRAILING"
-              ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-              : s.status === "WAITING_ENTRY"
-                ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
-                : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
-        }
+        ${s.status === "RUNNING" ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>` :
+          s.status === "TRAILING" ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>` :
+          s.status === "WAITING_ENTRY" ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>` :
+          `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`}
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
         <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.08); z-index:1;">
@@ -3139,51 +3121,7 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Detail Strategi (seperti di BSJP) - dengan penjelasan setup
-  const buySetupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
-  let setupIcon = "fa-arrow-trend-up";
-  let setupColor = "#10b981";
-  let setupDesc = "Memanfaatkan pullback ke area support untuk entry dengan risk-reward optimal.";
-  if (buySetupText.toLowerCase().includes("breakout")) {
-    setupIcon = "fa-rocket";
-    setupColor = "#3b82f6";
-    setupDesc = "Breakout di atas resistance dengan retest support untuk konfirmasi valid.";
-  } else if (buySetupText.toLowerCase().includes("support")) {
-    setupIcon = "fa-hand-holding-heart";
-    setupColor = "#8b5cf6";
-    setupDesc = "Entry di area support dengan potensi reversal dan target profit bertahap.";
-  }
-
-  const strategyDetail = `
-    <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
-      <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem;">
-        <i class="fa-solid ${setupIcon}" style="color:${setupColor}; font-size:0.8rem;"></i>
-        <span style="font-weight:600; color:var(--text-primary); font-size:0.7rem;">${buySetupText}</span>
-      </div>
-      <div style="display:flex; align-items:start; margin-left:0.1rem;">
-        <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>${setupDesc}</span>
-      </div>
-      <div style="display:flex; align-items:start; margin-left:0.1rem;">
-        <i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Entry di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
-      </div>
-      <div style="display:flex; align-items:start; margin-left:0.1rem;">
-        <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Target pertama <strong>TP 1</strong> di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
-      </div>
-      <div style="display:flex; align-items:start; margin-left:0.1rem;">
-        <i class="fa-regular fa-circle-check" style="color:#fbbf24; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Target kedua <strong>TP 2</strong> di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
-      </div>
-      <div style="display:flex; align-items:start; margin-left:0.1rem;">
-        <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
-      </div>
-    </div>
-  `;
-
-  // Price Ladder untuk Technical (Entry, TP1, TP2, SL)
+  // Price Ladder (Entry, TP1, TP2, SL)
   const priceLadder = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0; flex-wrap:wrap;">
@@ -3219,13 +3157,13 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Buy Area dan Target Ranges (dalam grid card) dengan icon
+  // Buy Area & Stop Loss (dengan icon)
   const buyAreaDisplay = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
           <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">
-            <i class="fa-solid fa-cart-shopping" style="margin-right:0.2rem;"></i> Buy Area Reference
+            <i class="fa-solid fa-cart-shopping" style="color:#3b82f6; margin-right:0.2rem;"></i> Buy Area Reference
           </div>
           <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#3b82f6; margin-top:0.15rem;">${s.buyAreaLow} – ${s.buyAreaHigh}</div>
           <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">
@@ -3234,7 +3172,7 @@ function renderTechnicalSignalDetail(s, container) {
         </div>
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
           <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">
-            <i class="fa-solid fa-shield" style="margin-right:0.2rem;"></i> Stop Loss Baseline
+            <i class="fa-solid fa-shield" style="color:#ef4444; margin-right:0.2rem;"></i> Stop Loss Baseline
           </div>
           <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#ef4444; margin-top:0.15rem;">-${s.stopLossPercent || 5}%</div>
           <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}</div>
@@ -3243,6 +3181,7 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
+  // Target Ranges dengan icon
   const targetRanges = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600;">
@@ -3250,14 +3189,14 @@ function renderTechnicalSignalDetail(s, container) {
       </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div style="background:rgba(0,0,0,0.2); padding:0.5rem 0.6rem; border-radius:6px; border-left:2px solid #10b981;">
-          <span style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.3rem;">
-            <i class="fa-solid fa-flag" style="color:#10b981; font-size:0.6rem;"></i> Target Area 1
+          <span style="font-size:0.6rem; color:var(--text-secondary);">
+            <i class="fa-solid fa-flag-checkered" style="color:#10b981; margin-right:0.2rem;"></i> Target Area 1
           </span>
           <div style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:#10b981;">${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}</div>
         </div>
         <div style="background:rgba(0,0,0,0.2); padding:0.5rem 0.6rem; border-radius:6px; border-left:2px solid #f59e0b;">
-          <span style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.3rem;">
-            <i class="fa-solid fa-flag-checkered" style="color:#f59e0b; font-size:0.6rem;"></i> Target Area 2
+          <span style="font-size:0.6rem; color:var(--text-secondary);">
+            <i class="fa-solid fa-flag-checkered" style="color:#f59e0b; margin-right:0.2rem;"></i> Target Area 2
           </span>
           <div style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:#f59e0b;">${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}</div>
         </div>
@@ -3265,9 +3204,52 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Header dengan setup teks
-  const setupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
+  // Setup Type - Visual Card dengan icon dan deskripsi
+  const setupCard = `
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.75rem; border-left:3px solid ${setupColor};">
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
+          <i class="fa-solid ${setupIcon}" style="color:${setupColor}; font-size:1.1rem;"></i>
+          <span style="font-weight:700; font-size:0.9rem; color:${setupColor};">${setupType}</span>
+        </div>
+        <div style="font-size:0.7rem; color:var(--text-secondary); line-height:1.5;">
+          ${setupDesc}
+        </div>
+        <div style="display:flex; gap:0.5rem; margin-top:0.3rem; flex-wrap:wrap; font-size:0.6rem; color:var(--text-secondary); opacity:0.6;">
+          <span><i class="fa-regular fa-circle-check" style="color:#10b981;"></i> Entry: ${s.buyAreaLow} – ${s.buyAreaHigh}</span>
+          <span><i class="fa-regular fa-circle-check" style="color:#10b981;"></i> TP1: ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}</span>
+          <span><i class="fa-regular fa-circle-check" style="color:#f59e0b;"></i> TP2: ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}</span>
+          <span><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> SL: -${s.stopLossPercent || 5}%</span>
+        </div>
+      </div>
+    </div>
+  `;
 
+  // Detail Strategi (penjelasan lengkap)
+  const strategyDetail = `
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
+        <div style="display:flex; align-items:start;">
+          <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+          <span>Entry dilakukan saat harga berada di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
+        </div>
+        <div style="display:flex; align-items:start;">
+          <i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+          <span>Target pertama <strong>TP 1</strong> di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
+        </div>
+        <div style="display:flex; align-items:start;">
+          <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+          <span>Target kedua <strong>TP 2</strong> di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
+        </div>
+        <div style="display:flex; align-items:start;">
+          <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+          <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // HEADER
   const html = `
     <div class="pro-detail-container">
       <button class="sig-back-btn" id="techBackBtn" style="margin-bottom:0.5rem;">
@@ -3276,7 +3258,7 @@ function renderTechnicalSignalDetail(s, container) {
 
       <div style="background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.08); overflow:hidden;">
 
-        <!-- Header -->
+        <!-- HEADER -->
         <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
           <div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;">
             <div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;">
@@ -3296,7 +3278,6 @@ function renderTechnicalSignalDetail(s, container) {
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem;">
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
-              <span class="emit-tag"><i class="fa-regular fa-clock" style="margin-right:3px; font-size:0.65rem;"></i>${setupText}</span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
             </div>
             <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
@@ -3306,14 +3287,11 @@ function renderTechnicalSignalDetail(s, container) {
         ${priceLadder}
         ${buyAreaDisplay}
         ${targetRanges}
+        ${setupCard}
+        ${strategyFlow}
+        ${strategyDetail}
 
-        <!-- Strategy Flow -->
-        <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-          ${strategyFlow}
-          ${strategyDetail}
-        </div>
-
-        <!-- Footer -->
+        <!-- FOOTER -->
         <div style="padding:0.5rem 0.75rem; text-align:center; font-size:0.55rem; color:var(--text-secondary); opacity:0.4; border-top:1px solid rgba(255,255,255,0.04);">
           <i class="fa-solid fa-microchip" style="margin-right:0.2rem;"></i> Technical Strategy Engine v1.0
         </div>
