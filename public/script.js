@@ -2832,9 +2832,9 @@ async function showTechnicalSignalList() {
     // Tampilkan long name
     const longName = info.longName || s.stockCode;
 
-    // Sub detail teks: buy area atau entry/gain
+    // === PERUBAHAN: SubDetailText untuk WAITING_ENTRY dikosongkan ===
     if (s.status === "WAITING_ENTRY") {
-      subDetailText = `Buy Area: ${s.buyAreaLow || 0}–${s.buyAreaHigh || 0}`;
+      subDetailText = ""; // <-- HAPUS "Buy Area: ..."
     } else if (s.status === "RUNNING" || s.status === "TRAILING") {
       if (s.entryPrice && currentPrice) {
         const gain = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
@@ -2846,25 +2846,26 @@ async function showTechnicalSignalList() {
       subDetailText = `Closed: ${s.returnPercent?.toFixed(2)}%`;
     }
 
-    let badgeColor = "#3b82f6";
-    let badgeBg = "rgba(59,130,246,0.15)";
-    let badgeText = s.status;
+    // === PERUBAHAN: Badge status tidak ditampilkan untuk WAITING_ENTRY ===
+    let statusBadge = "";
+    if (s.status !== "WAITING_ENTRY") {
+      let badgeColor = "#3b82f6";
+      let badgeBg = "rgba(59,130,246,0.15)";
+      let badgeText = s.status;
 
-    if (s.status === "WAITING_ENTRY") {
-      badgeColor = "#f59e0b";
-      badgeBg = "rgba(245,158,11,0.15)";
-    } else if (s.status === "RUNNING" || s.status === "TRAILING") {
-      badgeColor = "#10b981";
-      badgeBg = "rgba(16,185,129,0.15)";
-    } else if (s.status === "TP") {
-      badgeColor = "#10b981";
-      badgeBg = "rgba(16,185,129,0.15)";
-    } else if (s.status === "SL") {
-      badgeColor = "#ef4444";
-      badgeBg = "rgba(239,68,68,0.15)";
+      if (s.status === "RUNNING" || s.status === "TRAILING") {
+        badgeColor = "#10b981";
+        badgeBg = "rgba(16,185,129,0.15)";
+      } else if (s.status === "TP") {
+        badgeColor = "#10b981";
+        badgeBg = "rgba(16,185,129,0.15)";
+      } else if (s.status === "SL") {
+        badgeColor = "#ef4444";
+        badgeBg = "rgba(239,68,68,0.15)";
+      }
+
+      statusBadge = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:${badgeColor}; background:${badgeBg}; padding:0.15rem 0.5rem; border-radius:12px; border:1px solid ${badgeColor}33; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">${badgeText}</span>`;
     }
-
-    const statusBadge = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:${badgeColor}; background:${badgeBg}; padding:0.15rem 0.5rem; border-radius:12px; border:1px solid ${badgeColor}33; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">${badgeText}</span>`;
 
     // Logo
     const stockbitUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
@@ -2899,7 +2900,7 @@ async function showTechnicalSignalList() {
             <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
               <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
                 <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary);">${priceDisplay}</span>
-                <span style="font-family:'JetBrains Mono'; font-size:0.6rem; color:var(--text-secondary);">${escapeHtml(subDetailText)}</span>
+                ${subDetailText ? `<span style="font-family:'JetBrains Mono'; font-size:0.6rem; color:var(--text-secondary);">${escapeHtml(subDetailText)}</span>` : ''}
               </div>
             </div>
           </div>
