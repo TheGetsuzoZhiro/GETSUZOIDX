@@ -120,7 +120,7 @@
       }
 
       .content-wrapper {
-        padding-top: 20px !important; 
+        padding-top: 20px !important;
       }
 
       .sidebar {
@@ -709,7 +709,11 @@
         }
       }
 
-      /* Dropdown dan submenu styling */
+      /* Gaya dropdown – sama persis dengan yang sudah ada di style.css atau ditambahkan di sini */
+      .nav-dropdown {
+        position: relative;
+      }
+
       .nav-sub {
         display: none;
         list-style: none;
@@ -719,10 +723,14 @@
         border-radius: 4px;
         border-left: 1px solid rgba(255, 255, 255, 0.05);
         margin-left: 12px;
+        overflow: hidden;
+        transition: all 0.2s ease;
       }
+
       .nav-sub.show {
         display: block;
       }
+
       .nav-sub-link {
         display: flex;
         align-items: center;
@@ -735,32 +743,71 @@
         cursor: pointer;
         border-radius: 4px;
       }
+
       .nav-sub-link:hover,
       .nav-sub-link.active {
         color: #ffffff;
         background: rgba(255, 255, 255, 0.05);
       }
+
       .nav-sub-link i {
         width: 18px;
         text-align: center;
       }
+
       .nav-arrow {
         margin-left: auto;
         font-size: 0.7rem;
         color: rgba(255, 255, 255, 0.3);
         transition: 0.2s;
       }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        color: rgba(255, 255, 255, 0.5);
+        background: transparent;
+        border: none;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: 0.2s;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 0.85rem;
+        font-weight: 500;
+      }
+
+      .nav-link:hover,
+      .nav-link.active {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .nav-link .nav-icon {
+        width: 20px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
     </style>
 
     <script>
       (function () {
         "use strict";
-        var isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-        var style = document.createElement('style');
+        var isStandalone =
+          window.matchMedia("(display-mode: standalone)").matches ||
+          window.navigator.standalone === true;
+        var style = document.createElement("style");
         if (isStandalone) {
-          style.innerHTML = '#pwa-lock-screen { display: none !important; } .app-wrapper { display: flex !important; }';
+          style.innerHTML =
+            "#pwa-lock-screen { display: none !important; } .app-wrapper { display: flex !important; }";
         } else {
-          style.innerHTML = '#pwa-lock-screen { display: block !important; } .app-wrapper { display: none !important; }';
+          style.innerHTML =
+            "#pwa-lock-screen { display: block !important; } .app-wrapper { display: none !important; }";
         }
         document.head.appendChild(style);
       })();
@@ -769,7 +816,7 @@
   <body>
     <div class="particles-container" id="particles"></div>
 
-    <div id="pwa-lock-screen" class="pwa-lock-container" style="display: none;">
+    <div id="pwa-lock-screen" class="pwa-lock-container" style="display: none">
       <div class="lock-card">
         <div class="corner-tag top-l"></div>
         <div class="corner-tag top-r"></div>
@@ -976,7 +1023,7 @@
             <span class="nav-text">Performance</span>
           </button>
 
-          <!-- SINYAL AKTIF -->
+          <!-- SINYAL AKTIF (Dropdown) -->
           <div class="nav-dropdown">
             <button class="nav-link" data-tab="signals" id="signalsParent">
               <div class="nav-icon">
@@ -1014,7 +1061,7 @@
             </ul>
           </div>
 
-          <!-- TECHNICAL SIGNALS -->
+          <!-- TECHNICAL SIGNALS (Dropdown baru) -->
           <div class="nav-dropdown">
             <button class="nav-link" data-tab="technical" id="technicalParent">
               <div class="nav-icon">
@@ -1181,6 +1228,7 @@
             </div>
           </div>
 
+          <!-- VIEWS UTAMA -->
           <section id="home" class="view active">
             <div class="hero-banner">
               <div class="hero-content">
@@ -1369,7 +1417,7 @@
             </div>
           </section>
 
-          <!-- ===== VIEW UNTUK TECHNICAL SIGNALS ===== -->
+          <!-- VIEW UNTUK TECHNICAL SIGNALS -->
           <section id="technical" class="view">
             <div class="loading-state">
               <div class="loader">
@@ -1697,100 +1745,119 @@
 
         enforceSecurityLock();
 
-        document.getElementById('pwa-lock-screen').addEventListener('touchmove', function(e) {
+        document.getElementById("pwa-lock-screen").addEventListener(
+          "touchmove",
+          function (e) {
             e.stopPropagation();
-        }, { passive: true });
+          },
+          { passive: true },
+        );
       })();
     </script>
 
-    <!-- ===== NAVIGASI DROPDOWN & SUBMENU ===== -->
+    <!-- NAVIGASI DROPDOWN DAN SUBMENU -->
     <script>
-      (function() {
-        // Signal Aktif dropdown
-        const signalParent = document.getElementById('signalsParent');
-        const signalSub = document.getElementById('signalSubMenu');
+      (function () {
+        // Sinyal Aktif
+        const signalParent = document.getElementById("signalsParent");
+        const signalSub = document.getElementById("signalSubMenu");
         if (signalParent && signalSub) {
-          signalParent.addEventListener('click', function(e) {
+          signalParent.addEventListener("click", function (e) {
             e.stopPropagation();
             // Tutup dropdown technical jika terbuka
-            const techSub = document.getElementById('technicalSubMenu');
-            if (techSub) techSub.classList.remove('show');
-            signalSub.classList.toggle('show');
-            const arrow = this.querySelector('.nav-arrow i');
+            const techSub = document.getElementById("technicalSubMenu");
+            if (techSub) techSub.classList.remove("show");
+            signalSub.classList.toggle("show");
+            const arrow = this.querySelector(".nav-arrow i");
             if (arrow) {
-              arrow.classList.toggle('fa-chevron-down');
-              arrow.classList.toggle('fa-chevron-up');
+              arrow.classList.toggle("fa-chevron-down");
+              arrow.classList.toggle("fa-chevron-up");
             }
           });
         }
 
-        // Technical Signals dropdown
-        const techParent = document.getElementById('technicalParent');
-        const techSub = document.getElementById('technicalSubMenu');
+        // Technical Signals
+        const techParent = document.getElementById("technicalParent");
+        const techSub = document.getElementById("technicalSubMenu");
         if (techParent && techSub) {
-          techParent.addEventListener('click', function(e) {
+          techParent.addEventListener("click", function (e) {
             e.stopPropagation();
             // Tutup dropdown signal jika terbuka
-            const signalSub = document.getElementById('signalSubMenu');
-            if (signalSub) signalSub.classList.remove('show');
-            techSub.classList.toggle('show');
-            const arrow = this.querySelector('.nav-arrow i');
+            const signalSub = document.getElementById("signalSubMenu");
+            if (signalSub) signalSub.classList.remove("show");
+            techSub.classList.toggle("show");
+            const arrow = this.querySelector(".nav-arrow i");
             if (arrow) {
-              arrow.classList.toggle('fa-chevron-down');
-              arrow.classList.toggle('fa-chevron-up');
+              arrow.classList.toggle("fa-chevron-down");
+              arrow.classList.toggle("fa-chevron-up");
             }
           });
         }
 
-        // Navigasi submenu link
-        document.querySelectorAll('.nav-sub-link').forEach(link => {
-          link.addEventListener('click', function(e) {
+        // Semua submenu link
+        document.querySelectorAll(".nav-sub-link").forEach((link) => {
+          link.addEventListener("click", function (e) {
             e.preventDefault();
-            const tab = this.getAttribute('data-tab');
+            const tab = this.getAttribute("data-tab");
             // Sembunyikan semua view
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document
+              .querySelectorAll(".view")
+              .forEach((v) => v.classList.remove("active"));
             const targetView = document.getElementById(tab);
-            if (targetView) targetView.classList.add('active');
-            // Update active class pada nav
-            document.querySelectorAll('.nav-link, .nav-sub-link').forEach(el => el.classList.remove('active'));
-            this.classList.add('active');
+            if (targetView) targetView.classList.add("active");
+            // Update active class
+            document
+              .querySelectorAll(".nav-link, .nav-sub-link")
+              .forEach((el) => el.classList.remove("active"));
+            this.classList.add("active");
             // Tutup semua dropdown
-            document.querySelectorAll('.nav-sub').forEach(sub => sub.classList.remove('show'));
-            // Reset arrow
-            document.querySelectorAll('.nav-arrow i').forEach(icon => {
-              icon.classList.remove('fa-chevron-up');
-              icon.classList.add('fa-chevron-down');
+            document
+              .querySelectorAll(".nav-sub")
+              .forEach((sub) => sub.classList.remove("show"));
+            document.querySelectorAll(".nav-arrow i").forEach((icon) => {
+              icon.classList.remove("fa-chevron-up");
+              icon.classList.add("fa-chevron-down");
             });
           });
         });
 
-        // Navigasi utama (Beranda, Performance)
-        document.querySelectorAll('.nav-link[data-tab]:not(.nav-dropdown .nav-link)').forEach(btn => {
-          btn.addEventListener('click', function(e) {
-            const tab = this.getAttribute('data-tab');
-            if (!tab) return;
-            // Sembunyikan semua view
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            const targetView = document.getElementById(tab);
-            if (targetView) targetView.classList.add('active');
-            // Update active class
-            document.querySelectorAll('.nav-link, .nav-sub-link').forEach(el => el.classList.remove('active'));
-            this.classList.add('active');
-            // Tutup dropdown
-            document.querySelectorAll('.nav-sub').forEach(sub => sub.classList.remove('show'));
-            document.querySelectorAll('.nav-arrow i').forEach(icon => {
-              icon.classList.remove('fa-chevron-up');
-              icon.classList.add('fa-chevron-down');
+        // Nav utama (Beranda, Performance)
+        document
+          .querySelectorAll(
+            '.nav-link[data-tab]:not(.nav-dropdown .nav-link)',
+          )
+          .forEach((btn) => {
+            btn.addEventListener("click", function (e) {
+              const tab = this.getAttribute("data-tab");
+              if (!tab) return;
+              document
+                .querySelectorAll(".view")
+                .forEach((v) => v.classList.remove("active"));
+              const targetView = document.getElementById(tab);
+              if (targetView) targetView.classList.add("active");
+              document
+                .querySelectorAll(".nav-link, .nav-sub-link")
+                .forEach((el) => el.classList.remove("active"));
+              this.classList.add("active");
+              // Tutup dropdown
+              document
+                .querySelectorAll(".nav-sub")
+                .forEach((sub) => sub.classList.remove("show"));
+              document.querySelectorAll(".nav-arrow i").forEach((icon) => {
+                icon.classList.remove("fa-chevron-up");
+                icon.classList.add("fa-chevron-down");
+              });
             });
           });
-        });
 
         // Klik di luar dropdown untuk menutup
-        document.addEventListener('click', function() {
-          document.querySelectorAll('.nav-sub').forEach(sub => sub.classList.remove('show'));
-          document.querySelectorAll('.nav-arrow i').forEach(icon => {
-            icon.classList.remove('fa-chevron-up');
-            icon.classList.add('fa-chevron-down');
+        document.addEventListener("click", function () {
+          document
+            .querySelectorAll(".nav-sub")
+            .forEach((sub) => sub.classList.remove("show"));
+          document.querySelectorAll(".nav-arrow i").forEach((icon) => {
+            icon.classList.remove("fa-chevron-up");
+            icon.classList.add("fa-chevron-down");
           });
         });
       })();
