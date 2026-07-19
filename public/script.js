@@ -48,11 +48,12 @@ let _allRunning = [];
 let _allClosed = [];
 let currentSignalFilter = "none";
 
+let currentTechnicalFilter = "none";
+let technicalListRendered = false;
 
 let isDetailView = false;
 let currentDetailIndex = null;
-let bsjpRefreshInterval = null; 
-
+let bsjpRefreshInterval = null;
 
 let dailyRendered = false;
 let signalListRendered = false;
@@ -63,7 +64,6 @@ let currentFilterState = {
   isOpen: false,
 };
 let currentDateRange = null;
-
 
 let notificationHistory = [];
 const NOTIF_KEY = "notificationHistory";
@@ -130,7 +130,6 @@ function clearAllNotifications() {
   renderNotificationModal();
 }
 
-
 function getTodayWIB() {
   const now = new Date();
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -141,7 +140,6 @@ function getTodayWIB() {
   });
   return formatter.format(now);
 }
-
 
 function triggerHaptic() {
   if (navigator.vibrate) navigator.vibrate(30);
@@ -271,7 +269,6 @@ function fmtPriceNoRp(num) {
   return num != null ? Number(num).toLocaleString("id-ID") : "–";
 }
 
-
 const infoCache = new Map();
 
 async function fetchStockPrice(symbol) {
@@ -300,14 +297,11 @@ async function fetchStockInfo(symbol) {
   }
 }
 
-
 function showLoading(containerId) {
   const c = document.getElementById(containerId);
   if (c)
     c.innerHTML = `<div class="loading-state"><div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div><div class="loader-ring"></div></div><p>Loading...</p></div>`;
 }
-
-
 
 function filterSignalsByDate(signals, startDate, endDate) {
   if (!signals || !signals.length) return [];
@@ -466,7 +460,6 @@ function getDateRangeFromFilterState() {
   return { start: startStr, end: endStr };
 }
 
-
 let returnChartInstance = null;
 
 function renderDailyReturnChartFromSignals(signals) {
@@ -573,7 +566,6 @@ function renderDailyReturnChartFromSignals(signals) {
     },
   });
 }
-
 
 async function updateDailyContent() {
   await fetchSignals(false);
@@ -695,7 +687,6 @@ async function updateDailyContent() {
     }
   }
 }
-
 
 function renderDaily() {
   const c = document.getElementById("daily");
@@ -1097,7 +1088,6 @@ function renderDailyCharts(parsed) {
   }
 }
 
-
 async function showDailySignalDetail(stockCode, signalDate) {
   let signal = null;
   const allCached = [..._allRunning, ..._allClosed];
@@ -1272,7 +1262,6 @@ function renderStrategyFlowForSignal(s) {
     </div>
   `;
 }
-
 
 function renderBsjpDetail(s, container, onBack) {
   let stockInfo = { longName: s.stockCode, logoUrl: null };
@@ -1653,7 +1642,6 @@ function renderBsjpDetailContent(
   }, 10000);
 }
 
-
 async function renderSignalDetailToContainer(signal, container, onBack) {
   const s = signal;
 
@@ -2030,7 +2018,6 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   });
 }
 
-
 async function renderPerformanceSignalList(status) {
   const container = document.getElementById("signalListContainer");
   if (!container) return;
@@ -2125,7 +2112,6 @@ async function renderPerformanceSignalList(status) {
   }
 }
 
-
 function getSortedSignals() {
   const allSignals = [
     ..._allRunning.map((s) => ({ ...s, _type: "running" })),
@@ -2152,7 +2138,6 @@ function getSortedSignals() {
   return allSignals;
 }
 
-
 function getSessionFromDate(signalDate) {
   if (!signalDate) return null;
   const date = new Date(signalDate);
@@ -2163,7 +2148,6 @@ function getSessionFromDate(signalDate) {
   if (time >= 12 && time <= 16) return 2;
   return null;
 }
-
 
 function getColorFromCode(code) {
   const colors = [
@@ -2189,7 +2173,6 @@ const hitSvg = `<img src="https://stockbit.com/assets/img/correct.png" alt="HIT"
 const missedSvg = `<img src="https://stockbit.com/assets/img/missed.png" alt="MISSED" style="width:36px; height:36px; object-fit:contain; display:inline-block;">`;
 const hitSvgrow = `<img src="https://stockbit.com/assets/img/correct.png" alt="HIT" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
 const missedSvgrow = `<img src="https://stockbit.com/assets/img/missed.png" alt="MISSED" style="width:50px; height:50px; object-fit:contain; display:inline-block;">`;
-
 
 function renderSignalRows(signals, priceMap, infoMap) {
   let rows = "";
@@ -2269,7 +2252,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
         const gainPct = (gainAbs / s.entryPrice) * 100;
         const absGain = Math.abs(gainAbs).toFixed(0);
         const absPct = Math.abs(gainPct).toFixed(2);
-        
+
         if (Math.abs(gainAbs) < 0.01) {
           gainColor = "var(--text-secondary)";
           gainStr = `0 (0.00%)`;
@@ -2389,7 +2372,6 @@ function renderSignalRows(signals, priceMap, infoMap) {
   });
   return rows;
 }
-
 
 async function showSignalList() {
   isDetailView = false;
@@ -2611,7 +2593,6 @@ async function showSignalList() {
     });
   });
 }
-
 
 async function showSignalDetailByStock(stockCode, signalDate) {
   const allSignals = getSortedSignals();
@@ -3360,7 +3341,6 @@ ${headerResetStyle}
   });
 }
 
-
 function renderBrokerFlow(
   topBuyers,
   topSellers,
@@ -3461,7 +3441,6 @@ function renderBrokerFlow(
   containerEl.innerHTML = html;
 }
 
-
 function renderPatternVisual(patternText, container = document) {
   const containerEl =
     container.getElementById("patternVisualContainer") ||
@@ -3528,7 +3507,6 @@ function renderPatternVisual(patternText, container = document) {
   containerEl.innerHTML = svg;
 }
 
-
 function renderIndRow(label, displayVal, compareVal, entryVal) {
   let fillClass = "bg-neutral",
     width = "50%";
@@ -3543,7 +3521,6 @@ function renderIndRow(label, displayVal, compareVal, entryVal) {
   }
   return `<div class="pro-ind-row"><span class="pro-ind-label">${label}</span><div class="pro-ind-track"><div class="pro-ind-fill ${fillClass}" style="width:${width};"></div></div><span class="pro-ind-val">${displayVal}</span></div>`;
 }
-
 
 function renderDetailCharts(s, container = document) {
   if (detailCharts.rsi) {
@@ -3628,7 +3605,6 @@ function renderDetailCharts(s, container = document) {
   }
 }
 
-
 async function fetchReports() {
   const activeTab = document.querySelector(".view.active")?.id;
   if (activeTab === "daily") {
@@ -3642,6 +3618,234 @@ async function fetchReports() {
     await fetchSignals(false);
     updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
   }
+}
+
+function selectTechnicalFilter(filter) {
+  isDetailView = false;
+  currentDetailIndex = null;
+  currentTechnicalFilter = filter;
+  const pageTitle = document.querySelector(".page-title");
+  const pageSubtitle = document.querySelector(".page-subtitle");
+
+  if (filter === "today") {
+    pageTitle.innerText = "Technical: Hari Ini";
+    pageSubtitle.innerText = "Today's technical strategy signals";
+    window.location.hash = "#technical-today";
+  } else if (filter === "running") {
+    pageTitle.innerText = "Technical: Running";
+    pageSubtitle.innerText = "Active technical dynamic positions";
+    window.location.hash = "#technical-running";
+  } else if (filter === "waiting") {
+    pageTitle.innerText = "Technical: Waiting Entry";
+    pageSubtitle.innerText = "Pending execution asset setups";
+    window.location.hash = "#technical-waiting";
+  }
+
+  document
+    .querySelectorAll(".view")
+    .forEach((v) => v.classList.remove("active"));
+  document.getElementById("technical-signals").classList.add("active");
+  currentTab = "technical-signals";
+  technicalListRendered = false;
+  fetchSignals(true);
+}
+
+async function showTechnicalSignalList() {
+  const container = document.getElementById("technical-signals");
+  if (!container) return;
+
+  const allSignals = [..._allRunning, ..._allClosed];
+
+  let techSignals = allSignals.filter((s) => s.signalType === "TECHNICAL");
+
+  if (!techSignals.length) {
+    container.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal teknikal.</p></div>`;
+    technicalListRendered = false;
+    return;
+  }
+
+  if (currentTechnicalFilter === "today") {
+    const today = getTodayWIB();
+    techSignals = techSignals.filter(
+      (s) => s.signalDate && s.signalDate.startsWith(today),
+    );
+  } else if (currentTechnicalFilter === "running") {
+    techSignals = techSignals.filter(
+      (s) => s.status === "RUNNING" || s.status === "TRAILING",
+    );
+  } else if (currentTechnicalFilter === "waiting") {
+    techSignals = techSignals.filter((s) => s.status === "WAITING_ENTRY");
+  }
+
+  if (!techSignals.length) {
+    container.innerHTML = `<div class="loading-state"><p>Tidak ada sinyal teknikal dalam filter ini.</p></div>`;
+    technicalListRendered = false;
+    return;
+  }
+
+  const symbols = [...new Set(techSignals.map((s) => s.stockCode))];
+  const [priceResults, infoResults] = await Promise.all([
+    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
+    Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
+  ]);
+
+  const priceMap = {};
+  const infoMap = {};
+  symbols.forEach((sym, idx) => {
+    priceMap[sym] = priceResults[idx];
+    infoMap[sym] = infoResults[idx];
+  });
+
+  let html = `
+    <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
+      <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+        TECHNICAL TRACKER LIST
+        <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${techSignals.length})</span>
+      </span>
+    </div>
+    <div class="sig-list">
+  `;
+
+  techSignals.forEach((s) => {
+    const currentPrice = priceMap[s.stockCode];
+    let priceDisplay = currentPrice != null ? fmtPriceNoRp(currentPrice) : "—";
+    let subDetailText = `Buy Area: ${s.buyAreaLow || 0}–${s.buyAreaHigh || 0}`;
+    let badgeColor = "#3b82f6";
+    let badgeBg = "rgba(59,130,246,0.15)";
+
+    if (s.status === "WAITING_ENTRY") {
+      badgeColor = "#f59e0b";
+      badgeBg = "rgba(245,158,11,0.15)";
+    } else if (s.status === "RUNNING" || s.status === "TRAILING") {
+      badgeColor = "#10b981";
+      badgeBg = "rgba(16,185,129,0.15)";
+      if (s.entryPrice && currentPrice) {
+        const gain = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
+        subDetailText = `Entry: ${fmtPrice(s.entryPrice)} | Gain: ${gain >= 0 ? "+" : ""}${gain.toFixed(2)}%`;
+      }
+    } else if (s.status === "TP") {
+      badgeColor = "#10b981";
+      badgeBg = "rgba(16,185,129,0.15)";
+      subDetailText = `Closed TP: ${s.returnPercent?.toFixed(2)}%`;
+    } else if (s.status === "SL") {
+      badgeColor = "#ef4444";
+      badgeBg = "rgba(239,68,68,0.15)";
+      subDetailText = `Closed SL: ${s.returnPercent?.toFixed(2)}%`;
+    }
+
+    const typeBadge = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:${badgeColor}; background:${badgeBg}; padding:0.15rem 0.5rem; border-radius:12px; border:1px solid ${badgeColor}33; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">${s.status}</span>`;
+
+    html += `
+      <div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
+        <div class="stock-logo-wrapper">
+          <img src="https://assets.stockbit.com/logos/companies/${s.stockCode}.png" alt="${s.stockCode}" class="stock-logo" onerror="this.onerror=null; this.src='https://assets.parqet.com/logos/symbol/${s.stockCode}.png';">
+        </div>
+        <div class="sig-list-name">
+          <div class="sig-name-row">
+            <div class="sig-stock-info">
+              <div class="sig-stock-top">
+                <span class="sig-stock-code">${s.stockCode}</span>
+                ${typeBadge}
+              </div>
+              <div class="sig-stock-longname">${subDetailText}</div>
+            </div>
+            <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
+              <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary);">${priceDisplay}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  container.innerHTML = html;
+  technicalListRendered = true;
+
+  container.querySelectorAll(".sig-list-row").forEach((row) => {
+    row.addEventListener("click", function () {
+      const stock = this.dataset.stock;
+      const date = this.dataset.date;
+      const matchSig = allSignals.find(
+        (s) => s.stockCode === stock && s.signalDate === date,
+      );
+      if (matchSig) {
+        isDetailView = true;
+        renderTechnicalSignalDetail(matchSig, container);
+      }
+    });
+  });
+}
+
+async function updateTechnicalSignalList() {
+  if (isDetailView) return;
+  const container = document.getElementById("technical-signals");
+  if (!container) return;
+
+  const rows = container.querySelectorAll(".sig-list-row");
+  for (const row of rows) {
+    const stock = row.dataset.stock;
+    if (!stock) continue;
+    const price = await fetchStockPrice(stock);
+    if (price != null) {
+      const priceEl = row.querySelector(".stock-price");
+      if (priceEl) priceEl.textContent = fmtPriceNoRp(price);
+    }
+  }
+}
+
+function renderTechnicalSignalDetail(s, container) {
+  container.innerHTML = `
+    <div class="pro-detail-container">
+      <button class="sig-back-btn" id="techBackBtn" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#fff; padding:0.5rem 1rem; border-radius:8px; cursor:pointer; margin-bottom:1rem; display:flex; align-items:center; gap:0.4rem;">
+        <i class="fas fa-arrow-left"></i> Kembali
+      </button>
+      
+      <div style="background:#0a0a0a; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:0.75rem; margin-bottom:1rem;">
+          <div>
+            <h2 style="font-family:'JetBrains Mono'; margin:0; font-size:1.6rem; color:#3b82f6;">${s.stockCode}</h2>
+            <span style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase;">${s.buyType || "TECHNICAL BREAKOUT SETUP"}</span>
+          </div>
+          <span style="background:rgba(59,130,246,0.15); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); font-size:0.7rem; font-weight:700; padding:4px 12px; border-radius:20px;">${s.status}</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:1rem; margin-bottom:1rem;">
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:0.75rem; border-radius:8px;">
+            <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase;">Buy Area Reference</div>
+            <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#fff; margin-top:0.2rem;">${s.buyAreaLow} – ${s.buyAreaHigh}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:0.75rem; border-radius:8px;">
+            <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase;">Stop Loss Baseline (-${s.stopLossPercent}%)</div>
+            <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#ef4444; margin-top:0.2rem;">${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}</div>[cite: 1, 3]
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:1rem; border-radius:8px; margin-bottom:1rem;">
+          <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.5rem; font-weight:600;"><i class="fas fa-bullseye" style="color:#10b981; margin-right:4px;"></i> Target Profit Range Objectives</div>
+          <div style="display:flex; flex-direction:column; gap:0.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:0.5rem 0.75rem; border-radius:6px;">
+              <span style="font-size:0.75rem; color:#fff;">Target Area 1</span>
+              <span style="font-family:'JetBrains Mono'; font-weight:700; color:#10b981;">${s.target1Low} – ${s.target1High}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); padding:0.5rem 0.75rem; border-radius:6px;">
+              <span style="font-size:0.75rem; color:#fff;">Target Area 2</span>
+              <span style="font-family:'JetBrains Mono'; font-weight:700; color:#10b981;">${s.target2Low} – ${s.target2High}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:0.65rem; color:var(--text-secondary); text-align:right; opacity:0.6; font-family:'JetBrains Mono';">
+          Signal Date: ${s.signalDate}
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.querySelector("#techBackBtn").addEventListener("click", () => {
+    isDetailView = false;
+    showTechnicalSignalList();
+  });
 }
 
 async function fetchSignals(showLoadingIndicator = true) {
@@ -3661,8 +3865,10 @@ async function fetchSignals(showLoadingIndicator = true) {
     return;
   }
 
-  if (showLoadingIndicator && currentTab === "signals" && !isDetailView)
-    showLoading("signals");
+  if (showLoadingIndicator) {
+    if (currentTab === "signals") showLoading("signals");
+    if (currentTab === "technical-signals") showLoading("technical-signals");
+  }
 
   try {
     const res = await fetch(`${apiBase}/signals`);
@@ -3689,12 +3895,24 @@ async function fetchSignals(showLoadingIndicator = true) {
       }
     }
 
+    if (currentTab === "technical-signals") {
+      if (isDetailView) {
+        isDetailView = false;
+      }
+      if (technicalListRendered) {
+        await updateTechnicalSignalList();
+      } else {
+        await showTechnicalSignalList();
+      }
+    }
+
     updateTotalSignals(running, closed);
     updateChartsFromSignals({ running, closed });
     checkSignalChanges(running, closed);
   } catch (err) {
     console.error(err);
-    if (currentTab === "signals" && !isDetailView) {
+
+    if (currentTab === "signals") {
       document.getElementById("signals").innerHTML = `
         <div class="loading-state" style="text-align:center; padding:2rem;">
           <div style="display:flex; flex-direction:column; align-items:center; gap:1rem;">
@@ -3703,18 +3921,33 @@ async function fetchSignals(showLoadingIndicator = true) {
               <line x1="12" y1="8" x2="12" y2="12"/>
               <line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
-            <p style="color:#ef4444; font-weight:500; margin:0;">Gagal memuat sinyal</p>
+            <p style="color:#ef4444; font-weight:500; margin:0;">Gagal memuat sinyal biasa</p>
             <button onclick="fetchSignals()" class="retry-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:0.6rem 1.2rem;border-radius:8px;color:var(--text-primary);cursor:pointer;display:flex;align-items:center;gap:0.5rem;transition:0.2s;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px; height:16px;">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-              </svg>
               Coba Lagi
             </button>
           </div>
         </div>
       `;
       signalListRendered = false;
+    }
+
+    if (currentTab === "technical-signals") {
+      document.getElementById("technical-signals").innerHTML = `
+        <div class="loading-state" style="text-align:center; padding:2rem;">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:1rem;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" style="width:48px; height:48px;">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p style="color:#ef4444; font-weight:500; margin:0;">Gagal memuat sinyal teknikal</p>
+            <button onclick="fetchSignals()" class="retry-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:0.6rem 1.2rem;border-radius:8px;color:var(--text-primary);cursor:pointer;display:flex;align-items:center;gap:0.5rem;transition:0.2s;">
+              Coba Lagi
+            </button>
+          </div>
+        </div>
+      `;
+      technicalListRendered = false;
     }
   }
 }
@@ -3819,7 +4052,6 @@ function checkSignalChanges(running, closed) {
   localStorage.setItem("lastRunningIds", currentRunningIds);
   localStorage.setItem("lastClosedIds", currentClosedIds);
 }
-
 
 function renderNotificationModal() {
   const oldModal = document.getElementById("notificationModal");
@@ -3991,7 +4223,7 @@ async function updateSignalList() {
     if (!stock || !date) return;
 
     const signal = filteredSignals.find(
-      (s) => s.stockCode === stock && s.signalDate === date
+      (s) => s.stockCode === stock && s.signalDate === date,
     );
     if (!signal) return;
     const price = priceMap[stock];
@@ -3999,7 +4231,8 @@ async function updateSignalList() {
     const gainEl = row.querySelector(".sig-right span:last-child");
     if (!priceEl) return;
 
-    const isRunning = signal.status === "RUNNING" || signal.status === "TRAILING";
+    const isRunning =
+      signal.status === "RUNNING" || signal.status === "TRAILING";
     if (!isRunning) return;
 
     if (price != null) {
@@ -4233,7 +4466,6 @@ function updateSignalChart(data) {
   });
 }
 
-
 function sendNotification(title, body) {
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted") {
@@ -4244,7 +4476,6 @@ function sendNotification(title, body) {
   }
 }
 
-
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
@@ -4252,7 +4483,11 @@ function startPolling() {
     if (activeTab === "home") {
       fetchReports();
     }
-    if (activeTab === "signals" || activeTab === "home" || activeTab === "daily") {
+    if (
+      activeTab === "signals" ||
+      activeTab === "home" ||
+      activeTab === "daily"
+    ) {
       fetchSignals(false);
     }
     updateLastUpdate();
@@ -4269,7 +4504,6 @@ function updateLastUpdate() {
       minute: "2-digit",
     });
 }
-
 
 function updateClock() {
   const clockEl = document.getElementById("clockDisplay");
@@ -4289,7 +4523,6 @@ function updateClock() {
     marketStatus.innerHTML = `<span class="dot"></span><span class="market-text">${isOpen ? "Market Open" : "Market Closed"}</span>`;
   }
 }
-
 
 function selectSignalFilter(filter) {
   isDetailView = false;
@@ -4319,12 +4552,12 @@ function selectSignalFilter(filter) {
   fetchSignals(true);
 }
 
-
 function initTabs() {
   const btns = document.querySelectorAll(".nav-link, .nav-sub-link");
   const views = document.querySelectorAll(".view");
   const pageTitle = document.querySelector(".page-title");
   const pageSubtitle = document.querySelector(".page-subtitle");
+
   const titles = {
     home: { t: "Dashboard Overview", s: "Real-time monitoring & analysis" },
     daily: { t: "Laporan Harian", s: "Daily reports" },
@@ -4333,10 +4566,23 @@ function initTabs() {
     signals: { t: "Sinyal Aktif", s: "All signals" },
     "signals-today": { t: "Sinyal Hari Ini", s: "Today's signals" },
     "signals-running": { t: "All Running", s: "Active positions" },
+
+    "technical-today": {
+      t: "Technical: Hari Ini",
+      s: "Today's technical strategy signals",
+    },
+    "technical-running": {
+      t: "Technical: Running",
+      s: "Active technical dynamic positions",
+    },
+    "technical-waiting": {
+      t: "Technical: Waiting Entry",
+      s: "Pending execution setups",
+    },
   };
 
   btns.forEach((btn) => {
-    if (btn.id === "signalsParent") return;
+    if (btn.id === "signalsParent" || btn.id === "technicalParent") return;
 
     btn.addEventListener("click", function (e) {
       e.preventDefault();
@@ -4352,27 +4598,50 @@ function initTabs() {
           const arrow = parentBtn?.querySelector(".nav-arrow");
           if (arrow) arrow.classList.remove("open");
         }
+
+        const techSubMenu = document.getElementById("technicalSubMenu");
+        const techParentBtn = document.getElementById("technicalParent");
+        if (techSubMenu && techSubMenu.classList.contains("open")) {
+          techSubMenu.classList.remove("open");
+          techSubMenu.style.display = "none";
+          if (techParentBtn) techParentBtn.classList.remove("open");
+          const techArrow = techParentBtn?.querySelector(".nav-arrow");
+          if (techArrow) techArrow.classList.remove("open");
+        }
       }
 
       const tabId = this.getAttribute("data-tab");
       const isSub = this.classList.contains("nav-sub-link");
 
       if (isSub) {
-        if (tabId === "signals-today") {
-          selectSignalFilter("today");
-        } else if (tabId === "signals-running") {
-          selectSignalFilter("running");
+        if (tabId.startsWith("technical-")) {
+          const subFilter = tabId.split("-")[1];
+          selectTechnicalFilter(subFilter);
+          btns.forEach((b) => b.classList.remove("active"));
+          document
+            .querySelector('.nav-link[data-tab="technical-signals"]')
+            ?.classList.add("active");
+          this.classList.add("active");
+          document.querySelector(".sidebar")?.classList.remove("open");
+          document.querySelector(".overlay")?.classList.remove("active");
+          return;
         } else {
-          selectSignalFilter("all");
+          if (tabId === "signals-today") {
+            selectSignalFilter("today");
+          } else if (tabId === "signals-running") {
+            selectSignalFilter("running");
+          } else {
+            selectSignalFilter("all");
+          }
+          btns.forEach((b) => b.classList.remove("active"));
+          document
+            .querySelector('.nav-link[data-tab="signals"]')
+            ?.classList.add("active");
+          this.classList.add("active");
+          document.querySelector(".sidebar")?.classList.remove("open");
+          document.querySelector(".overlay")?.classList.remove("active");
+          return;
         }
-        btns.forEach((b) => b.classList.remove("active"));
-        document
-          .querySelector('.nav-link[data-tab="signals"]')
-          ?.classList.add("active");
-        this.classList.add("active");
-        document.querySelector(".sidebar")?.classList.remove("open");
-        document.querySelector(".overlay")?.classList.remove("active");
-        return;
       }
 
       currentTab = tabId;
@@ -4380,10 +4649,12 @@ function initTabs() {
       this.classList.add("active");
       views.forEach((v) => v.classList.remove("active"));
       document.getElementById(tabId).classList.add("active");
+
       if (titles[tabId]) {
         pageTitle.innerText = titles[tabId].t;
         pageSubtitle.innerText = titles[tabId].s;
       }
+
       if (tabId === "daily") {
         if (!dailyRendered) showLoading("daily");
         fetchReports();
@@ -4392,10 +4663,15 @@ function initTabs() {
         signalListRendered = false;
         fetchSignals(true);
       }
+      if (tabId === "technical-signals") {
+        technicalListRendered = false;
+        fetchSignals(true);
+      }
       if (tabId === "home") {
         fetchReports();
         fetchSignals(false);
       }
+
       document.querySelector(".sidebar")?.classList.remove("open");
       document.querySelector(".overlay")?.classList.remove("active");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -4499,7 +4775,6 @@ function createParticles() {
   document.head.appendChild(style);
 }
 
-
 const VAPID_PUBLIC_KEY =
   "BCGyIOUseFBON2YXTAk-rcvncZ65jkbKqb2ShjOuvZhP08HLvaJJis5Bsx8ybuVVcZbXZow5GRrl9ykSiV0Y3B0";
 
@@ -4524,7 +4799,6 @@ async function subscribeToPush() {
     const registration = await navigator.serviceWorker.register("/sw.js");
     await navigator.serviceWorker.ready;
 
-    
     if (Notification.permission !== "granted") {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -4533,7 +4807,6 @@ async function subscribeToPush() {
       }
     }
 
-    
     let subscription = await registration.pushManager.getSubscription();
     if (subscription) {
       await subscription.unsubscribe();
@@ -4541,14 +4814,12 @@ async function subscribeToPush() {
       subscription = null;
     }
 
-    
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     console.log("✅ Dibuat subscription baru di browser.");
 
-    
     const response = await fetch("/api/save-subscription", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4574,13 +4845,15 @@ async function subscribeToPush() {
 function updatePriceElement(symbol, price) {
   const allSignals = getSortedSignals();
   const runningSignals = allSignals.filter(
-    (s) => s.stockCode === symbol && (s.status === "RUNNING" || s.status === "TRAILING")
+    (s) =>
+      s.stockCode === symbol &&
+      (s.status === "RUNNING" || s.status === "TRAILING"),
   );
   if (!runningSignals.length) return;
 
   runningSignals.forEach((signal) => {
     const rows = document.querySelectorAll(
-      `.sig-list-row[data-stock="${symbol}"][data-date="${signal.signalDate}"]`
+      `.sig-list-row[data-stock="${symbol}"][data-date="${signal.signalDate}"]`,
     );
     rows.forEach((row) => {
       const priceEl = row.querySelector(".stock-price");
@@ -4601,14 +4874,16 @@ function updatePriceElement(symbol, price) {
             gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i> +${absGain}%`;
             gainEl.style.color = "#10b981";
           }
-          arrow = '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
+          arrow =
+            '<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.7rem; margin-right:0.1rem;"></i>';
         } else {
           const absGain = Math.abs(gain).toFixed(2);
           if (gainEl) {
             gainEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i> -${absGain}%`;
             gainEl.style.color = "#ef4444";
           }
-          arrow = '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
+          arrow =
+            '<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.7rem; margin-right:0.1rem;"></i>';
         }
         priceEl.innerHTML = `${arrow} ${fmtPriceNoRp(price)}`;
       } else {
@@ -4652,12 +4927,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const technicalParent = document.getElementById("technicalParent");
+  const technicalSubMenu = document.getElementById("technicalSubMenu");
+  if (technicalParent && technicalSubMenu) {
+    technicalParent.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = technicalSubMenu.classList.toggle("open");
+      technicalSubMenu.style.display = isOpen ? "block" : "none";
+      this.classList.toggle("open");
+      const arrow = this.querySelector(".nav-arrow");
+      if (arrow) arrow.classList.toggle("open");
+    });
+  }
+
   initMobileMenu();
   initPullToRefresh();
   initNotifications();
 
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash;
+
     if (hash === "#signals-today") {
       selectSignalFilter("today");
     } else if (hash === "#signals-running") {
@@ -4666,9 +4956,16 @@ document.addEventListener("DOMContentLoaded", () => {
       currentSignalFilter = "none";
       signalListRendered = false;
       showSignalList();
+    } else if (hash === "#technical-today") {
+      selectTechnicalFilter("today");
+    } else if (hash === "#technical-running") {
+      selectTechnicalFilter("running");
+    } else if (hash === "#technical-waiting") {
+      selectTechnicalFilter("waiting");
     } else if (hash === "#home") {
       currentTab = "home";
       currentSignalFilter = "none";
+      currentTechnicalFilter = "none";
       document
         .querySelectorAll(".view")
         .forEach((v) => v.classList.remove("active"));
@@ -4689,12 +4986,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const currentHash = window.location.hash;
-  if (currentHash !== "#home" && !currentHash.startsWith("#detail-")) {
+  if (
+    currentHash !== "#home" &&
+    !currentHash.startsWith("#detail-") &&
+    !currentHash.startsWith("#technical-") &&
+    !currentHash.startsWith("#signals-")
+  ) {
     window.location.hash = "home";
   }
 
   currentTab = "home";
   currentSignalFilter = "none";
+  currentTechnicalFilter = "none";
   document
     .querySelectorAll(".view")
     .forEach((v) => v.classList.remove("active"));
@@ -4706,6 +5009,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   showLoading("daily");
   showLoading("signals");
+  showLoading("technical-signals");
 
   fetchReports();
   fetchSignals(false);
