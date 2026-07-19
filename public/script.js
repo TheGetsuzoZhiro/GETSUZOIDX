@@ -2830,10 +2830,8 @@ async function showTechnicalSignalList() {
     const currentPrice = priceMap[s.stockCode];
     let priceDisplay = currentPrice != null ? fmtPriceNoRp(currentPrice) : "—";
 
-    
     let subText = info.longName || s.stockCode;
-    
-    
+
     if (s.status === "RUNNING" || s.status === "TRAILING") {
       if (s.entryPrice && currentPrice) {
         const gain = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
@@ -2909,9 +2907,6 @@ async function updateTechnicalSignalList() {
   }
 }
 
-
-
-
 function renderTechnicalSignalDetail(s, container) {
   let currentPrice = localPrices.get(s.stockCode) || null;
   let gainAbs = 0,
@@ -2981,11 +2976,10 @@ function renderTechnicalSignalDetail(s, container) {
   const logoUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
   const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
   const bgColor = getColorFromCode(s.stockCode);
-  
-  
+
   const logoHtml = `
     <div class="detail-logo-text" style="position:relative; border-radius:12px; overflow:hidden; width:52px; height:52px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;">
-      <img src="${logoUrl}" alt="${s.stockCode}" style="width:100\%; height:100\%; object-fit:contain; border:none; background:transparent;" onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='flex'; }">
+      <img src="${logoUrl}" alt="${s.stockCode}" style="width:100%; height:100%; object-fit:contain; border:none; background:transparent;" onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='flex'; }">
       <div style="display:none; width:100%; height:100%; align-items:center; justify-content:center; background:${bgColor}; color:#fff; font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace;">${s.stockCode.substring(0, 2)}</div>
     </div>`;
 
@@ -3006,17 +3000,25 @@ function renderTechnicalSignalDetail(s, container) {
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
 
-  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tp1Label = tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
-  const tp2Label = tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
+  const slLabel =
+    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tp1Label =
+    tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
+  const tp2Label =
+    tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
 
   const step1Active = true;
   let step1State = "default";
   if (s.status === "SL" && !s.breakEven) step1State = "failed";
 
-  const step2Active = s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
+  const step2Active =
+    s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
   const step2State =
-    s.status === "SL" && s.breakEven ? "warning" : s.status === "TP" ? "success" : "default";
+    s.status === "SL" && s.breakEven
+      ? "warning"
+      : s.status === "TP"
+        ? "success"
+        : "default";
 
   const step3Active = s.status === "TRAILING" || s.status === "TP";
   let step3State = "default";
@@ -3053,10 +3055,10 @@ function renderTechnicalSignalDetail(s, container) {
 
     return `
       <div style="flex:1; text-align:center; z-index:2; position:relative;">
-        <div style="width:36px; height:36px; background:${bg}; border:1px solid${border}; color:${color}; border-radius:50\%; display:flex; align-items:center; justify-content:center; margin:0 auto; font-size:0.85rem; font-weight:700; box-shadow:${shadow}; transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+        <div style="width:36px; height:36px; background:${bg}; border:1px solid ${border}; color:${color}; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto; font-size:0.85rem; font-weight:700; box-shadow: ${shadow}; transition:all 0.3s ease;">
           ${icon}
         </div>
-        <div style="font-size:0.75rem; font-weight:600; color:${active \vert{}\vert{} state !== "default" ? "var(--text-primary)" : "var(--text-secondary)"}; margin-top:0.5rem;">${label}</div>
+        <div style="font-size:0.75rem; font-weight:600; color:${active || state !== "default" ? "var(--text-primary)" : "var(--text-secondary)"}; margin-top:0.5rem;">${label}</div>
         <div style="font-size:0.6rem; color:${descColor}; margin-top:0.15rem; opacity:0.9; font-weight:500;">${desc}</div>
       </div>
     `;
@@ -3094,7 +3096,7 @@ function renderTechnicalSignalDetail(s, container) {
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; margin:1.2rem 0; position:relative; padding:0 0.5rem;">
         <div style="position:absolute; top:18px; left:12%; right:12%; height:3px; background:rgba(255,255,255,0.06); z-index:1; border-radius:2px;">
-          <div style="height:100%; width:${progressWidth}; background:${progressGradient}; border-radius:2px; transition:width 0.8s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+          <div style="height:100%; width:${progressWidth}; background:${progressGradient}; border-radius:2px; transition:width 0.8s ease;"></div>
         </div>
         ${stepCircle(step1Active, "Entry", `SL ${slLabel}`, `<i class="fa-solid fa-play" style="font-size:0.6rem;"></i>`, step1State)}
         ${stepCircle(step2Active, "TP 1", `${tp1Label}`, `<i class="fa-solid fa-crosshairs" style="font-size:0.7rem;"></i>`, step2State)}
@@ -3111,15 +3113,18 @@ function renderTechnicalSignalDetail(s, container) {
   const buySetupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
   let setupIcon = "fa-arrow-trend-up";
   let setupColor = "#10b981";
-  let setupDesc = "Memanfaatkan pullback ke area support untuk entry dengan risk-reward optimal.";
+  let setupDesc =
+    "Memanfaatkan pullback ke area support untuk entry dengan risk-reward optimal.";
   if (buySetupText.toLowerCase().includes("breakout")) {
     setupIcon = "fa-rocket";
     setupColor = "#3b82f6";
-    setupDesc = "Breakout di atas resistance dengan retest support untuk konfirmasi valid.";
+    setupDesc =
+      "Breakout di atas resistance dengan retest support untuk konfirmasi valid.";
   } else if (buySetupText.toLowerCase().includes("support")) {
     setupIcon = "fa-chart-area";
     setupColor = "#8b5cf6";
-    setupDesc = "Entry di area support dengan potensi reversal dan target profit bertahap.";
+    setupDesc =
+      "Entry di area support dengan potensi reversal dan target profit bertahap.";
   }
 
   const strategyDetail = `
@@ -3134,15 +3139,15 @@ function renderTechnicalSignalDetail(s, container) {
       </div>
       <div style="display:flex; align-items:start; gap:0.4rem;">
         <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:0.65rem; margin-top:0.15rem; flex-shrink:0;"></i>
-        <span>Entry di kisaran <strong>Buy Area ${s.buyAreaLow} –${s.buyAreaHigh}</strong>.</span>
+        <span>Entry di kisaran <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
       </div>
       <div style="display:flex; align-items:start; gap:0.4rem;">
         <i class="fa-solid fa-circle-check" style="color:#3b82f6; font-size:0.65rem; margin-top:0.15rem; flex-shrink:0;"></i>
-        <span>Target pertama <strong>TP 1</strong> terpetakan di area ${s.target1Low \vert{}\vert{} s.tp1 \vert{}\vert{} 0} –${s.target1High || 0}.</span>
+        <span>Target pertama <strong>TP 1</strong> terpetakan di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
       </div>
       <div style="display:flex; align-items:start; gap:0.4rem;">
         <i class="fa-solid fa-circle-check" style="color:#f59e0b; font-size:0.65rem; margin-top:0.15rem; flex-shrink:0;"></i>
-        <span>Target kedua <strong>TP 2</strong> terpetakan di area ${s.target2Low \vert{}\vert{} s.tp2 \vert{}\vert{} 0} –${s.target2High || 0}.</span>
+        <span>Target kedua <strong>TP 2</strong> terpetakan di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
       </div>
       <div style="display:flex; align-items:start; gap:0.4rem;">
         <i class="fa-solid fa-circle-exclamation" style="color:#ef4444; font-size:0.65rem; margin-top:0.15rem; flex-shrink:0;"></i>
@@ -3151,7 +3156,6 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  
   const priceLadder = `
     <div style="padding:0.75rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04);">
       <div class="price-ladder" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(85px, 1fr)); gap:0.5rem;">
@@ -3194,7 +3198,7 @@ function renderTechnicalSignalDetail(s, container) {
           <div style="font-size:0.65rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.4px; font-weight:600; display:flex; align-items:center; gap:0.25rem;">
             <i class="fa-solid fa-wallet" style="color:#3b82f6;"></i> Buy Area Reference
           </div>
-          <div style="font-family:'JetBrains Mono'; font-size:1.2rem; font-weight:700; color:#3b82f6; margin-top:0.25rem;">${s.buyAreaLow} –${s.buyAreaHigh}</div>
+          <div style="font-family:'JetBrains Mono'; font-size:1.2rem; font-weight:700; color:#3b82f6; margin-top:0.25rem;">${s.buyAreaLow} – ${s.buyAreaHigh}</div>
           <div style="font-size:0.55rem; color:var(--text-secondary); opacity:0.6; margin-top:0.15rem; display:flex; align-items:center; gap:0.2rem;">
             <i class="fa-solid fa-sliders" style="font-size:0.5rem;"></i> ${s.buyType || "BREAKOUT SETUP"}
           </div>
@@ -3222,13 +3226,13 @@ function renderTechnicalSignalDetail(s, container) {
           <span style="font-size:0.65rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.25rem; font-weight:500;">
             <i class="fa-solid fa-flag" style="color:#10b981; font-size:0.65rem;"></i> Target Range 1
           </span>
-          <div style="font-family:'JetBrains Mono'; font-weight:700; font-size:1rem; color:#10b981; margin-top:0.2rem;">${s.target1Low \vert{}\vert{} s.tp1 \vert{}\vert{} 0} –${s.target1High || 0}</div>
+          <div style="font-family:'JetBrains Mono'; font-weight:700; font-size:1rem; color:#10b981; margin-top:0.2rem;">${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}</div>
         </div>
         <div style="background:rgba(245,158,11,0.01); padding:0.6rem 0.75rem; border-radius:10px; border:1px solid rgba(245,158,11,0.08); border-left:3px solid #f59e0b;">
           <span style="font-size:0.65rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.25rem; font-weight:500;">
             <i class="fa-solid fa-flag-checkered" style="color:#f59e0b; font-size:0.65rem;"></i> Target Range 2
           </span>
-          <div style="font-family:'JetBrains Mono'; font-weight:700; font-size:1rem; color:#f59e0b; margin-top:0.2rem;">${s.target2Low \vert{}\vert{} s.tp2 \vert{}\vert{} 0} –${s.target2High || 0}</div>
+          <div style="font-family:'JetBrains Mono'; font-weight:700; font-size:1rem; color:#f59e0b; margin-top:0.2rem;">${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}</div>
         </div>
       </div>
     </div>
@@ -3237,7 +3241,7 @@ function renderTechnicalSignalDetail(s, container) {
   const setupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
 
   const html = `
-    <div class="pro-detail-container" style="animation: fadeIn 0.25s ease-out;">
+    <div class="pro-detail-container">
       <button class="sig-back-btn" id="techBackBtn" style="margin-bottom:0.75rem; display:inline-flex; align-items:center; gap:0.35rem; padding:0.4rem 0.8rem; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:var(--text-primary); font-size:0.75rem; font-weight:600; cursor:pointer;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px; height:14px;"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Kembali
       </button>
@@ -3254,22 +3258,26 @@ function renderTechnicalSignalDetail(s, container) {
             
             <div style="grid-column:1; grid-row:2; display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; margin-top:0.2rem;">
               <span style="font-family:'JetBrains Mono'; font-weight:700; font-size:1.15rem; color:var(--text-primary); display:flex; align-items:center; gap:0.1rem;">
-                ${priceArrow}${displayPrice}
+                ${priceArrow} ${displayPrice}
               </span>
-              <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem; background:rgba(255,255,255,0.02); padding:0.1rem 0.4rem; border-radius:6px;">${gainStr}</span>${statusStamp}
+              <span style="font-family:'JetBrains Mono'; font-size:0.8rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem; background:rgba(255,255,255,0.02); padding:0.1rem 0.4rem; border-radius:6px;">${gainStr}</span>
+              ${statusStamp}
             </div>
             
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
             
-            <!-- Ringkas & Bersih: Hanya menampilkan detail strategi dan status penting tanpa penumpukan tag -->
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
               <span style="font-size:0.65rem; font-weight:600; padding:0.25rem 0.6rem; border-radius:6px; background:rgba(99,102,241,0.12); color:#a5b4fc; border:1px solid rgba(99,102,241,0.2); display:inline-flex; align-items:center; gap:0.25rem;">
                 <i class="fa-solid fa-compass" style="font-size:0.6rem;"></i> ${setupText}
               </span>
-              ${s.status === "WAITING_ENTRY" ? `
+              ${
+                s.status === "WAITING_ENTRY"
+                  ? `
               <span style="font-size:0.65rem; font-weight:600; padding:0.25rem 0.6rem; border-radius:6px; background:rgba(245,158,11,0.12); color:#fde047; border:1px solid rgba(245,158,11,0.2); display:inline-flex; align-items:center; gap:0.25rem;">
                 <i class="fa-regular fa-hourglass-half" style="font-size:0.6rem;"></i> Waiting Entry
-              </span>` : ""}
+              </span>`
+                  : ""
+              }
             </div>
             
             <div style="grid-column:1 / 3; grid-row:4; font-size:0.65rem; color:var(--text-secondary); opacity:0.5; margin-top:0.2rem; display:flex; align-items:center; gap:0.25rem;">
@@ -3279,11 +3287,13 @@ function renderTechnicalSignalDetail(s, container) {
         </div>
 
         ${priceLadder}
-        ${buyAreaDisplay}${targetRanges}
+        ${buyAreaDisplay}
+        ${targetRanges}
 
         <!-- Strategy Section -->
         <div style="padding:1rem; background: rgba(0,0,0,0.1);">
-          ${strategyFlow}${strategyDetail}
+          ${strategyFlow}
+          ${strategyDetail}
         </div>
 
         <!-- System Footer -->
