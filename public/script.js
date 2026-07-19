@@ -2943,24 +2943,16 @@ async function updateTechnicalSignalList() {
     }
   }
 }
-
 // ============================================================
 // TECHNICAL SIGNAL DETAIL - Professional style like BSJP
 // ============================================================
 function renderTechnicalSignalDetail(s, container) {
   // Ambil current price untuk gain
   let currentPrice = localPrices.get(s.stockCode) || null;
-  let stockInfo = { longName: s.stockCode, logoUrl: null };
-  
-  // Ambil info saham (long name)
-  fetchStockInfo(s.stockCode).then(info => {
-    if (info) {
-      stockInfo = info;
-      // Re-render dengan long name yang benar jika diperlukan
-    }
-  }).catch(() => {});
-
-  let gainAbs = 0, gainPct = 0, gainStr = "—", gainColor = "var(--text-secondary)";
+  let gainAbs = 0,
+    gainPct = 0,
+    gainStr = "—",
+    gainColor = "var(--text-secondary)";
   let arrowIcon = "";
 
   const isRunning = s.status === "RUNNING" || s.status === "TRAILING";
@@ -2988,8 +2980,10 @@ function renderTechnicalSignalDetail(s, container) {
     const sign = ret >= 0 ? "+" : "";
     gainStr = `${sign}${ret.toFixed(2)}%`;
     gainColor = ret >= 0 ? "#10b981" : "#ef4444";
-    if (ret > 0.01) arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
-    else if (ret < -0.01) arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+    if (ret > 0.01)
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+    else if (ret < -0.01)
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
   }
 
   let displayPrice = "—";
@@ -2997,32 +2991,48 @@ function renderTechnicalSignalDetail(s, container) {
   if (isClosed && s.exitPrice) {
     displayPrice = Number(s.exitPrice).toLocaleString("id-ID");
     const ret = s.returnPercent || 0;
-    if (ret > 0) priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
-    else if (ret < 0) priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    if (ret > 0)
+      priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    else if (ret < 0)
+      priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
   } else if (isRunning && currentPrice != null) {
     displayPrice = Number(currentPrice).toLocaleString("id-ID");
-    if (gainAbs > 0) priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
-    else if (gainAbs < 0) priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    if (gainAbs > 0)
+      priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    else if (gainAbs < 0)
+      priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
   } else {
-    displayPrice = s.entryPrice ? Number(s.entryPrice).toLocaleString("id-ID") : "—";
+    displayPrice = s.entryPrice
+      ? Number(s.entryPrice).toLocaleString("id-ID")
+      : "—";
   }
 
   let statusStamp = "";
-  if (s.status === "TP") statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${hitSvg}</span>`;
-  else if (s.status === "SL" || s.status === "STOP LOSS") statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${missedSvg}</span>`;
+  if (s.status === "TP")
+    statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${hitSvg}</span>`;
+  else if (s.status === "SL" || s.status === "STOP LOSS")
+    statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${missedSvg}</span>`;
 
   const logoUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
   const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
   const bgColor = getColorFromCode(s.stockCode);
   const logoHtml = `<span class="detail-logo-text"><img src="${logoUrl}" alt="${s.stockCode}" style="width:50px; height:64px; object-fit:contain; border:none; background:transparent; display:block;" onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"><span style="display:none; width:64px; height:64px; line-height:64px; text-align:center; background:${bgColor}; color:#fff; font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace;">${s.stockCode.substring(0, 2)}</span></span>`;
 
-  // Build Strategy Flow untuk Technical (3 step: Entry, TP1, TP2 dengan SL di Entry)
+  // Ambil nama panjang dari cache atau fallback
+  let longName = s.stockCode;
+  if (infoCache.has(s.stockCode)) {
+    longName = infoCache.get(s.stockCode).data.longName || s.stockCode;
+  }
+
+  // Build Strategy Flow untuk Technical
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp1 = s.tp1 || 0;
   const tp2 = s.tp2 || s.target2Low || 0;
 
-  let slPercent = 0, tp1Percent = 0, tp2Percent = 0;
+  let slPercent = 0,
+    tp1Percent = 0,
+    tp2Percent = 0;
   if (entry > 0 && sl > 0) slPercent = ((sl - entry) / entry) * 100;
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
@@ -3036,7 +3046,8 @@ function renderTechnicalSignalDetail(s, container) {
   if (s.status === "SL" && !s.breakEven) step1State = "failed";
 
   const step2Active = s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
-  const step2State = s.status === "SL" && s.breakEven ? "warning" : s.status === "TP" ? "success" : "default";
+  const step2State =
+    s.status === "SL" && s.breakEven ? "warning" : s.status === "TP" ? "success" : "default";
 
   const step3Active = s.status === "TRAILING" || s.status === "TP";
   let step3State = "default";
@@ -3045,10 +3056,27 @@ function renderTechnicalSignalDetail(s, container) {
 
   function stepCircle(active, label, desc, icon, state = "default") {
     let bg, border, color, shadow;
-    if (state === "failed") { bg = "#ef4444"; border = "#ef4444"; color = "#fff"; shadow = "0 0 0 4px rgba(239,68,68,0.2)"; }
-    else if (state === "warning") { bg = "#f59e0b"; border = "#f59e0b"; color = "#fff"; shadow = "0 0 0 4px rgba(245,158,11,0.2)"; }
-    else if (state === "success" || active) { bg = "#10b981"; border = "#10b981"; color = "#fff"; shadow = "0 0 0 4px rgba(16,185,129,0.2)"; }
-    else { bg = "#2a2a2a"; border = "rgba(255,255,255,0.1)"; color = "var(--text-secondary)"; shadow = "0 0 0 4px #121212"; }
+    if (state === "failed") {
+      bg = "#ef4444";
+      border = "#ef4444";
+      color = "#fff";
+      shadow = "0 0 0 4px rgba(239,68,68,0.2)";
+    } else if (state === "warning") {
+      bg = "#f59e0b";
+      border = "#f59e0b";
+      color = "#fff";
+      shadow = "0 0 0 4px rgba(245,158,11,0.2)";
+    } else if (state === "success" || active) {
+      bg = "#10b981";
+      border = "#10b981";
+      color = "#fff";
+      shadow = "0 0 0 4px rgba(16,185,129,0.2)";
+    } else {
+      bg = "#2a2a2a";
+      border = "rgba(255,255,255,0.1)";
+      color = "var(--text-secondary)";
+      shadow = "0 0 0 4px #121212";
+    }
     let descColor = "var(--text-secondary)";
     if (state === "failed") descColor = "#ef4444";
     else if (state === "warning") descColor = "#f59e0b";
@@ -3085,10 +3113,15 @@ function renderTechnicalSignalDetail(s, container) {
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
         <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Technical Strategy Flow</span>
-        ${s.status === "RUNNING" ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>` :
-          s.status === "TRAILING" ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>` :
-          s.status === "WAITING_ENTRY" ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>` :
-          `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`}
+        ${
+          s.status === "RUNNING"
+            ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+            : s.status === "TRAILING"
+              ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+              : s.status === "WAITING_ENTRY"
+                ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
+                : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+        }
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
         <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.08); z-index:1;">
@@ -3102,6 +3135,28 @@ function renderTechnicalSignalDetail(s, container) {
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit</span>
+      </div>
+    </div>
+  `;
+
+  // Detail Strategi (seperti di BSJP)
+  const strategyDetail = `
+    <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
+      <div style="display:flex; align-items:start;">
+        <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Entry dilakukan saat harga berada di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
+      </div>
+      <div style="display:flex; align-items:start;">
+        <i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Target pertama <strong>TP 1</strong> di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
+      </div>
+      <div style="display:flex; align-items:start;">
+        <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Target kedua <strong>TP 2</strong> di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
+      </div>
+      <div style="display:flex; align-items:start;">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
       </div>
     </div>
   `;
@@ -3142,17 +3197,23 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Buy Area dan Target Ranges
+  // Buy Area dan Target Ranges (dalam grid card)
   const buyAreaDisplay = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
-          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">Buy Area Reference</div>
-          <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#3b82f6; margin-top:0.15rem;">${s.buyAreaLow || 0} – ${s.buyAreaHigh || 0}</div>
-          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">${s.buyType || "BREAKOUT SETUP"}</div>
+          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">
+            <i class="fa-solid fa-cart-shopping" style="margin-right:0.2rem;"></i> Buy Area Reference
+          </div>
+          <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#3b82f6; margin-top:0.15rem;">${s.buyAreaLow} – ${s.buyAreaHigh}</div>
+          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">
+            <i class="fa-regular fa-tag"></i> ${s.buyType || "BREAKOUT SETUP"}
+          </div>
         </div>
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
-          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">Stop Loss Baseline</div>
+          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">
+            <i class="fa-solid fa-shield" style="margin-right:0.2rem;"></i> Stop Loss Baseline
+          </div>
           <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#ef4444; margin-top:0.15rem;">-${s.stopLossPercent || 5}%</div>
           <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}</div>
         </div>
@@ -3162,7 +3223,9 @@ function renderTechnicalSignalDetail(s, container) {
 
   const targetRanges = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600;"><i class="fas fa-bullseye" style="color:#10b981; margin-right:4px;"></i> Target Profit Range Objectives</div>
+      <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600;">
+        <i class="fas fa-bullseye" style="color:#10b981; margin-right:4px;"></i> Target Profit Range Objectives
+      </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div style="background:rgba(0,0,0,0.2); padding:0.5rem 0.6rem; border-radius:6px; border-left:2px solid #10b981;">
           <span style="font-size:0.6rem; color:var(--text-secondary);">Target Area 1</span>
@@ -3176,34 +3239,8 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Header seperti BSJP dengan grid layout
-  const headerHtml = `
-    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;">
-        <div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;">
-          <span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary);">${escapeHtml(s.stockCode)}</span>
-          <span style="font-size:0.8rem; color:var(--text-secondary); opacity:0.7;">${escapeHtml(stockInfo.longName || s.stockCode)}</span>
-        </div>
-        <div style="grid-column:1; grid-row:2; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-          <span style="font-family:'JetBrains Mono'; font-weight:600; font-size:1rem; color:var(--text-primary); display:flex; align-items:center;">
-            ${priceArrow} ${displayPrice}
-          </span>
-          <span style="font-family:'JetBrains Mono'; font-size:0.75rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>
-          ${statusStamp}
-          <span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:#06b6d4; background:rgba(6,182,212,0.15); padding:0.15rem 0.5rem; border-radius:12px; border:1px solid rgba(6,182,212,0.3); display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap;">
-            <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
-          </span>
-        </div>
-        <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
-        <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem;">
-          <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
-          ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-clock" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
-          ${s.buyType ? `<span class="emit-tag"><i class="fa-solid fa-tag" style="margin-right:3px; font-size:0.65rem;"></i>${escapeHtml(s.buyType)}</span>` : ""}
-        </div>
-        <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
-      </div>
-    </div>
-  `;
+  // Header dengan setup teks
+  const setupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
 
   const html = `
     <div class="pro-detail-container">
@@ -3213,11 +3250,42 @@ function renderTechnicalSignalDetail(s, container) {
 
       <div style="background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.08); overflow:hidden;">
 
-        ${headerHtml}
+        <!-- Header -->
+        <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;">
+            <div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;">
+              <span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary);">${escapeHtml(s.stockCode)}</span>
+              <span style="font-size:0.8rem; color:var(--text-secondary); opacity:0.7;">${escapeHtml(longName)}</span>
+            </div>
+            <div style="grid-column:1; grid-row:2; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <span style="font-family:'JetBrains Mono'; font-weight:600; font-size:1rem; color:var(--text-primary); display:flex; align-items:center;">
+                ${priceArrow} ${displayPrice}
+              </span>
+              <span style="font-family:'JetBrains Mono'; font-size:0.75rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>
+              ${statusStamp}
+              <span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:#06b6d4; background:rgba(6,182,212,0.15); padding:0.15rem 0.5rem; border-radius:12px; border:1px solid rgba(6,182,212,0.3); display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap;">
+                <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
+              </span>
+            </div>
+            <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
+            <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem;">
+              <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
+              <span class="emit-tag"><i class="fa-regular fa-clock" style="margin-right:3px; font-size:0.65rem;"></i>${setupText}</span>
+              ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
+            </div>
+            <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
+          </div>
+        </div>
+
         ${priceLadder}
         ${buyAreaDisplay}
         ${targetRanges}
-        ${strategyFlow}
+
+        <!-- Strategy Flow -->
+        <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+          ${strategyFlow}
+          ${strategyDetail}
+        </div>
 
         <!-- Footer -->
         <div style="padding:0.5rem 0.75rem; text-align:center; font-size:0.55rem; color:var(--text-secondary); opacity:0.4; border-top:1px solid rgba(255,255,255,0.04);">
