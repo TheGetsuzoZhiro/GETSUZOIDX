@@ -2373,6 +2373,37 @@ function renderSignalRows(signals, priceMap, infoMap) {
   return rows;
 }
 
+// ============================================================
+// 🔥 FUNGSI BARU: TUTUP SEMUA DROPDOWN
+// ============================================================
+function closeAllDropdowns() {
+  // Tutup Getsuzo Signals
+  const signalSub = document.getElementById("signalSubMenu");
+  const signalParent = document.getElementById("signalsParent");
+  if (signalSub) {
+    signalSub.classList.remove("open");
+    signalSub.style.display = "none";
+  }
+  if (signalParent) {
+    signalParent.classList.remove("open");
+    const arrow = signalParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.remove("open");
+  }
+
+  // Tutup Technical Signals
+  const techSub = document.getElementById("technicalSubMenu");
+  const techParent = document.getElementById("technicalParent");
+  if (techSub) {
+    techSub.classList.remove("open");
+    techSub.style.display = "none";
+  }
+  if (techParent) {
+    techParent.classList.remove("open");
+    const arrow = techParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.remove("open");
+  }
+}
+
 async function showSignalList() {
   isDetailView = false;
   currentDetailIndex = null;
@@ -2385,7 +2416,8 @@ async function showSignalList() {
     return;
   }
 
-  const allSignals = getSortedSignals();
+  // 🔥 FILTER: Hanya sinyal yang BUKAN TECHNICAL
+  const allSignals = getSortedSignals().filter(s => s.signalType !== "TECHNICAL");
 
   if (!allSignals.length) {
     container.innerHTML = `<div class="loading-state"><p>Belum ada sinyal.</p></div>`;
@@ -3817,7 +3849,7 @@ function renderTechnicalSignalDetail(s, container) {
           </div>
           <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:0.75rem; border-radius:8px;">
             <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase;">Stop Loss Baseline (-${s.stopLossPercent}%)</div>
-            <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#ef4444; margin-top:0.2rem;">${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}</div>[cite: 1, 3]
+            <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#ef4444; margin-top:0.2rem;">${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}</div>
           </div>
         </div>
 
@@ -4188,7 +4220,8 @@ async function updateSignalList() {
   const container = document.getElementById("signals");
   if (!container) return;
 
-  const allSignals = getSortedSignals();
+  // 🔥 FILTER: Hanya sinyal yang BUKAN TECHNICAL
+  const allSignals = getSortedSignals().filter(s => s.signalType !== "TECHNICAL");
   if (!allSignals.length) return;
 
   let filteredSignals = [];
@@ -4588,27 +4621,8 @@ function initTabs() {
       e.preventDefault();
       triggerHaptic();
 
-      if (!this.classList.contains("nav-sub-link")) {
-        const subMenu = document.getElementById("signalSubMenu");
-        const parentBtn = document.getElementById("signalsParent");
-        if (subMenu && subMenu.classList.contains("open")) {
-          subMenu.classList.remove("open");
-          subMenu.style.display = "none";
-          if (parentBtn) parentBtn.classList.remove("open");
-          const arrow = parentBtn?.querySelector(".nav-arrow");
-          if (arrow) arrow.classList.remove("open");
-        }
-
-        const techSubMenu = document.getElementById("technicalSubMenu");
-        const techParentBtn = document.getElementById("technicalParent");
-        if (techSubMenu && techSubMenu.classList.contains("open")) {
-          techSubMenu.classList.remove("open");
-          techSubMenu.style.display = "none";
-          if (techParentBtn) techParentBtn.classList.remove("open");
-          const techArrow = techParentBtn?.querySelector(".nav-arrow");
-          if (techArrow) techArrow.classList.remove("open");
-        }
-      }
+      // 🔥 Tutup semua dropdown
+      closeAllDropdowns();
 
       const tabId = this.getAttribute("data-tab");
       const isSub = this.classList.contains("nav-sub-link");
