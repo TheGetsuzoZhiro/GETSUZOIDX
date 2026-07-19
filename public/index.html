@@ -708,6 +708,48 @@
           opacity: 0;
         }
       }
+
+      /* Dropdown dan submenu styling */
+      .nav-sub {
+        display: none;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 4px;
+        border-left: 1px solid rgba(255, 255, 255, 0.05);
+        margin-left: 12px;
+      }
+      .nav-sub.show {
+        display: block;
+      }
+      .nav-sub-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 16px;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.8rem;
+        text-decoration: none;
+        transition: 0.2s;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      .nav-sub-link:hover,
+      .nav-sub-link.active {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .nav-sub-link i {
+        width: 18px;
+        text-align: center;
+      }
+      .nav-arrow {
+        margin-left: auto;
+        font-size: 0.7rem;
+        color: rgba(255, 255, 255, 0.3);
+        transition: 0.2s;
+      }
     </style>
 
     <script>
@@ -934,6 +976,7 @@
             <span class="nav-text">Performance</span>
           </button>
 
+          <!-- SINYAL AKTIF -->
           <div class="nav-dropdown">
             <button class="nav-link" data-tab="signals" id="signalsParent">
               <div class="nav-icon">
@@ -966,6 +1009,46 @@
                   href="#signals-running"
                 >
                   <i class="fas fa-play"></i> Running
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- TECHNICAL SIGNALS -->
+          <div class="nav-dropdown">
+            <button class="nav-link" data-tab="technical" id="technicalParent">
+              <div class="nav-icon">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <span class="nav-text">Technical Signals</span>
+              <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </button>
+            <ul class="nav-sub" id="technicalSubMenu">
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="technical-today"
+                  href="#technical-today"
+                >
+                  <i class="fas fa-fire"></i> Today's Signals
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="technical-running"
+                  href="#technical-running"
+                >
+                  <i class="fas fa-play"></i> Running
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="technical-wait"
+                  href="#technical-wait"
+                >
+                  <i class="fas fa-clock"></i> Wait
                 </a>
               </li>
             </ul>
@@ -1285,6 +1368,48 @@
               <p>Loading active signals...</p>
             </div>
           </section>
+
+          <!-- ===== VIEW UNTUK TECHNICAL SIGNALS ===== -->
+          <section id="technical" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading technical signals...</p>
+            </div>
+          </section>
+          <section id="technical-today" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading today's technical signals...</p>
+            </div>
+          </section>
+          <section id="technical-running" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading running technical signals...</p>
+            </div>
+          </section>
+          <section id="technical-wait" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Loading waiting technical signals...</p>
+            </div>
+          </section>
         </div>
       </main>
     </div>
@@ -1575,6 +1700,99 @@
         document.getElementById('pwa-lock-screen').addEventListener('touchmove', function(e) {
             e.stopPropagation();
         }, { passive: true });
+      })();
+    </script>
+
+    <!-- ===== NAVIGASI DROPDOWN & SUBMENU ===== -->
+    <script>
+      (function() {
+        // Signal Aktif dropdown
+        const signalParent = document.getElementById('signalsParent');
+        const signalSub = document.getElementById('signalSubMenu');
+        if (signalParent && signalSub) {
+          signalParent.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // Tutup dropdown technical jika terbuka
+            const techSub = document.getElementById('technicalSubMenu');
+            if (techSub) techSub.classList.remove('show');
+            signalSub.classList.toggle('show');
+            const arrow = this.querySelector('.nav-arrow i');
+            if (arrow) {
+              arrow.classList.toggle('fa-chevron-down');
+              arrow.classList.toggle('fa-chevron-up');
+            }
+          });
+        }
+
+        // Technical Signals dropdown
+        const techParent = document.getElementById('technicalParent');
+        const techSub = document.getElementById('technicalSubMenu');
+        if (techParent && techSub) {
+          techParent.addEventListener('click', function(e) {
+            e.stopPropagation();
+            // Tutup dropdown signal jika terbuka
+            const signalSub = document.getElementById('signalSubMenu');
+            if (signalSub) signalSub.classList.remove('show');
+            techSub.classList.toggle('show');
+            const arrow = this.querySelector('.nav-arrow i');
+            if (arrow) {
+              arrow.classList.toggle('fa-chevron-down');
+              arrow.classList.toggle('fa-chevron-up');
+            }
+          });
+        }
+
+        // Navigasi submenu link
+        document.querySelectorAll('.nav-sub-link').forEach(link => {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const tab = this.getAttribute('data-tab');
+            // Sembunyikan semua view
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const targetView = document.getElementById(tab);
+            if (targetView) targetView.classList.add('active');
+            // Update active class pada nav
+            document.querySelectorAll('.nav-link, .nav-sub-link').forEach(el => el.classList.remove('active'));
+            this.classList.add('active');
+            // Tutup semua dropdown
+            document.querySelectorAll('.nav-sub').forEach(sub => sub.classList.remove('show'));
+            // Reset arrow
+            document.querySelectorAll('.nav-arrow i').forEach(icon => {
+              icon.classList.remove('fa-chevron-up');
+              icon.classList.add('fa-chevron-down');
+            });
+          });
+        });
+
+        // Navigasi utama (Beranda, Performance)
+        document.querySelectorAll('.nav-link[data-tab]:not(.nav-dropdown .nav-link)').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            const tab = this.getAttribute('data-tab');
+            if (!tab) return;
+            // Sembunyikan semua view
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const targetView = document.getElementById(tab);
+            if (targetView) targetView.classList.add('active');
+            // Update active class
+            document.querySelectorAll('.nav-link, .nav-sub-link').forEach(el => el.classList.remove('active'));
+            this.classList.add('active');
+            // Tutup dropdown
+            document.querySelectorAll('.nav-sub').forEach(sub => sub.classList.remove('show'));
+            document.querySelectorAll('.nav-arrow i').forEach(icon => {
+              icon.classList.remove('fa-chevron-up');
+              icon.classList.add('fa-chevron-down');
+            });
+          });
+        });
+
+        // Klik di luar dropdown untuk menutup
+        document.addEventListener('click', function() {
+          document.querySelectorAll('.nav-sub').forEach(sub => sub.classList.remove('show'));
+          document.querySelectorAll('.nav-arrow i').forEach(icon => {
+            icon.classList.remove('fa-chevron-up');
+            icon.classList.add('fa-chevron-down');
+          });
+        });
       })();
     </script>
 
