@@ -2323,10 +2323,18 @@ function renderSignalRows(signals, priceMap, infoMap) {
     let badgeBg = "rgba(113,113,122,0.15)";
     let badgeIcon = "fa-eye";
     if (signalType === "TECHNICAL") {
-      badgeColor = "#06b6d4";
-      badgeBg = "rgba(6,182,212,0.15)";
-      badgeIcon = "fa-chart-line";
-    } else if (signalType === "BSJP") {
+  badgeColor = "#06b6d4";
+  badgeBg = "rgba(6,182,212,0.15)";
+  badgeIcon = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 3px;">
+      <line x1="5" y1="16" x2="5" y2="20" />
+      <line x1="10" y1="11" x2="10" y2="20" />
+      <line x1="15" y1="14" x2="15" y2="20" />
+      <line x1="20" y1="12" x2="20" y2="20" />
+      <path d="M 4 13 L 10 6 L 15 10 L 21 4" />
+    </svg>
+  `;
+} else if (signalType === "BSJP") {
       badgeColor = "#8b5cf6";
       badgeBg = "rgba(139,92,246,0.15)";
       badgeIcon = "fa-chart-simple";
@@ -2366,7 +2374,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
       white-space:nowrap;
       margin-left:0.3rem;
     ">
-      <i class="fa-solid ${badgeIcon}" style="font-size:0.5rem;"></i>
+      ${badgeIcon.startsWith('<svg') ? badgeIcon : `<i class="fa-solid ${badgeIcon}" style="font-size:0.5rem;"></i>`}
       ${signalType.replace("STRONG ", "S.")}
     </span>`;
 
@@ -2907,7 +2915,13 @@ function renderTechnicalRows(signals, priceMap, infoMap) {
       white-space:nowrap;
       margin-left:0.3rem;
     ">
-      <i class="fa-solid fa-chart-line" style="font-size:0.5rem;"></i> TECHNICAL
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="width:0.55rem; height:0.55rem; display:block;">
+        <line x1="5" y1="16" x2="5" y2="20" />
+        <line x1="10" y1="11" x2="10" y2="20" />
+        <line x1="15" y1="14" x2="15" y2="20" />
+        <line x1="20" y1="12" x2="20" y2="20" />
+        <path d="M 4 13 L 10 6 L 15 10 L 21 4" />
+      </svg> TECHNICAL
     </span>`;
 
     rows += `<div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
@@ -3519,7 +3533,17 @@ function renderTechnicalSignalDetail(s, container) {
             </div>
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
-              <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
+              <span class="emit-tag">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 3px;">
+    <!-- 4 Batang Grafik -->
+    <line x1="5" y1="16" x2="5" y2="20" />
+    <line x1="10" y1="11" x2="10" y2="20" />
+    <line x1="15" y1="14" x2="15" y2="20" />
+    <line x1="20" y1="12" x2="20" y2="20" />
+    <!-- Garis Tren -->
+    <path d="M 4 13 L 10 6 L 15 10 L 21 4" />
+  </svg>Technical
+</span>
           
               <span class="emit-tag">
                 <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:5px;"></i>${setupText}
