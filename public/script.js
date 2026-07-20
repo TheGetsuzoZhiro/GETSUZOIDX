@@ -2791,6 +2791,17 @@ function selectTechnicalFilter(filter) {
   currentTab = "technical-signals";
   technicalListRendered = false;
   fetchSignals(true);
+
+  // BUKA DROPDOWN TECHNICAL
+  const techParent = document.getElementById("technicalParent");
+  const techSub = document.getElementById("technicalSubMenu");
+  if (techParent && techSub) {
+    techParent.classList.add("open");
+    techSub.classList.add("open");
+    techSub.style.display = "block";
+    const arrow = techParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.add("open");
+  }
 }
 
 function renderTechnicalRows(signals, priceMap, infoMap) {
@@ -4050,6 +4061,17 @@ function selectSignalFilter(filter) {
   currentTab = "signals";
   signalListRendered = false;
   fetchSignals(true);
+
+  // BUKA DROPDOWN SIGNALS
+  const signalParent = document.getElementById("signalsParent");
+  const signalSub = document.getElementById("signalSubMenu");
+  if (signalParent && signalSub) {
+    signalParent.classList.add("open");
+    signalSub.classList.add("open");
+    signalSub.style.display = "block";
+    const arrow = signalParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.add("open");
+  }
 }
 
 async function fetchSignals(showLoadingIndicator = true) {
