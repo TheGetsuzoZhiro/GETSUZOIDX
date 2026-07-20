@@ -2979,6 +2979,7 @@ function renderTechnicalSignalDetail(s, container) {
     gainStr = "—",
     gainColor = "var(--text-secondary)";
   let arrowIcon = "";
+
   const isRunning = s.status === "RUNNING" || s.status === "TRAILING";
   const isClosed = s.status === "TP" || s.status === "SL";
 
@@ -3112,6 +3113,7 @@ function renderTechnicalSignalDetail(s, container) {
       color = "var(--text-secondary)";
       shadow = "0 0 0 4px #121212";
     }
+
     let descColor = "var(--text-secondary)";
     if (isExpired) descColor = "#71717a";
     else if (state === "failed") descColor = "#ef4444";
@@ -3193,10 +3195,8 @@ function renderTechnicalSignalDetail(s, container) {
             <i class="fa-solid fa-tag" style="font-size:0.6rem; opacity:0.5;"></i>
             ${s.buyAreaLow} – ${s.buyAreaHigh}
           </div>
-          <!-- PERBAIKAN: ikon selalu abu-abu + margin-right -->
-          <div style="font-size:0.5rem; color:${isExpired ? "#71717a" : "var(--text-secondary)"}; margin-top:0.1rem; display:flex; align-items:center; gap:0; opacity:0.7;">
-            <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.5rem; margin-right:4px;"></i>
-            ${s.buyType || "BREAKOUT SETUP"}
+          <div style="font-size:0.5rem; color:${isExpired ? "#71717a" : "var(--text-secondary)"}; margin-top:0.1rem; opacity:0.7;">
+            <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.5rem;"></i> ${s.buyType || "BREAKOUT SETUP"}
           </div>
         </div>
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
@@ -3346,10 +3346,9 @@ function renderTechnicalSignalDetail(s, container) {
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
-              <!-- PERBAIKAN: ikon selalu abu-abu + margin-right -->
-              <span class="emit-tag" style="display:inline-flex; align-items:center; gap:0;">
-                <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:4px;"></i>
-                ${setupText}
+              <!-- PERBAIKAN: spasi biasa setelah ikon -->
+              <span class="emit-tag">
+                <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem;"></i> ${setupText}
               </span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
               ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
