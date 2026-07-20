@@ -4496,22 +4496,34 @@ function updateWinRateChart(data) {
   let winRate = totalClosed > 0 ? (tpCount / totalClosed) * 100 : 0;
   winRate = Math.round(winRate * 10) / 10;
 
-  let totalRisk = 0,
-    totalReward = 0,
-    grossProfit = 0,
+  let winCount = 0,
+    lossCount = 0;
+  let grossProfit = 0,
     grossLoss = 0;
+
   closed.forEach((s) => {
     const ret = s.returnPercent || 0;
     if (ret > 0) {
       grossProfit += ret;
-      totalReward += ret;
-      totalRisk += ret * 0.5;
-    } else {
+      winCount++;
+    } else if (ret < 0) {
       grossLoss += Math.abs(ret);
-      totalRisk += Math.abs(ret);
+      lossCount++;
     }
   });
-  const avgRR = totalRisk > 0 ? (totalReward / totalRisk).toFixed(1) : "-";
+
+  let avgRR = "-";
+  if (winCount > 0 && lossCount > 0) {
+    const avgWin = grossProfit / winCount;
+    const avgLoss = grossLoss / lossCount;
+    const ratio = avgWin / avgLoss;
+    avgRR = ratio.toFixed(1);
+  } else if (winCount > 0 && lossCount === 0) {
+    avgRR = "∞";
+  } else {
+    avgRR = "-";
+  }
+
   const profitFactor =
     grossLoss > 0
       ? (grossProfit / grossLoss).toFixed(2)
