@@ -3498,7 +3498,7 @@ function renderTechnicalSignalDetail(s, container) {
   } else if (s.status === "RUNNING") {
     statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`;
   } else if (s.status === "TRAILING") {
-    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`;
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;"><i class="fa-solid fa-person-running" style="margin-right:0.2rem;"></i>Trailing Active</span>`;
   } else if (s.status === "WAITING_ENTRY") {
     statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`;
   } else {
@@ -3532,6 +3532,10 @@ function renderTechnicalSignalDetail(s, container) {
         isExpired
           ? `<div style="text-align:center; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(113,113,122,0.08); border-radius:6px; font-size:0.6rem; color:#71717a; border:1px dashed rgba(113,113,122,0.15);">
           <i class="fa-regular fa-clock" style="margin-right:0.3rem;"></i> Signal telah kedaluwarsa — Tidak ada alur aktif
+        </div>`
+          : s.status === "TRAILING"
+          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(245,158,11,0.1); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.2);">
+          <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i> <strong>Trailing Stop 3% Aktif:</strong> SL dinaikkan ke Rp${s.sl ? fmtPrice(s.sl) : "TP1"} (Locking Profit)
         </div>`
           : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
           <i class="fa-regular fa-circle-check" style="margin-right:0.2rem; color:#10b981;"></i> Alur strategi berjalan sesuai rencana
@@ -3579,7 +3583,6 @@ function renderTechnicalSignalDetail(s, container) {
           <span class="change neutral" style="font-size:0.55rem; color:var(--text-secondary);">—</span>
         </div>
         
-        <!-- PERBAIKAN: TP1 & TP2 dihapus, digabung menjadi TAKE PROFIT dinamis dengan EKG/Pulse SVG Icon -->
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
             <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:12px;height:12px;margin-right:0.2rem;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT
@@ -3590,17 +3593,26 @@ function renderTechnicalSignalDetail(s, container) {
         
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size:0.7rem; color:#ef4444;"></i> STOP LOSS
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:0.7rem; color:${s.status === "TRAILING" ? "#f59e0b" : "#ef4444"};"></i> ${s.status === "TRAILING" ? "TRAILING SL" : "STOP LOSS"}
           </span>
-          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#ef4444;">${s.sl ? fmtPrice(s.sl) : "—"}</span>
-          <span class="change negative" style="font-size:0.55rem; color:#ef4444;">${slLabel}</span>
+          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:${s.status === "TRAILING" ? "#f59e0b" : "#ef4444"};">${s.sl ? fmtPrice(s.sl) : "—"}</span>
+          <span class="change ${s.status === "TRAILING" ? "positive" : "negative"}" style="font-size:0.55rem; color:${s.status === "TRAILING" ? "#f59e0b" : "#ef4444"};">${slLabel}</span>
         </div>
       </div>
     </div>
   `;
 
+  // METODE TRAILING DITAMBAHKAN PADA STRATEGY DETAIL DI BAWAH INI:
   const strategyDetail = `
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
+      ${
+        s.status === "TRAILING"
+          ? `<div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); border-radius:6px; padding:0.4rem 0.5rem; color:#f59e0b; font-weight:600; display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
+              <i class="fa-solid fa-shield-halved" style="font-size:0.8rem;"></i>
+              <span>Status Mode: <strong>TRAILING STOP AKTIF</strong> (Batas proteksi SL dinaikkan ke ${s.sl ? fmtPrice(s.sl) : "TP1"} / Trailing 3%)</span>
+            </div>`
+          : ""
+      }
       <div style="display:flex; align-items:start;">
         <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Entry dilakukan saat harga berada di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
@@ -3610,12 +3622,16 @@ function renderTechnicalSignalDetail(s, container) {
         <span>Target pertama <strong>TP 1</strong> di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
       </div>
       <div style="display:flex; align-items:start;">
+        <i class="fa-solid fa-arrows-up-to-line" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span><strong>Trailing Stop (3%)</strong> aktif otomatis jika TP 1 tercapai untuk mengunci profit menuju TP 2.</span>
+      </div>
+      <div style="display:flex; align-items:start;">
         <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Target kedua <strong>TP 2</strong> di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
       </div>
       <div style="display:flex; align-items:start;">
         <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
+        <span>Stop Loss awal <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
       </div>
     </div>
   `;
@@ -3647,16 +3663,14 @@ function renderTechnicalSignalDetail(s, container) {
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
               <span class="emit-tag">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 3px;">
-    <!-- 4 Batang Grafik -->
-    <line x1="5" y1="16" x2="5" y2="20" />
-    <line x1="10" y1="11" x2="10" y2="20" />
-    <line x1="15" y1="14" x2="15" y2="20" />
-    <line x1="20" y1="12" x2="20" y2="20" />
-    <!-- Garis Tren -->
-    <path d="M 4 13 L 10 6 L 15 10 L 21 4" />
-  </svg>Technical
-</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 3px;">
+                  <line x1="5" y1="16" x2="5" y2="20" />
+                  <line x1="10" y1="11" x2="10" y2="20" />
+                  <line x1="15" y1="14" x2="15" y2="20" />
+                  <line x1="20" y1="12" x2="20" y2="20" />
+                  <path d="M 4 13 L 10 6 L 15 10 L 21 4" />
+                </svg>Technical
+              </span>
           
               <span class="emit-tag">
                 <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:5px;"></i>${setupText}
