@@ -1146,7 +1146,9 @@ async function showDailySignalDetail(stockCode, signalDate) {
         renderPerformanceSignalList(activeStatus);
       });
     }
+    // FIX: scroll ke atas saat detail ditampilkan
     detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.scrollTo({ top: 0, behavior: "smooth" }); // tambahan untuk memastikan posisi top
   }
 }
 
@@ -3678,6 +3680,7 @@ function renderTechnicalSignalDetail(s, container) {
       showTechnicalSignalList();
     });
   }
+  // FIX: scroll ke atas setelah detail teknikal dirender
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -3721,6 +3724,7 @@ async function showSignalDetail(index) {
 
   if (s.signalType === "BSJP") {
     renderBsjpDetail(s, container, () => showSignalList());
+    // FIX: scroll ke atas setelah BSJP detail
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
@@ -3737,6 +3741,7 @@ async function showSignalDetail(index) {
   } catch (e) {}
 
   await renderSignalDetailToContainer(s, container, () => showSignalList());
+  // FIX: scroll ke atas setelah detail biasa dirender
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -4658,7 +4663,9 @@ function initTabs() {
     if (btn.id === "signalsParent" || btn.id === "technicalParent") return;
 
     btn.addEventListener("click", function (e) {
+      // FIX: tambahkan e.stopPropagation() agar parent tidak ikut terpicu
       e.preventDefault();
+      e.stopPropagation();
       triggerHaptic();
       closeAllDropdowns();
 
