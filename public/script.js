@@ -2325,7 +2325,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
     if (signalType === "TECHNICAL") {
       badgeColor = "#06b6d4";
       badgeBg = "rgba(6,182,212,0.15)";
-      badgeIcon = "fa-microchip";
+      badgeIcon = "fa-chart-candlestick";
     } else if (signalType === "BSJP") {
       badgeColor = "#8b5cf6";
       badgeBg = "rgba(139,92,246,0.15)";
@@ -2907,7 +2907,7 @@ function renderTechnicalRows(signals, priceMap, infoMap) {
       white-space:nowrap;
       margin-left:0.3rem;
     ">
-      <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
+      <i class="fa-solid fa-chart-candlestick" style="font-size:0.5rem;"></i> TECHNICAL
     </span>`;
 
     rows += `<div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
@@ -3413,16 +3413,14 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // ==================== LOGIKA UTAMA: DYNAMIC TAKE PROFIT ESCALATION ====================
   const t1Low = Number(s.target1Low || s.tp1 || 0);
   const t1High = Number(s.target1High || 0);
   const t2Low = Number(s.target2Low || s.tp2 || 0);
   const t2High = Number(s.target2High || 0);
 
-  // Cek harga acuan berdasarkan status close (exitPrice) atau running (currentPrice)
-  let checkPrice = (isClosed && s.exitPrice) ? Number(s.exitPrice) : Number(currentPrice || 0);
-  
-  // Eskalasi target naik bertahap jika tembus tingkat sebelumnya
+  let checkPrice =
+    isClosed && s.exitPrice ? Number(s.exitPrice) : Number(currentPrice || 0);
+
   let dynamicTpVal = t1Low;
   if (checkPrice >= t1Low && t1High > 0) {
     dynamicTpVal = t1High;
@@ -3433,14 +3431,15 @@ function renderTechnicalSignalDetail(s, container) {
   if (checkPrice >= t2Low && t2High > 0) {
     dynamicTpVal = t2High;
   }
-  
-  // Hitung persentase return dinamis berdasarkan level target aktif
+
   let dynamicTpPercent = 0;
   if (entry > 0 && dynamicTpVal > 0) {
     dynamicTpPercent = ((dynamicTpVal - entry) / entry) * 100;
   }
-  const dynamicTpLabel = dynamicTpPercent > 0 ? `+${dynamicTpPercent.toFixed(1)}%` : `${dynamicTpPercent.toFixed(1)}%`;
-  // ======================================================================================
+  const dynamicTpLabel =
+    dynamicTpPercent > 0
+      ? `+${dynamicTpPercent.toFixed(1)}%`
+      : `${dynamicTpPercent.toFixed(1)}%`;
 
   const priceLadder = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
@@ -3544,7 +3543,7 @@ function renderTechnicalSignalDetail(s, container) {
 
         <!-- FOOTER -->
         <div style="padding:0.5rem 0.75rem; text-align:center; font-size:0.55rem; color:var(--text-secondary); opacity:0.4; border-top:1px solid rgba(255,255,255,0.04);">
-          <i class="fa-solid fa-microchip" style="margin-right:0.2rem;"></i> Technical Strategy Engine v1.0
+          <i class="fa-solid fa-microchip" style="margin-right:0.2rem;"></i> Technical Strategy
         </div>
       </div>
     </div>
@@ -4538,10 +4537,13 @@ function initTabs() {
     btn.addEventListener("click", function (e) {
       e.preventDefault();
       triggerHaptic();
-      closeAllDropdowns();
 
       const tabId = this.getAttribute("data-tab");
       const isSub = this.classList.contains("nav-sub-link");
+
+      if (!isSub) {
+        closeAllDropdowns();
+      }
 
       if (isSub) {
         if (tabId.startsWith("technical-")) {
@@ -4552,18 +4554,24 @@ function initTabs() {
             .querySelector('.nav-link[data-tab="technical-signals"]')
             ?.classList.add("active");
           this.classList.add("active");
+
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
           return;
         } else {
-          if (tabId === "signals-today") selectSignalFilter("today");
-          else if (tabId === "signals-running") selectSignalFilter("running");
-          else selectSignalFilter("all");
+          if (tabId === "signals-today") {
+            selectSignalFilter("today");
+          } else if (tabId === "signals-running") {
+            selectSignalFilter("running");
+          } else {
+            selectSignalFilter("all");
+          }
           btns.forEach((b) => b.classList.remove("active"));
           document
             .querySelector('.nav-link[data-tab="signals"]')
             ?.classList.add("active");
           this.classList.add("active");
+
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
           return;
