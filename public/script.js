@@ -3002,11 +3002,53 @@ async function showTechnicalSignalList() {
     infoMap[sym] = infoResults[idx];
   });
 
+  let totalGainPct = 0;
+  let totalRunningCount = 0;
+
+  techSignals.forEach((s) => {
+    let gainPct = 0;
+    if (s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS") {
+      gainPct = s.returnPercent || 0;
+      if (gainPct !== 0) {
+        totalGainPct += gainPct;
+        totalRunningCount++;
+      }
+    } else if (
+      (s.status === "RUNNING" || s.status === "TRAILING") &&
+      s.entryPrice &&
+      priceMap[s.stockCode]
+    ) {
+      const currentPrice = priceMap[s.stockCode];
+      gainPct = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
+      if (gainPct !== 0) {
+        totalGainPct += gainPct;
+        totalRunningCount++;
+      }
+    }
+  });
+
+  const avgGainPct =
+    totalRunningCount > 0 ? totalGainPct / totalRunningCount : 0;
+  let totalGainStr =
+    totalRunningCount > 0
+      ? (avgGainPct >= 0 ? "+" : "") + avgGainPct.toFixed(2) + "%"
+      : "—";
+  let totalGainColor = avgGainPct >= 0 ? "#10b981" : "#ef4444";
+  let arrowIconTotal = "";
+  if (avgGainPct > 0.01) {
+    arrowIconTotal = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+  } else if (avgGainPct < -0.01) {
+    arrowIconTotal = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+  }
+
   let html = `
     <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
       <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
         TECHNICAL TRACKER LIST
         <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${techSignals.length})</span>
+      </span>
+      <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+        GAIN: ${arrowIconTotal} <span id="techListGain" style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
       </span>
     </div>
     <div class="sig-list">
@@ -3030,6 +3072,8 @@ async function showTechnicalSignalList() {
       }
     });
   });
+
+  container._techPriceMap = priceMap;
 }
 
 async function updateTechnicalSignalList() {
@@ -3121,6 +3165,57 @@ async function updateTechnicalSignalList() {
       }
     }
   });
+
+  const gainSpan = document.getElementById("techListGain");
+  if (gainSpan) {
+    let totalGainPct = 0;
+    let totalRunningCount = 0;
+
+    techSignals.forEach((s) => {
+      let gainPct = 0;
+      if (s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS") {
+        gainPct = s.returnPercent || 0;
+        if (gainPct !== 0) {
+          totalGainPct += gainPct;
+          totalRunningCount++;
+        }
+      } else if (
+        (s.status === "RUNNING" || s.status === "TRAILING") &&
+        s.entryPrice &&
+        priceMap[s.stockCode]
+      ) {
+        const currentPrice = priceMap[s.stockCode];
+        gainPct = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
+        if (gainPct !== 0) {
+          totalGainPct += gainPct;
+          totalRunningCount++;
+        }
+      }
+    });
+
+    const avgGainPct =
+      totalRunningCount > 0 ? totalGainPct / totalRunningCount : 0;
+    let totalGainStr =
+      totalRunningCount > 0
+        ? (avgGainPct >= 0 ? "+" : "") + avgGainPct.toFixed(2) + "%"
+        : "—";
+    let totalGainColor = avgGainPct >= 0 ? "#10b981" : "#ef4444";
+    let arrowIconTotal = "";
+    if (avgGainPct > 0.01) {
+      arrowIconTotal = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+    } else if (avgGainPct < -0.01) {
+      arrowIconTotal = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+    }
+
+    const header = gainSpan.closest(".sig-list-header");
+    if (header) {
+      const leftSpan = header.querySelector("span:first-child");
+      const rightSpan = header.querySelector("span:last-child");
+      if (rightSpan) {
+        rightSpan.innerHTML = `GAIN: ${arrowIconTotal} <span id="techListGain" style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>`;
+      }
+    }
+  }
 }
 
 function renderTechnicalSignalDetail(s, container) {
