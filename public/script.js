@@ -4025,6 +4025,7 @@ function renderDetailCharts(s, container = document) {
 
 async function fetchReports() {
   const activeTab = document.querySelector(".view.active")?.id;
+
   if (activeTab === "daily") {
     if (dailyRendered) {
       await fetchSignals(false);
@@ -4033,9 +4034,8 @@ async function fetchReports() {
       renderDaily();
     }
   } else if (activeTab === "home") {
-    await fetchSignals(false);
-
     if (!homeLoaded) {
+      await fetchSignals(false);
       updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
       homeLoaded = true;
     }
