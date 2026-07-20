@@ -4301,3 +4301,14 @@ body {
 .tech-target-card:hover:not([style*="opacity:0.6"]) .target-icon {
   transform: scale(1.2) rotate(-5deg);
 }
+
+/* Gabungkan selector agar kedua parent dropdown punya efek transisi radius */
+#signalsParent, #technicalParent {
+  border-radius: 12px !important;
+  transition: border-radius 0.2s;
+}
+
+/* Saat dropdown terbuka, hilangkan rounded di sudut bawah tombol */
+#signalsParent.open, #technicalParent.open {
+  border-radius: 12px 12px 0 0 !important;
+}
