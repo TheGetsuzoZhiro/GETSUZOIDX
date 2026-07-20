@@ -4312,3 +4312,81 @@ body {
 #signalsParent.open, #technicalParent.open {
   border-radius: 12px 12px 0 0 !important;
 }
+
+
+
+
+
+/* ========================================= */
+/* PERBAIKAN FULL WIDTH & RESPONSIVE REPORT DAILY */
+/* ========================================= */
+
+/* 1. Pastikan seluruh container laporan memenuhi lebar layar (Full Width) */
+#dailyContentWrapper,
+.pro-detail-container,
+#dailyDetailContainer {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0.5rem !important;
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+}
+
+/* 2. Kunci Grid Statistik agar tetap 3 Kolom di semua perangkat */
+#statsGridContainer {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 1rem !important;
+  margin-bottom: 1.5rem !important;
+  width: 100% !important;
+}
+
+/* 3. Penyesuaian Responsif (Ukuran Font & Padding mengecil otomatis saat di HP) */
+@media (max-width: 520px) {
+  /* Grid tetap 3 kolom, tapi jarak antar kartu (gap) dipersempit */
+  #statsGridContainer {
+    gap: 0.4rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* Padding dalam kartu statistik dikecilkan */
+  #statsGridContainer > div {
+    padding: 0.4rem 0.3rem !important;
+  }
+
+  /* Perkecil judul/label (Contoh: SINYAL BARU) dan nilainya (Contoh: 32) */
+  #statsGridContainer > div > div:first-child {
+    font-size: 0.55rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+  #statsGridContainer > div > div:last-child {
+    font-size: 1.1rem !important;
+  }
+
+  /* Perkecil kotak Best/Worst Trade */
+  #bestWorstContainer {
+    gap: 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+  #bestWorstContainer .pro-card {
+    padding: 0.6rem 0.8rem !important;
+  }
+
+  /* Perkecil judul utama Trade Summary */
+  #reportHeader .emit-ticker {
+    font-size: 1.2rem !important;
+  }
+  #reportDateRange {
+    font-size: 0.65rem !important;
+  }
+}
+
+/* Penyesuaian ekstra untuk layar HP sangat kecil (seperti 320px - 360px) */
+@media (max-width: 380px) {
+  #statsGridContainer > div > div:first-child {
+    font-size: 0.45rem !important;
+  }
+  #statsGridContainer > div > div:last-child {
+    font-size: 0.9rem !important;
+  }
+}
