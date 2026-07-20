@@ -2848,7 +2848,6 @@ async function showTechnicalSignalList() {
 
     const longName = info.longName || s.stockCode;
 
-    // SubDetailText
     if (s.status === "WAITING_ENTRY") {
       subDetailText = "";
     } else if (s.status === "RUNNING" || s.status === "TRAILING") {
@@ -2862,7 +2861,6 @@ async function showTechnicalSignalList() {
       subDetailText = `Closed: ${s.returnPercent?.toFixed(2)}%`;
     }
 
-    // ===== BADGE STATUS: tidak tampil untuk WAITING_ENTRY dan EXPIRED =====
     let statusBadge = "";
     if (s.status !== "WAITING_ENTRY" && s.status !== "EXPIRED") {
       let badgeColor = "#3b82f6";
@@ -2883,7 +2881,6 @@ async function showTechnicalSignalList() {
       statusBadge = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:${badgeColor}; background:${badgeBg}; padding:0.15rem 0.5rem; border-radius:12px; border:1px solid ${badgeColor}33; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">${badgeText}</span>`;
     }
 
-    // Logo
     const stockbitUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
     const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
     const bgColor = getColorFromCode(s.stockCode);
@@ -2895,7 +2892,6 @@ async function showTechnicalSignalList() {
       </div>
     `;
 
-    // Tag TECHNICAL
     const techTag = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:#06b6d4; background:rgba(6,182,212,0.15); padding:0.15rem 0.5rem; border-radius:12px; border:1px solid rgba(6,182,212,0.3); display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">
       <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
     </span>`;
@@ -2962,9 +2958,12 @@ async function updateTechnicalSignalList() {
 }
 
 function renderTechnicalSignalDetail(s, container) {
-  const isExpired = s.status === "EXPIRED" || s.expired === true;
+  const isExpired =
+    s.status === "EXPIRED" ||
+    s.expired === true ||
+    (s.status === "CLOSED" && s.returnPercent === 0) ||
+    (s.status === "SL" && (s.returnPercent || 0) < -5);
 
-  // Ambil current price untuk gain (sama seperti sebelumnya)
   let currentPrice = localPrices.get(s.stockCode) || null;
   let gainAbs = 0,
     gainPct = 0,
@@ -3040,7 +3039,6 @@ function renderTechnicalSignalDetail(s, container) {
     longName = infoCache.get(s.stockCode).data.longName || s.stockCode;
   }
 
-  // Build Strategy Flow
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp1 = s.tp1 || 0;
@@ -3053,14 +3051,19 @@ function renderTechnicalSignalDetail(s, container) {
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
 
-  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tp1Label = tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
-  const tp2Label = tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
+  const slLabel =
+    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tp1Label =
+    tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
+  const tp2Label =
+    tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
 
-  // Step aktif hanya jika tidak expired
   const step1Active = !isExpired;
-  const step2Active = !isExpired && (s.breakEven === true || s.status === "TRAILING" || s.status === "TP");
-  const step3Active = !isExpired && (s.status === "TRAILING" || s.status === "TP");
+  const step2Active =
+    !isExpired &&
+    (s.breakEven === true || s.status === "TRAILING" || s.status === "TP");
+  const step3Active =
+    !isExpired && (s.status === "TRAILING" || s.status === "TP");
 
   let step1State = "default";
   let step2State = "default";
@@ -3078,9 +3081,9 @@ function renderTechnicalSignalDetail(s, container) {
     let bg, border, color, shadow;
     if (isExpired) {
       bg = "#3a3a3a";
-      border = "rgba(255,255,255,0.1)";
-      color = "var(--text-secondary)";
-      shadow = "0 0 0 4px #121212";
+      border = "rgba(255,255,255,0.08)";
+      color = "#71717a";
+      shadow = "0 0 0 4px rgba(0,0,0,0.3)";
     } else if (state === "failed") {
       bg = "#ef4444";
       border = "#ef4444";
@@ -3098,7 +3101,7 @@ function renderTechnicalSignalDetail(s, container) {
       shadow = "0 0 0 4px rgba(16,185,129,0.2)";
     } else {
       bg = "#2a2a2a";
-      border = "rgba(255,255,255,0.1)";
+      border = "rgba(255,255,255,0.05)";
       color = "var(--text-secondary)";
       shadow = "0 0 0 4px #121212";
     }
@@ -3120,32 +3123,108 @@ function renderTechnicalSignalDetail(s, container) {
     `;
   }
 
-  // Progress bar - pastikan expired = abu-abu penuh
   let progressWidth = "0%";
   let progressGradient = "linear-gradient(90deg, #3a3a3a, #3a3a3a)";
 
   if (isExpired) {
     progressWidth = "100%";
-    progressGradient = "linear-gradient(90deg, #3a3a3a, #3a3a3a)";
+    progressGradient = "linear-gradient(90deg, #3a3a3a, #4a4a4a)";
   } else if (step3Active && step3State !== "warning") {
     progressWidth = "100%";
-    progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
+    progressGradient = "linear-gradient(90deg, #10b981, #34d399)";
   } else if (step2Active) {
     progressWidth = "50%";
-    progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
+    progressGradient = "linear-gradient(90deg, #10b981, #34d399)";
   } else if (step1State === "failed") {
     progressWidth = "10%";
-    progressGradient = "linear-gradient(90deg, #ef4444, #ef4444)";
-  }
-  if (step3State === "warning") {
-    progressWidth = "100%";
-    progressGradient = "linear-gradient(90deg, #10b981 50%, #f59e0b 50%)";
+    progressGradient = "linear-gradient(90deg, #ef4444, #f87171)";
   }
 
-  // ===== BADGE STATUS DI DALAM FLOW: hilangkan untuk EXPIRED =====
+  const targetRanges = `
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+        <i class="fas fa-bullseye" style="color:#10b981; font-size:0.9rem;"></i> 
+        Target Profit Range Objectives
+        ${isExpired ? `<span style="font-size:0.5rem; color:#71717a; background:rgba(113,113,122,0.15); padding:0.1rem 0.5rem; border-radius:10px; margin-left:auto;">EXPIRED</span>` : ""}
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+        <!-- Target Area 1 dengan Icon 🎯 -->
+        <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid ${isExpired ? "#71717a" : "#10b981"}; transition:all 0.3s; ${isExpired ? "opacity:0.6;" : ""}">
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.15rem;">
+            <span class="target-icon" style="font-size:0.7rem; color:#10b981; ${isExpired ? "filter:grayscale(1); opacity:0.4;" : ""}">
+              <i class="fa-solid fa-arrow-up-right-dots"></i>
+            </span>
+            <span style="font-size:0.6rem; color:var(--text-secondary); font-weight:500;">Target Area 1</span>
+            <span style="font-size:0.5rem; color:#10b981; background:rgba(16,185,129,0.1); padding:0.05rem 0.4rem; border-radius:8px; margin-left:auto; ${isExpired ? "display:none;" : ""}">
+              <i class="fa-regular fa-flag"></i> PRIORITY
+            </span>
+          </div>
+          <div class="target-value" style="font-family:'JetBrains Mono'; font-weight:700; font-size:0.95rem; color:${isExpired ? "#71717a" : "#10b981"}; display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-arrow-right" style="font-size:0.6rem; opacity:0.5;"></i>
+            ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}
+            <span style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-left:auto;">
+              <i class="fa-regular fa-clock"></i> TP 1
+            </span>
+          </div>
+        </div>
+
+        <!-- Target Area 2 dengan Icon 🏆 -->
+        <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid ${isExpired ? "#71717a" : "#f59e0b"}; transition:all 0.3s; ${isExpired ? "opacity:0.6;" : ""}">
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.15rem;">
+            <span class="target-icon" style="font-size:0.7rem; color:#f59e0b; ${isExpired ? "filter:grayscale(1); opacity:0.4;" : ""}">
+              <i class="fa-solid fa-trophy"></i>
+            </span>
+            <span style="font-size:0.6rem; color:var(--text-secondary); font-weight:500;">Target Area 2</span>
+            <span style="font-size:0.5rem; color:#f59e0b; background:rgba(245,158,11,0.1); padding:0.05rem 0.4rem; border-radius:8px; margin-left:auto; ${isExpired ? "display:none;" : ""}">
+              <i class="fa-regular fa-star"></i> EXTENDED
+            </span>
+          </div>
+          <div class="target-value" style="font-family:'JetBrains Mono'; font-weight:700; font-size:0.95rem; color:${isExpired ? "#71717a" : "#f59e0b"}; display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-arrow-right" style="font-size:0.6rem; opacity:0.5;"></i>
+            ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}
+            <span style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-left:auto;">
+              <i class="fa-regular fa-clock"></i> TP 2
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const buyAreaDisplay = `
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+        <div style="background:rgba(255,255,255,0.02); border:1px solid ${isExpired ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.06)"}; border-radius:8px; padding:0.65rem 0.6rem; ${isExpired ? "opacity:0.5;" : ""}">
+          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px; display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-cart-shopping" style="color:${isExpired ? "#71717a" : "#3b82f6"};"></i> Buy Area Reference
+          </div>
+          <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:${isExpired ? "#71717a" : "#3b82f6"}; margin-top:0.15rem; display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-tag" style="font-size:0.6rem; opacity:0.5;"></i>
+            ${s.buyAreaLow} – ${s.buyAreaHigh}
+          </div>
+          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">
+            <i class="fa-regular fa-tag"></i> ${s.buyType || "BREAKOUT SETUP"}
+          </div>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid ${isExpired ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.06)"}; border-radius:8px; padding:0.65rem 0.6rem; ${isExpired ? "opacity:0.5;" : ""}">
+          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px; display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-shield" style="color:${isExpired ? "#71717a" : "#ef4444"};"></i> Stop Loss Baseline
+          </div>
+          <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:${isExpired ? "#71717a" : "#ef4444"}; margin-top:0.15rem; display:flex; align-items:center; gap:0.3rem;">
+            <i class="fa-solid fa-arrow-down" style="font-size:0.6rem; opacity:0.5;"></i>
+            -${s.stopLossPercent || 5}%
+          </div>
+          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">
+            <i class="fa-regular fa-circle"></i> ${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
   let statusBadgeHtml = "";
   if (isExpired) {
-    // Tidak tampilkan badge apapun untuk expired
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(113,113,122,0.2); color:#71717a; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>`;
   } else if (s.status === "RUNNING") {
     statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`;
   } else if (s.status === "TRAILING") {
@@ -3157,48 +3236,45 @@ function renderTechnicalSignalDetail(s, container) {
   }
 
   const strategyFlow = `
-    <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
+    <div style="background:rgba(255,255,255,0.01); border:1px solid ${isExpired ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.08)"}; border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem; ${isExpired ? "opacity:0.65;" : ""}">
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
-        <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
-        <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Technical Strategy Flow</span>
+        <i class="fa-solid fa-layer-group" style="color:${isExpired ? "#71717a" : "var(--text-primary)"}; font-size:1rem;"></i>
+        <span style="font-weight:600; font-size:0.85rem; color:${isExpired ? "#71717a" : "var(--text-primary)"}; letter-spacing: 0.3px;">
+          ${isExpired ? "Expired Strategy Flow" : "Technical Strategy Flow"}
+        </span>
         ${statusBadgeHtml}
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
-        <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.08); z-index:1;">
-          <div style="height:100%; width:${progressWidth}; background:${progressGradient}; border-radius:2px; transition:width 0.8s ease;"></div>
+        <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.06); z-index:1;">
+          <div style="height:100%; width:${progressWidth}; background:${progressGradient}; border-radius:2px; transition:width 0.8s ease; box-shadow: ${isExpired ? "none" : "0 0 8px rgba(16,185,129,0.2)"};"></div>
         </div>
         ${stepCircle(step1Active, "Entry", `SL ${slLabel}`, "1", step1State)}
         ${stepCircle(step2Active, "TP 1", `${tp1Label}`, "2", step2State)}
         ${stepCircle(step3Active, "TP 2", `${tp2Label}`, "3", step3State)}
       </div>
-      <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem;">
-        <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active</span>
-        <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
-        <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit</span>
+      <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem; ${isExpired ? "opacity:0.4;" : ""}">
+        <span style="display:flex; align-items:center; gap:0.2rem;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active
+        </span>
+        <span style="display:flex; align-items:center; gap:0.2rem;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss
+        </span>
+        <span style="display:flex; align-items:center; gap:0.2rem;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit
+        </span>
+        ${isExpired ? `<span style="display:flex; align-items:center; gap:0.2rem; color:#71717a;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3a3a3a;"></span> Expired</span>` : ""}
       </div>
-      ${isExpired ? `<div style="text-align:center; margin-top:0.4rem; font-size:0.6rem; color:#71717a; opacity:0.6;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>Signal Expired — No active flow</div>` : ""}
-    </div>
-  `;
-
-  // ===== Detail strategi, price ladder, buy area, target ranges (sama seperti sebelumnya) =====
-  const strategyDetail = `
-    <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
-      <div style="display:flex; align-items:start;">
-        <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Entry dilakukan saat harga berada di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
-      </div>
-      <div style="display:flex; align-items:start;">
-        <i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Target pertama <strong>TP 1</strong> di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
-      </div>
-      <div style="display:flex; align-items:start;">
-        <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Target kedua <strong>TP 2</strong> di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
-      </div>
-      <div style="display:flex; align-items:start;">
-        <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
-      </div>
+      ${
+        isExpired
+          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(113,113,122,0.08); border-radius:6px; font-size:0.6rem; color:#71717a; border:1px dashed rgba(113,113,122,0.15);">
+          <i class="fa-regular fa-clock" style="margin-right:0.3rem;"></i>
+          Signal telah kedaluwarsa — Tidak ada alur aktif
+        </div>`
+          : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
+          <i class="fa-regular fa-circle-check" style="margin-right:0.2rem; color:#10b981;"></i>
+          Alur strategi berjalan sesuai rencana
+        </div>`
+      }
     </div>
   `;
 
@@ -3237,43 +3313,23 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  const buyAreaDisplay = `
-    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
-        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
-          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">
-            <i class="fa-solid fa-cart-shopping" style="margin-right:0.2rem;"></i> Buy Area Reference
-          </div>
-          <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#3b82f6; margin-top:0.15rem;">${s.buyAreaLow} – ${s.buyAreaHigh}</div>
-          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">
-            <i class="fa-regular fa-tag"></i> ${s.buyType || "BREAKOUT SETUP"}
-          </div>
-        </div>
-        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
-          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">
-            <i class="fa-solid fa-shield" style="margin-right:0.2rem;"></i> Stop Loss Baseline
-          </div>
-          <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#ef4444; margin-top:0.15rem;">-${s.stopLossPercent || 5}%</div>
-          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}</div>
-        </div>
+  const strategyDetail = `
+    <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
+      <div style="display:flex; align-items:start;">
+        <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Entry dilakukan saat harga berada di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
       </div>
-    </div>
-  `;
-
-  const targetRanges = `
-    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600;">
-        <i class="fas fa-bullseye" style="color:#10b981; margin-right:4px;"></i> Target Profit Range Objectives
+      <div style="display:flex; align-items:start;">
+        <i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Target pertama <strong>TP 1</strong> di area ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}.</span>
       </div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
-        <div style="background:rgba(0,0,0,0.2); padding:0.5rem 0.6rem; border-radius:6px; border-left:2px solid #10b981;">
-          <span style="font-size:0.6rem; color:var(--text-secondary);">Target Area 1</span>
-          <div style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:#10b981;">${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}</div>
-        </div>
-        <div style="background:rgba(0,0,0,0.2); padding:0.5rem 0.6rem; border-radius:6px; border-left:2px solid #f59e0b;">
-          <span style="font-size:0.6rem; color:var(--text-secondary);">Target Area 2</span>
-          <div style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:#f59e0b;">${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}</div>
-        </div>
+      <div style="display:flex; align-items:start;">
+        <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Target kedua <strong>TP 2</strong> di area ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}.</span>
+      </div>
+      <div style="display:flex; align-items:start;">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
       </div>
     </div>
   `;
@@ -3289,7 +3345,7 @@ function renderTechnicalSignalDetail(s, container) {
 
       <div style="background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.08); overflow:hidden; ${expiredContainerStyle}">
 
-        <!-- Header -->
+        <!-- HEADER -->
         <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
           <div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;">
             <div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;">
@@ -3308,7 +3364,7 @@ function renderTechnicalSignalDetail(s, container) {
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
               <span class="emit-tag"><i class="fa-regular fa-clock" style="margin-right:3px; font-size:0.65rem;"></i>${setupText}</span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
-              <!-- ===== BADGE EXPIRED DI HAPUS ===== -->
+              ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
             </div>
             <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
           </div>
@@ -3318,13 +3374,13 @@ function renderTechnicalSignalDetail(s, container) {
         ${buyAreaDisplay}
         ${targetRanges}
 
-        <!-- Strategy Flow -->
+        <!-- STRATEGY FLOW -->
         <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
           ${strategyFlow}
           ${strategyDetail}
         </div>
 
-        <!-- Footer -->
+        <!-- FOOTER -->
         <div style="padding:0.5rem 0.75rem; text-align:center; font-size:0.55rem; color:var(--text-secondary); opacity:0.4; border-top:1px solid rgba(255,255,255,0.04);">
           <i class="fa-solid fa-microchip" style="margin-right:0.2rem;"></i> Technical Strategy Engine v1.0
         </div>
