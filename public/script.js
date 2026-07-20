@@ -571,12 +571,11 @@ function renderDailyReturnChartFromSignals(signals) {
 
 async function updateDailyContent() {
   await fetchSignals(false);
-  
-  // ===== TAMBAHKAN FILTER =====
+
   const allSignals = [..._allRunning, ..._allClosed].filter(
-    s => s.status !== 'WAITING_ENTRY' && s.status !== 'EXPIRED'
+    (s) => s.status !== "WAITING_ENTRY" && s.status !== "EXPIRED",
   );
-  
+
   const { start, end } = getDateRangeFromFilterState();
   const filtered = filterSignalsByDate(allSignals, start, end);
   const agg = aggregateSignals(filtered);
@@ -703,10 +702,9 @@ async function renderDaily() {
   dailyRendered = false;
 
   await fetchSignals(false);
-  
-  // ===== FILTER: keluarkan WAITING_ENTRY dan EXPIRED =====
+
   const allSignals = [..._allRunning, ..._allClosed].filter(
-    s => s.status !== 'WAITING_ENTRY' && s.status !== 'EXPIRED'
+    (s) => s.status !== "WAITING_ENTRY" && s.status !== "EXPIRED",
   );
 
   if (!allSignals.length) {
@@ -1128,7 +1126,7 @@ async function showDailySignalDetail(stockCode, signalDate) {
 
   if (detailContainer) {
     detailContainer.style.display = "block";
-    
+
     if (signal.signalType === "TECHNICAL") {
       renderTechnicalSignalDetail(signal, detailContainer);
       const backBtn = detailContainer.querySelector("#techBackBtn");
@@ -2055,10 +2053,9 @@ async function renderPerformanceSignalList(status) {
 
     const running = data.running || [];
     const closed = data.closed || [];
-    
-    // ===== FILTER: keluarkan WAITING_ENTRY dan EXPIRED =====
+
     const allSignals = [...running, ...closed].filter(
-      s => s.status !== 'WAITING_ENTRY' && s.status !== 'EXPIRED'
+      (s) => s.status !== "WAITING_ENTRY" && s.status !== "EXPIRED",
     );
 
     const filteredByDate = allSignals.filter((s) => {
@@ -2395,9 +2392,6 @@ function renderSignalRows(signals, priceMap, infoMap) {
   return rows;
 }
 
-// ============================================================
-// 🔥 FUNGSI BARU: TUTUP SEMUA DROPDOWN
-// ============================================================
 function closeAllDropdowns() {
   const signalSub = document.getElementById("signalSubMenu");
   const signalParent = document.getElementById("signalsParent");
@@ -2424,9 +2418,6 @@ function closeAllDropdowns() {
   }
 }
 
-// ============================================================
-// GETSUZO SIGNALS - Filtering (Tidak termasuk TECHNICAL)
-// ============================================================
 async function showSignalList() {
   isDetailView = false;
   currentDetailIndex = null;
@@ -2439,8 +2430,9 @@ async function showSignalList() {
     return;
   }
 
-  // Ambil semua sinyal KECUALI TECHNICAL
-  const allSignals = getSortedSignals().filter(s => s.signalType !== "TECHNICAL");
+  const allSignals = getSortedSignals().filter(
+    (s) => s.signalType !== "TECHNICAL",
+  );
 
   if (!allSignals.length) {
     container.innerHTML = `<div class="loading-state"><p>Belum ada sinyal.</p></div>`;
@@ -2453,24 +2445,24 @@ async function showSignalList() {
   const today = getTodayWIB();
 
   if (filterType === "today") {
-    // Today's Signals: semua sinyal hari ini (status apapun)
     filteredSignals = allSignals.filter(
       (s) => s.signalDate && s.signalDate.startsWith(today),
     );
   } else if (filterType === "running") {
-    // Running: status RUNNING atau TRAILING
     filteredSignals = allSignals.filter(
       (s) => s.status === "RUNNING" || s.status === "TRAILING",
     );
   } else {
-    // All: semua sinyal (kecuali TECHNICAL sudah difilter di atas)
     filteredSignals = allSignals;
   }
 
   if (!filteredSignals.length) {
-    const msg = filterType === "today" ? "Tidak ada sinyal hari ini." :
-                filterType === "running" ? "Tidak ada posisi running." :
-                "Tidak ada sinyal.";
+    const msg =
+      filterType === "today"
+        ? "Tidak ada sinyal hari ini."
+        : filterType === "running"
+          ? "Tidak ada posisi running."
+          : "Tidak ada sinyal.";
     container.innerHTML = `<div class="loading-state"><p>${msg}</p></div>`;
     signalListRendered = false;
     return;
@@ -2582,10 +2574,12 @@ async function showSignalList() {
     const runningBsjp = filteredSignals.filter((s) => s.signalType === "BSJP");
     const allRunning = [...runningBiasa, ...runningBsjp];
 
-    let totalGain = 0, totalCount = 0;
+    let totalGain = 0,
+      totalCount = 0;
     allRunning.forEach((s) => {
       if (s.entryPrice && priceMap[s.stockCode]) {
-        const gain = ((priceMap[s.stockCode] - s.entryPrice) / s.entryPrice) * 100;
+        const gain =
+          ((priceMap[s.stockCode] - s.entryPrice) / s.entryPrice) * 100;
         if (gain !== 0) {
           totalGain += gain;
           totalCount++;
@@ -2593,7 +2587,10 @@ async function showSignalList() {
       }
     });
     const avgTotalGain = totalCount > 0 ? totalGain / totalCount : 0;
-    const totalGainStr = totalCount > 0 ? (avgTotalGain >= 0 ? "+" : "") + avgTotalGain.toFixed(2) + "%" : "—";
+    const totalGainStr =
+      totalCount > 0
+        ? (avgTotalGain >= 0 ? "+" : "") + avgTotalGain.toFixed(2) + "%"
+        : "—";
     const totalGainColor = avgTotalGain >= 0 ? "#10b981" : "#ef4444";
 
     if (allRunning.length) {
@@ -2651,9 +2648,6 @@ async function showSignalList() {
   });
 }
 
-// ============================================================
-// GETSUZO SIGNALS - Update List (Tidak termasuk TECHNICAL)
-// ============================================================
 async function updateSignalList() {
   if (isDetailView) return;
   if (!signalListRendered) {
@@ -2663,7 +2657,9 @@ async function updateSignalList() {
   const container = document.getElementById("signals");
   if (!container) return;
 
-  const allSignals = getSortedSignals().filter(s => s.signalType !== "TECHNICAL");
+  const allSignals = getSortedSignals().filter(
+    (s) => s.signalType !== "TECHNICAL",
+  );
   if (!allSignals.length) return;
 
   let filteredSignals = [];
@@ -2707,7 +2703,8 @@ async function updateSignalList() {
     const gainEl = row.querySelector(".sig-right span:last-child");
     if (!priceEl) return;
 
-    const isRunning = signal.status === "RUNNING" || signal.status === "TRAILING";
+    const isRunning =
+      signal.status === "RUNNING" || signal.status === "TRAILING";
     if (!isRunning) return;
 
     if (price != null) {
@@ -2751,9 +2748,6 @@ async function updateSignalList() {
   });
 }
 
-// ============================================================
-// TECHNICAL SIGNALS - Filtering (Hanya TECHNICAL)
-// ============================================================
 function selectTechnicalFilter(filter) {
   isDetailView = false;
   currentDetailIndex = null;
@@ -2775,7 +2769,9 @@ function selectTechnicalFilter(filter) {
     window.location.hash = "#technical-waiting";
   }
 
-  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document
+    .querySelectorAll(".view")
+    .forEach((v) => v.classList.remove("active"));
   document.getElementById("technical-signals").classList.add("active");
   currentTab = "technical-signals";
   technicalListRendered = false;
@@ -2810,9 +2806,12 @@ async function showTechnicalSignalList() {
   }
 
   if (!techSignals.length) {
-    const msg = currentTechnicalFilter === "today" ? "Tidak ada sinyal teknikal hari ini." :
-                currentTechnicalFilter === "running" ? "Tidak ada posisi teknikal running." :
-                "Tidak ada sinyal teknikal waiting.";
+    const msg =
+      currentTechnicalFilter === "today"
+        ? "Tidak ada sinyal teknikal hari ini."
+        : currentTechnicalFilter === "running"
+          ? "Tidak ada posisi teknikal running."
+          : "Tidak ada sinyal teknikal waiting.";
     container.innerHTML = `<div class="loading-state"><p>${msg}</p></div>`;
     technicalListRendered = false;
     return;
@@ -2846,13 +2845,11 @@ async function showTechnicalSignalList() {
     let priceDisplay = currentPrice != null ? fmtPriceNoRp(currentPrice) : "—";
     let subDetailText = "";
     const info = infoMap[s.stockCode] || { longName: s.stockCode };
-    
-    // Tampilkan long name
+
     const longName = info.longName || s.stockCode;
 
-    // === PERUBAHAN: SubDetailText untuk WAITING_ENTRY dikosongkan ===
     if (s.status === "WAITING_ENTRY") {
-      subDetailText = ""; // <-- HAPUS "Buy Area: ..."
+      subDetailText = "";
     } else if (s.status === "RUNNING" || s.status === "TRAILING") {
       if (s.entryPrice && currentPrice) {
         const gain = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
@@ -2864,7 +2861,6 @@ async function showTechnicalSignalList() {
       subDetailText = `Closed: ${s.returnPercent?.toFixed(2)}%`;
     }
 
-    // === PERUBAHAN: Badge status tidak ditampilkan untuk WAITING_ENTRY ===
     let statusBadge = "";
     if (s.status !== "WAITING_ENTRY") {
       let badgeColor = "#3b82f6";
@@ -2885,7 +2881,6 @@ async function showTechnicalSignalList() {
       statusBadge = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:${badgeColor}; background:${badgeBg}; padding:0.15rem 0.5rem; border-radius:12px; border:1px solid ${badgeColor}33; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">${badgeText}</span>`;
     }
 
-    // Logo
     const stockbitUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
     const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
     const bgColor = getColorFromCode(s.stockCode);
@@ -2897,7 +2892,6 @@ async function showTechnicalSignalList() {
       </div>
     `;
 
-    // Tag TECHNICAL
     const techTag = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:#06b6d4; background:rgba(6,182,212,0.15); padding:0.15rem 0.5rem; border-radius:12px; border:1px solid rgba(6,182,212,0.3); display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">
       <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
     </span>`;
@@ -2918,7 +2912,7 @@ async function showTechnicalSignalList() {
             <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
               <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
                 <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary);">${priceDisplay}</span>
-                ${subDetailText ? `<span style="font-family:'JetBrains Mono'; font-size:0.6rem; color:var(--text-secondary);">${escapeHtml(subDetailText)}</span>` : ''}
+                ${subDetailText ? `<span style="font-family:'JetBrains Mono'; font-size:0.6rem; color:var(--text-secondary);">${escapeHtml(subDetailText)}</span>` : ""}
               </div>
             </div>
           </div>
@@ -2964,7 +2958,8 @@ async function updateTechnicalSignalList() {
 }
 
 function renderTechnicalSignalDetail(s, container) {
-  // Ambil current price untuk gain
+  const isExpired = s.status === "EXPIRED" || s.expired === true;
+
   let currentPrice = localPrices.get(s.stockCode) || null;
   let gainAbs = 0,
     gainPct = 0,
@@ -3035,13 +3030,11 @@ function renderTechnicalSignalDetail(s, container) {
   const bgColor = getColorFromCode(s.stockCode);
   const logoHtml = `<span class="detail-logo-text"><img src="${logoUrl}" alt="${s.stockCode}" style="width:50px; height:64px; object-fit:contain; border:none; background:transparent; display:block;" onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"><span style="display:none; width:64px; height:64px; line-height:64px; text-align:center; background:${bgColor}; color:#fff; font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace;">${s.stockCode.substring(0, 2)}</span></span>`;
 
-  // Ambil nama panjang dari cache atau fallback
   let longName = s.stockCode;
   if (infoCache.has(s.stockCode)) {
     longName = infoCache.get(s.stockCode).data.longName || s.stockCode;
   }
 
-  // Build Strategy Flow untuk Technical
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp1 = s.tp1 || 0;
@@ -3054,26 +3047,40 @@ function renderTechnicalSignalDetail(s, container) {
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
 
-  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tp1Label = tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
-  const tp2Label = tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
+  const slLabel =
+    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tp1Label =
+    tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
+  const tp2Label =
+    tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
 
-  const step1Active = true;
+  const step1Active = !isExpired;
+  const step2Active =
+    !isExpired &&
+    (s.breakEven === true || s.status === "TRAILING" || s.status === "TP");
+  const step3Active =
+    !isExpired && (s.status === "TRAILING" || s.status === "TP");
+
   let step1State = "default";
-  if (s.status === "SL" && !s.breakEven) step1State = "failed";
-
-  const step2Active = s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
-  const step2State =
-    s.status === "SL" && s.breakEven ? "warning" : s.status === "TP" ? "success" : "default";
-
-  const step3Active = s.status === "TRAILING" || s.status === "TP";
+  let step2State = "default";
   let step3State = "default";
-  if (s.status === "SL" && s.breakEven) step3State = "warning";
-  else if (s.status === "TP") step3State = "success";
+
+  if (!isExpired) {
+    if (s.status === "SL" && !s.breakEven) step1State = "failed";
+    if (s.status === "SL" && s.breakEven) step2State = "warning";
+    else if (s.status === "TP") step2State = "success";
+    if (s.status === "SL" && s.breakEven) step3State = "warning";
+    else if (s.status === "TP") step3State = "success";
+  }
 
   function stepCircle(active, label, desc, icon, state = "default") {
     let bg, border, color, shadow;
-    if (state === "failed") {
+    if (isExpired) {
+      bg = "#3a3a3a";
+      border = "rgba(255,255,255,0.1)";
+      color = "var(--text-secondary)";
+      shadow = "0 0 0 4px #121212";
+    } else if (state === "failed") {
       bg = "#ef4444";
       border = "#ef4444";
       color = "#fff";
@@ -3095,7 +3102,9 @@ function renderTechnicalSignalDetail(s, container) {
       shadow = "0 0 0 4px #121212";
     }
     let descColor = "var(--text-secondary)";
-    if (state === "failed") descColor = "#ef4444";
+    if (isExpired) {
+      descColor = "#71717a";
+    } else if (state === "failed") descColor = "#ef4444";
     else if (state === "warning") descColor = "#f59e0b";
     else if (state === "success" || active) descColor = "#10b981";
 
@@ -3111,11 +3120,17 @@ function renderTechnicalSignalDetail(s, container) {
   }
 
   let progressWidth = "0%";
-  let progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
-  if (step3Active && step3State !== "warning") {
+  let progressGradient = "linear-gradient(90deg, #3a3a3a, #3a3a3a)";
+
+  if (isExpired) {
     progressWidth = "100%";
+    progressGradient = "linear-gradient(90deg, #3a3a3a, #3a3a3a)";
+  } else if (step3Active && step3State !== "warning") {
+    progressWidth = "100%";
+    progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
   } else if (step2Active) {
     progressWidth = "50%";
+    progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
   } else if (step1State === "failed") {
     progressWidth = "10%";
     progressGradient = "linear-gradient(90deg, #ef4444, #ef4444)";
@@ -3125,20 +3140,25 @@ function renderTechnicalSignalDetail(s, container) {
     progressGradient = "linear-gradient(90deg, #10b981 50%, #f59e0b 50%)";
   }
 
+  let statusBadgeHtml = "";
+  if (isExpired) {
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(113,113,122,0.2); color:#71717a; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;">EXPIRED</span>`;
+  } else if (s.status === "RUNNING") {
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`;
+  } else if (s.status === "TRAILING") {
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`;
+  } else if (s.status === "WAITING_ENTRY") {
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`;
+  } else {
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`;
+  }
+
   const strategyFlow = `
     <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
         <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Technical Strategy Flow</span>
-        ${
-          s.status === "RUNNING"
-            ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-            : s.status === "TRAILING"
-              ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-              : s.status === "WAITING_ENTRY"
-                ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
-                : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
-        }
+        ${statusBadgeHtml}
       </div>
       <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
         <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.08); z-index:1;">
@@ -3153,10 +3173,10 @@ function renderTechnicalSignalDetail(s, container) {
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit</span>
       </div>
+      ${isExpired ? `<div style="text-align:center; margin-top:0.4rem; font-size:0.6rem; color:#71717a; opacity:0.6;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>Signal Expired — No active flow</div>` : ""}
     </div>
   `;
 
-  // Detail Strategi (seperti di BSJP)
   const strategyDetail = `
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
       <div style="display:flex; align-items:start;">
@@ -3178,7 +3198,6 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Price Ladder untuk Technical (Entry, TP1, TP2, SL)
   const priceLadder = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0; flex-wrap:wrap;">
@@ -3214,7 +3233,6 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Buy Area dan Target Ranges (dalam grid card)
   const buyAreaDisplay = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
@@ -3256,8 +3274,9 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // Header dengan setup teks
   const setupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
+
+  const expiredContainerStyle = isExpired ? `opacity:0.7;` : "";
 
   const html = `
     <div class="pro-detail-container">
@@ -3265,7 +3284,7 @@ function renderTechnicalSignalDetail(s, container) {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Kembali
       </button>
 
-      <div style="background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.08); overflow:hidden;">
+      <div style="background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.08); overflow:hidden; ${expiredContainerStyle}">
 
         <!-- Header -->
         <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
@@ -3280,13 +3299,13 @@ function renderTechnicalSignalDetail(s, container) {
               </span>
               <span style="font-family:'JetBrains Mono'; font-size:0.75rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>
               ${statusStamp}
-              <!-- Badge TECHNICAL di samping price telah dihapus -->
             </div>
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem;">
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
               <span class="emit-tag"><i class="fa-regular fa-clock" style="margin-right:3px; font-size:0.65rem;"></i>${setupText}</span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
+              ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
             </div>
             <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
           </div>
@@ -3320,9 +3339,7 @@ function renderTechnicalSignalDetail(s, container) {
     });
   }
 }
-// ============================================================
-// FUNGSI LAINNYA (tidak berubah)
-// ============================================================
+
 async function showSignalDetailByStock(stockCode, signalDate) {
   const allSignals = getSortedSignals();
   const idx = allSignals.findIndex(
@@ -3366,7 +3383,6 @@ async function showSignalDetail(index) {
     return;
   }
 
-  // Untuk sinyal biasa (non-BSJP, non-TECHNICAL) - gunakan renderSignalDetailToContainer
   let stockInfo = { longName: s.stockCode, logoUrl: null };
   try {
     const info = await fetchStockInfo(s.stockCode);
@@ -3378,11 +3394,15 @@ async function showSignalDetail(index) {
     currentPrice = await fetchStockPrice(s.stockCode);
   } catch (e) {}
 
-  // Render detail menggunakan fungsi yang sudah ada
   await renderSignalDetailToContainer(s, container, () => showSignalList());
 }
 
-function renderBrokerFlow(topBuyers, topSellers, sinyalBandar, container = document) {
+function renderBrokerFlow(
+  topBuyers,
+  topSellers,
+  sinyalBandar,
+  container = document,
+) {
   let containerEl = container.querySelector
     ? container.querySelector("#brokerFlowContainer")
     : null;
@@ -3675,7 +3695,9 @@ function selectSignalFilter(filter) {
     pageSubtitle.innerText = "All signals";
     window.location.hash = "#signals";
   }
-  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document
+    .querySelectorAll(".view")
+    .forEach((v) => v.classList.remove("active"));
   document.getElementById("signals").classList.add("active");
   currentTab = "signals";
   signalListRendered = false;
@@ -4275,9 +4297,18 @@ function initTabs() {
     signals: { t: "Sinyal Aktif", s: "All signals" },
     "signals-today": { t: "Sinyal Hari Ini", s: "Today's signals" },
     "signals-running": { t: "All Running", s: "Active positions" },
-    "technical-today": { t: "Technical: Hari Ini", s: "Today's technical signals" },
-    "technical-running": { t: "Technical: Running", s: "Active technical positions" },
-    "technical-waiting": { t: "Technical: Waiting", s: "Pending execution setups" },
+    "technical-today": {
+      t: "Technical: Hari Ini",
+      s: "Today's technical signals",
+    },
+    "technical-running": {
+      t: "Technical: Running",
+      s: "Active technical positions",
+    },
+    "technical-waiting": {
+      t: "Technical: Waiting",
+      s: "Pending execution setups",
+    },
   };
 
   btns.forEach((btn) => {
@@ -4296,7 +4327,9 @@ function initTabs() {
           const subFilter = tabId.split("-")[1];
           selectTechnicalFilter(subFilter);
           btns.forEach((b) => b.classList.remove("active"));
-          document.querySelector('.nav-link[data-tab="technical-signals"]')?.classList.add("active");
+          document
+            .querySelector('.nav-link[data-tab="technical-signals"]')
+            ?.classList.add("active");
           this.classList.add("active");
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
@@ -4306,7 +4339,9 @@ function initTabs() {
           else if (tabId === "signals-running") selectSignalFilter("running");
           else selectSignalFilter("all");
           btns.forEach((b) => b.classList.remove("active"));
-          document.querySelector('.nav-link[data-tab="signals"]')?.classList.add("active");
+          document
+            .querySelector('.nav-link[data-tab="signals"]')
+            ?.classList.add("active");
           this.classList.add("active");
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
@@ -4325,10 +4360,22 @@ function initTabs() {
         pageSubtitle.innerText = titles[tabId].s;
       }
 
-      if (tabId === "daily") { if (!dailyRendered) showLoading("daily"); fetchReports(); }
-      if (tabId === "signals") { signalListRendered = false; fetchSignals(true); }
-      if (tabId === "technical-signals") { technicalListRendered = false; fetchSignals(true); }
-      if (tabId === "home") { fetchReports(); fetchSignals(false); }
+      if (tabId === "daily") {
+        if (!dailyRendered) showLoading("daily");
+        fetchReports();
+      }
+      if (tabId === "signals") {
+        signalListRendered = false;
+        fetchSignals(true);
+      }
+      if (tabId === "technical-signals") {
+        technicalListRendered = false;
+        fetchSignals(true);
+      }
+      if (tabId === "home") {
+        fetchReports();
+        fetchSignals(false);
+      }
 
       document.querySelector(".sidebar")?.classList.remove("open");
       document.querySelector(".overlay")?.classList.remove("active");
