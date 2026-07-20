@@ -36,6 +36,7 @@ function connectPriceSSE() {
 
   console.log("✅ SSE price stream connected");
 }
+let homeLoaded = false;
 let refreshInterval = null;
 let lastSignalCount = 0;
 let equityChart = null,
@@ -4033,8 +4034,12 @@ async function fetchReports() {
     }
   } else if (activeTab === "home") {
     await fetchSignals(false);
-    updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
-    // ===== TAMBAHKAN INI =====
+
+    if (!homeLoaded) {
+      updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
+      homeLoaded = true;
+    }
+
     if (document.getElementById("home").classList.contains("active")) {
       setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
     }
@@ -4696,6 +4701,9 @@ function initTabs() {
       closeAllDropdowns();
 
       const tabId = this.getAttribute("data-tab");
+      if (tabId !== "home") {
+        homeLoaded = false;
+      }
       const isSub = this.classList.contains("nav-sub-link");
 
       if (isSub) {
@@ -4752,8 +4760,8 @@ function initTabs() {
         fetchReports();
         fetchSignals(false);
         setTimeout(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, 100);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }, 100);
       }
 
       document.querySelector(".sidebar")?.classList.remove("open");
@@ -5031,6 +5039,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("hashchange", () => {
     const hash = window.location.hash;
+    if (hash !== "#home") {
+      homeLoaded = false;
+    }
 
     if (hash === "#signals-today") {
       selectSignalFilter("today");
@@ -5098,13 +5109,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fetchReports();
   fetchSignals(false);
+  homeLoaded = true;
   showSignalList();
 
   startPolling();
   connectPriceSSE();
   setTimeout(() => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}, 200);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 200);
   setInterval(updateClock, 1000);
   updateClock();
   updateLastUpdate();
