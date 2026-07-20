@@ -4034,6 +4034,10 @@ async function fetchReports() {
   } else if (activeTab === "home") {
     await fetchSignals(false);
     updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
+    // ===== TAMBAHKAN INI =====
+    if (document.getElementById("home").classList.contains("active")) {
+      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+    }
   }
 }
 
@@ -4747,6 +4751,9 @@ function initTabs() {
       if (tabId === "home") {
         fetchReports();
         fetchSignals(false);
+        setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 100);
       }
 
       document.querySelector(".sidebar")?.classList.remove("open");
@@ -5056,6 +5063,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fetchReports();
       fetchSignals(false);
       showSignalList();
+      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 100);
     } else {
       window.location.hash = "home";
     }
@@ -5094,6 +5102,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   startPolling();
   connectPriceSSE();
+  setTimeout(() => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}, 200);
   setInterval(updateClock, 1000);
   updateClock();
   updateLastUpdate();
