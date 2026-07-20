@@ -3236,44 +3236,6 @@ async function updateTechnicalSignalList() {
 }
 
 function renderTechnicalSignalDetail(s, container) {
-  // ============ HELPER FALLBACK ============
-  const fmtPrice = (val) => {
-    if (val == null || isNaN(val)) return '—';
-    return 'Rp' + Number(val).toLocaleString('id-ID');
-  };
-  const escapeHtml = (str) => {
-    if (!str) return '';
-    return String(str).replace(/[&<>"]/g, function(m) {
-      if (m === '&') return '&amp;';
-      if (m === '<') return '&lt;';
-      if (m === '>') return '&gt;';
-      if (m === '"') return '&quot;';
-      return m;
-    });
-  };
-  const formatFullDateTime = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-    } catch (_) { return dateStr; }
-  };
-  const getColorFromCode = (code) => {
-    // fallback warna sederhana
-    const colors = ['#f44336', '#e91e63', '#9c27b0', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ffeb3b', '#ff9800'];
-    let hash = 0;
-    for (let i = 0; i < code.length; i++) hash = code.charCodeAt(i) + ((hash << 5) - hash);
-    return colors[Math.abs(hash) % colors.length];
-  };
-  // Global vars with fallback
-  const localPrices = (typeof window !== 'undefined' && window.localPrices) ? window.localPrices : new Map();
-  const infoCache = (typeof window !== 'undefined' && window.infoCache) ? window.infoCache : new Map();
-  const hitSvg = (typeof hitSvg !== 'undefined') ? hitSvg : '✅';
-  const missedSvg = (typeof missedSvg !== 'undefined') ? missedSvg : '❌';
-  // Fungsi global untuk navigasi (fallback)
-  const showTechnicalSignalList = (typeof showTechnicalSignalList === 'function') ? showTechnicalSignalList : () => {};
-
-  // ============ LOGIKA EXPIRED ============
   const isExpired =
     s.status === "EXPIRED" ||
     s.status === "EXPRIED" ||
@@ -3289,7 +3251,6 @@ function renderTechnicalSignalDetail(s, container) {
     (s.closeDate &&
       new Date(s.closeDate) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
-  // ============ HARGA & GAIN ============
   let currentPrice = localPrices.get(s.stockCode) || null;
   let gainAbs = 0,
     gainPct = 0,
@@ -3354,7 +3315,6 @@ function renderTechnicalSignalDetail(s, container) {
   else if (s.status === "SL" || s.status === "STOP LOSS")
     statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${missedSvg}</span>`;
 
-  // ============ LOGO & NAMA ============
   const logoUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
   const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
   const bgColor = getColorFromCode(s.stockCode);
@@ -3365,7 +3325,6 @@ function renderTechnicalSignalDetail(s, container) {
     longName = infoCache.get(s.stockCode).data.longName || s.stockCode;
   }
 
-  // ============ DATA NUMERIK ============
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp1 = s.tp1 || 0;
@@ -3403,7 +3362,6 @@ function renderTechnicalSignalDetail(s, container) {
     else if (s.status === "TP") step3State = "success";
   }
 
-  // ============ STEP CIRCLE ============
   function stepCircle(active, label, desc, icon, state = "default") {
     let bg, border, color, shadow;
     if (isExpired) {
@@ -3466,37 +3424,6 @@ function renderTechnicalSignalDetail(s, container) {
     progressGradient = "linear-gradient(90deg, #ef4444, #f87171)";
   }
 
-  // ============ TRAILING INFO (baru) ============
-  let trailingInfo = '';
-  if (s.status === "TRAILING") {
-    trailingInfo = `
-      <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:0.3rem; padding:0.3rem 0.6rem; background:rgba(245,158,11,0.08); border-radius:6px; border:1px solid rgba(245,158,11,0.15);">
-        <i class="fa-solid fa-arrow-trend-up" style="color:#f59e0b; font-size:0.8rem;"></i>
-        <span style="font-size:0.7rem; color:#f59e0b; font-weight:600;">Trailing Stop Aktif</span>
-        <span style="font-size:0.6rem; color:var(--text-secondary);">(trailing 3% dari harga tertinggi)</span>
-      </div>
-    `;
-  } else if (s.status === "TP" && s.exitPrice) {
-    const exitDisplay = fmtPrice(s.exitPrice);
-    trailingInfo = `
-      <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:0.3rem; padding:0.3rem 0.6rem; background:rgba(16,185,129,0.08); border-radius:6px; border:1px solid rgba(16,185,129,0.15);">
-        <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:0.8rem;"></i>
-        <span style="font-size:0.7rem; color:#10b981; font-weight:600;">Target Profit Tercapai</span>
-        <span style="font-size:0.6rem; color:var(--text-secondary);">(exit di ${exitDisplay})</span>
-      </div>
-    `;
-  }
-
-  // ============ TRAILING DETAIL ============
-  const isTrailingOrTP = (s.status === "TRAILING" || s.status === "TP");
-  const trailingDetail = isTrailingOrTP ? `
-    <div style="display:flex; align-items:start;">
-      <i class="fa-solid fa-arrow-trend-up" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-      <span>Setelah <strong>TP1</strong> tercapai, trailing stop mengunci profit dengan <strong>trailing 3%</strong> dari harga tertinggi yang dicapai.</span>
-    </div>
-  ` : '';
-
-  // ============ TARGET RANGES ============
   const targetRanges = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
@@ -3533,7 +3460,6 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // ============ BUY AREA DISPLAY ============
   const buyAreaDisplay = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
@@ -3566,7 +3492,6 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // ============ STATUS BADGE ============
   let statusBadgeHtml = "";
   if (isExpired) {
     statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(113,113,122,0.2); color:#71717a; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>`;
@@ -3580,7 +3505,6 @@ function renderTechnicalSignalDetail(s, container) {
     statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`;
   }
 
-  // ============ STRATEGY FLOW (dengan trailingInfo) ============
   const strategyFlow = `
     <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
@@ -3598,7 +3522,6 @@ function renderTechnicalSignalDetail(s, container) {
         ${stepCircle(step2Active, "TP 1", `${tp1Label}`, "2", step2State)}
         ${stepCircle(step3Active, "TP 2", `${tp2Label}`, "3", step3State)}
       </div>
-      ${trailingInfo}   <!-- TRAILING INFO DITAMBAHKAN DI SINI -->
       <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem; ${isExpired ? "opacity:0.4;" : ""}">
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
@@ -3617,7 +3540,6 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // ============ PRICE LADDER (dynamic TP) ============
   const t1Low = Number(s.target1Low || s.tp1 || 0);
   const t1High = Number(s.target1High || 0);
   const t2Low = Number(s.target2Low || s.tp2 || 0);
@@ -3657,7 +3579,7 @@ function renderTechnicalSignalDetail(s, container) {
           <span class="change neutral" style="font-size:0.55rem; color:var(--text-secondary);">—</span>
         </div>
         
-        <!-- TAKE PROFIT dinamis dengan EKG Icon -->
+        <!-- PERBAIKAN: TP1 & TP2 dihapus, digabung menjadi TAKE PROFIT dinamis dengan EKG/Pulse SVG Icon -->
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
             <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:12px;height:12px;margin-right:0.2rem;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT
@@ -3677,7 +3599,6 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
-  // ============ STRATEGY DETAIL (dengan trailingDetail) ============
   const strategyDetail = `
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
       <div style="display:flex; align-items:start;">
@@ -3696,13 +3617,11 @@ function renderTechnicalSignalDetail(s, container) {
         <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
       </div>
-      ${trailingDetail}   <!-- TRAILING DETAIL DITAMBAHKAN DI SINI -->
     </div>
   `;
 
   const setupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
 
-  // ============ RENDER HTML UTAMA ============
   const html = `
     <div class="pro-detail-container">
       <button class="sig-back-btn" id="techBackBtn" style="margin-bottom:0.5rem;">
@@ -3729,10 +3648,12 @@ function renderTechnicalSignalDetail(s, container) {
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
               <span class="emit-tag">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 3px;">
+    <!-- 4 Batang Grafik -->
     <line x1="5" y1="16" x2="5" y2="20" />
     <line x1="10" y1="11" x2="10" y2="20" />
     <line x1="15" y1="14" x2="15" y2="20" />
     <line x1="20" y1="12" x2="20" y2="20" />
+    <!-- Garis Tren -->
     <path d="M 4 13 L 10 6 L 15 10 L 21 4" />
   </svg>Technical
 </span>
@@ -3767,16 +3688,11 @@ function renderTechnicalSignalDetail(s, container) {
 
   container.innerHTML = html;
 
-  // ============ EVENT BACK BUTTON ============
   const backBtn = container.querySelector("#techBackBtn");
   if (backBtn) {
     backBtn.addEventListener("click", () => {
-      if (typeof isDetailView !== 'undefined') window.isDetailView = false;
-      if (typeof showTechnicalSignalList === 'function') {
-        showTechnicalSignalList();
-      } else {
-        console.warn('showTechnicalSignalList tidak tersedia');
-      }
+      isDetailView = false;
+      showTechnicalSignalList();
     });
   }
 
