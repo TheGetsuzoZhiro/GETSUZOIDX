@@ -4879,15 +4879,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const technicalParent = document.getElementById("technicalParent");
   const technicalSubMenu = document.getElementById("technicalSubMenu");
   if (technicalParent && technicalSubMenu) {
-    technicalParent.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const isOpen = technicalSubMenu.classList.toggle("open");
-      technicalSubMenu.style.display = isOpen ? "block" : "none";
-      this.classList.toggle("open");
-      const arrow = this.querySelector(".nav-arrow");
-      if (arrow) arrow.classList.toggle("open");
-    });
+    technicalParent.addEventListener('click', () => {
+    // 1. INI YANG WAJIB ADA: Tambah/hapus class open di tombol utamanya
+    technicalParent.classList.toggle('open'); 
+    
+    // 2. Togel sub-menu di bawahnya agar muncul/sembunyi
+    technicalSubMenu.classList.toggle('open');
+    
+    // 3. Putar panah arrow (jika ada logic arrow terpisah)
+    const arrow = technicalParent.querySelector('.nav-arrow');
+    if (arrow) {
+        arrow.classList.toggle('open');
+    }
+});
   }
 
   initMobileMenu();
