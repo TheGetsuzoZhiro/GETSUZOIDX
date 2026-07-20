@@ -3344,7 +3344,7 @@ function renderTechnicalSignalDetail(s, container) {
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid #10b981;">
           <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.15rem;">
-            <span class="target-icon" style="font-size:0.7rem; color:#10b981;"><i class="fa-solid fa-flag"></i></span>
+            <span class="target-icon" style="font-size:0.7rem; color:#10b981;"><i class="fa-solid fa-arrow-up-right-dots"></i></span>
             <span style="font-size:0.6rem; color:var(--text-secondary); font-weight:500;">Target Area 1</span>
             <span style="font-size:0.5rem; color:#10b981; background:rgba(16,185,129,0.1); padding:0.05rem 0.4rem; border-radius:8px; margin-left:auto;"><i class="fa-regular fa-flag"></i> PRIORITY</span>
           </div>
@@ -3381,6 +3381,7 @@ function renderTechnicalSignalDetail(s, container) {
             <i class="fa-solid fa-tag" style="font-size:0.6rem; opacity:0.5;"></i>
             ${s.buyAreaLow} – ${s.buyAreaHigh}
           </div>
+          <!-- PERBAIKAN: ikon selalu abu-abu + margin-right -->
           <div style="font-size:0.5rem; color:${isExpired ? "#71717a" : "var(--text-secondary)"}; margin-top:0.1rem; display:flex; align-items:center; gap:0; opacity:0.7;">
             <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.5rem; margin-right:4px;"></i>
             ${s.buyType || "BREAKOUT SETUP"}
@@ -3455,21 +3456,21 @@ function renderTechnicalSignalDetail(s, container) {
       <div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0; flex-wrap:wrap;">
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-circle-check" style="font-size:0.7rem; color:#8b5cf6;"></i> Entry
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Entry
           </span>
           <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:var(--text-primary);">${s.entryPrice ? fmtPrice(s.entryPrice) : "—"}</span>
           <span class="change neutral" style="font-size:0.55rem; color:var(--text-secondary);">—</span>
         </div>
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-flag" style="font-size:0.7rem; color:#10b981;"></i> TP 1
+            <i class="fa-solid fa-bullseye" style="font-size:0.7rem; color:#10b981;"></i> TP 1
           </span>
           <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#10b981;">${s.tp1 ? fmtPrice(s.tp1) : "—"}</span>
           <span class="change positive" style="font-size:0.55rem; color:#10b981;">${tp1Label}</span>
         </div>
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-trophy" style="font-size:0.7rem; color:#f59e0b;"></i> TP 2
+            <i class="fa-solid fa-bullseye" style="font-size:0.7rem; color:#f59e0b;"></i> TP 2
           </span>
           <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#f59e0b;">${s.tp2 || s.target2Low ? fmtPrice(s.tp2 || s.target2Low) : "—"}</span>
           <span class="change positive" style="font-size:0.55rem; color:#f59e0b;">${tp2Label}</span>
@@ -3531,18 +3532,15 @@ function renderTechnicalSignalDetail(s, container) {
               ${statusStamp}
             </div>
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
-            <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-direction:column; gap:0.15rem;">
-              <div style="display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap;">
-                <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
-                ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
-                ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
-              </div>
-              <div style="display:flex; align-items:center; gap:0.3rem;">
-                <span class="emit-tag" style="display:inline-flex; align-items:center; gap:0;">
-                  <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:4px;"></i>
-                  ${setupText}
-                </span>
-              </div>
+            <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
+              <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
+              <!-- PERBAIKAN: ikon selalu abu-abu + margin-right -->
+              <span class="emit-tag" style="display:inline-flex; align-items:center; gap:0;">
+                <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:4px;"></i>
+                ${setupText}
+              </span>
+              ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
+              ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
             </div>
             <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
           </div>
