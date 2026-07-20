@@ -3424,6 +3424,25 @@ function renderTechnicalSignalDetail(s, container) {
     progressGradient = "linear-gradient(90deg, #ef4444, #f87171)";
   }
 
+  let trailingInfo = "";
+  if (s.status === "TRAILING") {
+    trailingInfo = `
+      <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:0.3rem; padding:0.3rem 0.6rem; background:rgba(245,158,11,0.08); border-radius:6px; border:1px solid rgba(245,158,11,0.15);">
+        <i class="fa-solid fa-arrow-trend-up" style="color:#f59e0b; font-size:0.8rem;"></i>
+        <span style="font-size:0.7rem; color:#f59e0b; font-weight:600;">Trailing Stop Aktif</span>
+        <span style="font-size:0.6rem; color:var(--text-secondary);">(trailing 3% dari harga tertinggi)</span>
+      </div>
+    `;
+  } else if (s.status === "TP") {
+    trailingInfo = `
+      <div style="display:flex; align-items:center; justify-content:center; gap:0.5rem; margin-top:0.3rem; padding:0.3rem 0.6rem; background:rgba(16,185,129,0.08); border-radius:6px; border:1px solid rgba(16,185,129,0.15);">
+        <i class="fa-solid fa-circle-check" style="color:#10b981; font-size:0.8rem;"></i>
+        <span style="font-size:0.7rem; color:#10b981; font-weight:600;">Target Profit Tercapai</span>
+        <span style="font-size:0.6rem; color:var(--text-secondary);">(exit di ${s.exitPrice ? fmtPrice(s.exitPrice) : ""})</span>
+      </div>
+    `;
+  }
+
   const targetRanges = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
@@ -3522,6 +3541,7 @@ function renderTechnicalSignalDetail(s, container) {
         ${stepCircle(step2Active, "TP 1", `${tp1Label}`, "2", step2State)}
         ${stepCircle(step3Active, "TP 2", `${tp2Label}`, "3", step3State)}
       </div>
+      ${trailingInfo}   <!-- <-- TRAILING INFO DITAMBAHKAN DI SINI -->
       <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem; ${isExpired ? "opacity:0.4;" : ""}">
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
@@ -3568,36 +3588,15 @@ function renderTechnicalSignalDetail(s, container) {
       ? `+${dynamicTpPercent.toFixed(1)}%`
       : `${dynamicTpPercent.toFixed(1)}%`;
 
-  const priceLadder = `
-    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0; flex-wrap:wrap;">
-        <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
-          <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Entry
-          </span>
-          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:var(--text-primary);">${s.entryPrice ? fmtPrice(s.entryPrice) : "—"}</span>
-          <span class="change neutral" style="font-size:0.55rem; color:var(--text-secondary);">—</span>
-        </div>
-        
-        <!-- PERBAIKAN: TP1 & TP2 dihapus, digabung menjadi TAKE PROFIT dinamis dengan EKG/Pulse SVG Icon -->
-        <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
-          <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:12px;height:12px;margin-right:0.2rem;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT
-          </span>
-          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#10b981;">${dynamicTpVal ? fmtPrice(dynamicTpVal) : "—"}</span>
-          <span class="change positive" style="font-size:0.55rem; color:#10b981;">${dynamicTpLabel}</span>
-        </div>
-        
-        <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
-          <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size:0.7rem; color:#ef4444;"></i> STOP LOSS
-          </span>
-          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#ef4444;">${s.sl ? fmtPrice(s.sl) : "—"}</span>
-          <span class="change negative" style="font-size:0.55rem; color:#ef4444;">${slLabel}</span>
-        </div>
+  const trailingDetail =
+    s.status === "TRAILING" || s.status === "TP"
+      ? `
+      <div style="display:flex; align-items:start;">
+        <i class="fa-solid fa-arrow-trend-up" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
+        <span>Setelah <strong>TP1</strong> tercapai, trailing stop mengunci profit dengan <strong>trailing 3%</strong> dari harga tertinggi yang dicapai.</span>
       </div>
-    </div>
-  `;
+    `
+      : "";
 
   const strategyDetail = `
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
@@ -3617,6 +3616,7 @@ function renderTechnicalSignalDetail(s, container) {
         <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Stop Loss <strong>-${s.stopLossPercent || 5}%</strong> dari entry untuk proteksi downside.</span>
       </div>
+      ${trailingDetail}
     </div>
   `;
 
