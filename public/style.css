@@ -4341,30 +4341,30 @@ body {
   width: 100% !important;
 }
 
-/* 3. Perbaikan Kartu Statistik agar Lebih "Kotak" & Seimbang */
+/* 3. Perbaikan Kartu Statistik agar Sangat Lebar (Tinggi) Atas-Bawahnya */
 #statsGridContainer > div {
-  padding: 1.2rem 0.5rem !important;  /* Tambah tinggi atas-bawah jadi 1.2rem */
-  min-height: 85px !important;        /* Tetapkan tinggi minimal agar tidak gepeng */
+  padding: 2.4rem 0.5rem !important;  /* 🚀 Tingkatkan padding atas-bawah jadi sangat tebal */
+  min-height: 130px !important;       /* 🚀 Pastikan tinggi minimal menjadi besar */
   display: flex !important;
   flex-direction: column !important;
-  align-items: center !important;     /* Ikon, label, dan angka rata tengah */
-  justify-content: center !important;
+  align-items: center !important;     /* Ikon & Teks berada di tengah secara horizontal */
+  justify-content: center !important; /* Ikon & Teks berada di tengah secara vertikal */
   box-sizing: border-box !important;
 }
 
 /* 4. Penyesuaian Responsif untuk Layar HP */
 @media (max-width: 520px) {
-  /* Kartu tetap 3 kolom, tapi dimensi atas-bawah dipertebal */
+  /* Dimensi atas-bawah tetap dijaga lebar meskipun di HP, hanya dikurangi sedikit */
   #statsGridContainer > div {
-    padding: 0.9rem 0.3rem !important; /* Naik dari 0.4rem ke 0.9rem */
-    min-height: 70px !important;       /* Tinggi minimal disesuaikan */
+    padding: 1.8rem 0.3rem !important; /* Turun dari 2.4rem ke 1.8rem agar tetap muat 3 kolom */
+    min-height: 100px !important;      /* Tetap jaga tinggi minimal di HP */
   }
   #statsGridContainer {
-    gap: 0.5rem !important;            /* Jarak antar kartu sedikit diperlebar */
+    gap: 0.5rem !important;            /* Jarak antar kartu rapat tapi tetap rapi */
     margin-bottom: 1rem !important;
   }
 
-  /* Perkecil label & angka agar tetap muat, tetapi rapi */
+  /* Perkecil font label dan angka agar 3 kolom bisa muat dengan nyaman */
   #statsGridContainer > div > div:first-child {
     font-size: 0.55rem !important;
     margin-bottom: 0.2rem !important;
@@ -4379,7 +4379,7 @@ body {
     font-size: 0.8rem !important;
   }
   #bestWorstContainer .pro-card {
-    padding: 0.6rem 0.8rem !important;
+    padding: 0.8rem 0.8rem !important; /* Tinggi Best/Worst trade juga diperlebar */
   }
 
   /* Perkecil judul utama */
@@ -4394,8 +4394,8 @@ body {
 /* Penyesuaian ekstra untuk HP sangat kecil (seperti 320px - 360px) */
 @media (max-width: 380px) {
   #statsGridContainer > div {
-    padding: 0.6rem 0.2rem !important;
-    min-height: 55px !important;
+    padding: 1.0rem 0.2rem !important; /* Masih tetap tinggi meski di layar sangat sempit */
+    min-height: 70px !important;
   }
   #statsGridContainer > div > div:first-child {
     font-size: 0.45rem !important;
