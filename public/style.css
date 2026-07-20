@@ -4318,10 +4318,10 @@ body {
 
 
 /* ========================================= */
-/* PERBAIKAN FULL WIDTH & RESPONSIVE REPORT DAILY */
+/* PERBAIKAN FULL WIDTH, RESPONSIVE, & DIMENSI KARTU */
 /* ========================================= */
 
-/* 1. Pastikan seluruh container laporan memenuhi lebar layar (Full Width) */
+/* 1. Pastikan container laporan full width */
 #dailyContentWrapper,
 .pro-detail-container,
 #dailyDetailContainer {
@@ -4332,7 +4332,7 @@ body {
   margin: 0 auto !important;
 }
 
-/* 2. Kunci Grid Statistik agar tetap 3 Kolom di semua perangkat */
+/* 2. Kunci Grid Statistik tetap 3 Kolom */
 #statsGridContainer {
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
@@ -4341,29 +4341,39 @@ body {
   width: 100% !important;
 }
 
-/* 3. Penyesuaian Responsif (Ukuran Font & Padding mengecil otomatis saat di HP) */
+/* 3. Perbaikan Kartu Statistik agar Lebih "Kotak" & Seimbang */
+#statsGridContainer > div {
+  padding: 1.2rem 0.5rem !important;  /* Tambah tinggi atas-bawah jadi 1.2rem */
+  min-height: 85px !important;        /* Tetapkan tinggi minimal agar tidak gepeng */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;     /* Ikon, label, dan angka rata tengah */
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+/* 4. Penyesuaian Responsif untuk Layar HP */
 @media (max-width: 520px) {
-  /* Grid tetap 3 kolom, tapi jarak antar kartu (gap) dipersempit */
+  /* Kartu tetap 3 kolom, tapi dimensi atas-bawah dipertebal */
+  #statsGridContainer > div {
+    padding: 0.9rem 0.3rem !important; /* Naik dari 0.4rem ke 0.9rem */
+    min-height: 70px !important;       /* Tinggi minimal disesuaikan */
+  }
   #statsGridContainer {
-    gap: 0.4rem !important;
+    gap: 0.5rem !important;            /* Jarak antar kartu sedikit diperlebar */
     margin-bottom: 1rem !important;
   }
 
-  /* Padding dalam kartu statistik dikecilkan */
-  #statsGridContainer > div {
-    padding: 0.4rem 0.3rem !important;
-  }
-
-  /* Perkecil judul/label (Contoh: SINYAL BARU) dan nilainya (Contoh: 32) */
+  /* Perkecil label & angka agar tetap muat, tetapi rapi */
   #statsGridContainer > div > div:first-child {
     font-size: 0.55rem !important;
-    margin-bottom: 0.1rem !important;
+    margin-bottom: 0.2rem !important;
   }
   #statsGridContainer > div > div:last-child {
     font-size: 1.1rem !important;
   }
 
-  /* Perkecil kotak Best/Worst Trade */
+  /* Penyesuaian Best/Worst Trade */
   #bestWorstContainer {
     gap: 0.5rem !important;
     font-size: 0.8rem !important;
@@ -4372,7 +4382,7 @@ body {
     padding: 0.6rem 0.8rem !important;
   }
 
-  /* Perkecil judul utama Trade Summary */
+  /* Perkecil judul utama */
   #reportHeader .emit-ticker {
     font-size: 1.2rem !important;
   }
@@ -4381,8 +4391,12 @@ body {
   }
 }
 
-/* Penyesuaian ekstra untuk layar HP sangat kecil (seperti 320px - 360px) */
+/* Penyesuaian ekstra untuk HP sangat kecil (seperti 320px - 360px) */
 @media (max-width: 380px) {
+  #statsGridContainer > div {
+    padding: 0.6rem 0.2rem !important;
+    min-height: 55px !important;
+  }
   #statsGridContainer > div > div:first-child {
     font-size: 0.45rem !important;
   }
