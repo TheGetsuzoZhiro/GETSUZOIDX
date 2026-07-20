@@ -3156,7 +3156,6 @@ function renderTechnicalSignalDetail(s, container) {
         ${isExpired ? `<span style="font-size:0.5rem; color:#71717a; background:rgba(113,113,122,0.15); padding:0.1rem 0.5rem; border-radius:10px; margin-left:auto;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>` : ""}
       </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
-        <!-- Target Area 1 -->
         <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid #10b981;">
           <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.15rem;">
             <span class="target-icon" style="font-size:0.7rem; color:#10b981;"><i class="fa-solid fa-arrow-up-right-dots"></i></span>
@@ -3169,7 +3168,6 @@ function renderTechnicalSignalDetail(s, container) {
             <span style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-left:auto;"><i class="fa-regular fa-clock"></i> TP 1</span>
           </div>
         </div>
-        <!-- Target Area 2 -->
         <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid #f59e0b;">
           <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.15rem;">
             <span class="target-icon" style="font-size:0.7rem; color:#f59e0b;"><i class="fa-solid fa-trophy"></i></span>
@@ -3197,8 +3195,9 @@ function renderTechnicalSignalDetail(s, container) {
             <i class="fa-solid fa-tag" style="font-size:0.6rem; opacity:0.5;"></i>
             ${s.buyAreaLow} – ${s.buyAreaHigh}
           </div>
-          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem; display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-arrow-trend-up" style="color:#8b5cf6; font-size:0.5rem;"></i>
+          <!-- PERBAIKAN: ikon dan teks berubah warna sesuai isExpired -->
+          <div style="font-size:0.5rem; color:${isExpired ? "#71717a" : "var(--text-secondary)"}; margin-top:0.1rem; display:flex; align-items:center; gap:0.2rem; opacity:0.7;">
+            <i class="fa-solid fa-arrow-trend-up" style="color:${isExpired ? "#71717a" : "#8b5cf6"}; font-size:0.5rem;"></i>
             ${s.buyType || "BREAKOUT SETUP"}
           </div>
         </div>
@@ -3232,7 +3231,6 @@ function renderTechnicalSignalDetail(s, container) {
   }
 
   const strategyFlow = `
-    <!-- Card border tetap normal, background tetap transparan -->
     <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:${isExpired ? "#71717a" : "var(--text-primary)"}; font-size:1rem;"></i>
@@ -3241,9 +3239,7 @@ function renderTechnicalSignalDetail(s, container) {
         </span>
         ${statusBadgeHtml}
       </div>
-      <!-- Kontainer progress & step circles -->
       <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
-        <!-- Garis progress -->
         <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.06); z-index:1;">
           <div style="height:100%; width:${progressWidth}; background:${progressGradient}; border-radius:2px; transition:width 0.8s ease;"></div>
         </div>
@@ -3251,7 +3247,6 @@ function renderTechnicalSignalDetail(s, container) {
         ${stepCircle(step2Active, "TP 1", `${tp1Label}`, "2", step2State)}
         ${stepCircle(step3Active, "TP 2", `${tp2Label}`, "3", step3State)}
       </div>
-      <!-- Legenda -->
       <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem; ${isExpired ? "opacity:0.4;" : ""}">
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
@@ -3353,8 +3348,9 @@ function renderTechnicalSignalDetail(s, container) {
             <div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div>
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
+              <!-- PERBAIKAN: ikon dan teks mengikuti isExpired -->
               <span class="emit-tag" style="display:inline-flex; align-items:center; gap:3px;">
-                <i class="fa-solid fa-arrow-trend-up" style="color:#8b5cf6; font-size:0.6rem;"></i>
+                <i class="fa-solid fa-arrow-trend-up" style="color:${isExpired ? "#71717a" : "#8b5cf6"}; font-size:0.6rem;"></i>
                 ${setupText}
               </span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
