@@ -2322,6 +2322,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
     let badgeColor = "#71717a";
     let badgeBg = "rgba(113,113,122,0.15)";
     let badgeIcon = "fa-eye";
+
     if (signalType === "TECHNICAL") {
       badgeColor = "#06b6d4";
       badgeBg = "rgba(6,182,212,0.15)";
@@ -2361,22 +2362,22 @@ function renderSignalRows(signals, priceMap, infoMap) {
     }
 
     const typeBadge = `<span class="sig-type-badge" style="
-      font-size:0.55rem; 
-      font-weight:600; 
-      color:${badgeColor}; 
-      background:${badgeBg}; 
-      padding:0.15rem 0.5rem; 
-      border-radius:12px; 
-      border:1px solid ${badgeColor}33; 
-      display:inline-flex; 
-      align-items:center; 
-      gap:0.2rem;
-      white-space:nowrap;
-      margin-left:0.3rem;
-    ">
-      ${badgeIcon.startsWith("<svg") ? badgeIcon : `<i class="fa-solid ${badgeIcon}" style="font-size:0.5rem;"></i>`}
-      ${signalType.replace("STRONG ", "S.")}
-    </span>`;
+  font-size:0.55rem; 
+  font-weight:600; 
+  color:${badgeColor}; 
+  background:${badgeBg}; 
+  padding:0.15rem 0.5rem; 
+  border-radius:12px; 
+  border:1px solid ${badgeColor}33; 
+  display:inline-flex; 
+  align-items:center; 
+  gap:0.2rem;
+  white-space:nowrap;
+  margin-left:0.3rem;
+">
+  ${badgeIcon.trim().startsWith("<svg") ? badgeIcon : `<i class="fa-solid ${badgeIcon}" style="font-size:0.5rem;"></i>`}
+  ${signalType.replace("STRONG ", "S.")}
+</span>`;
 
     rows += `<div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
       ${logoHtml}
