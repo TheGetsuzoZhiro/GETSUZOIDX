@@ -4039,10 +4039,6 @@ async function fetchReports() {
       updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
       homeLoaded = true;
     }
-
-    if (document.getElementById("home").classList.contains("active")) {
-      setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
-    }
   }
 }
 
