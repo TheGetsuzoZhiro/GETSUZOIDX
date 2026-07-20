@@ -3302,7 +3302,7 @@ function renderTechnicalSignalDetail(s, container) {
       <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
         <i class="fas fa-bullseye" style="color:#10b981; font-size:0.9rem;"></i> 
         Target Profit Range Objectives
-        ${isExpired ? `<span style="font-size:0.5rem; color:#71717a; background:rgba(113,113,122,0.15); padding:0.1rem 0.5rem; border-radius:10px; margin-left:auto;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>` : ""}
+        ${isExpired ? `<span style="font-size:0.55rem; color:#71717a; background:rgba(113,113,122,0.15); padding:0.1rem 0.5rem; border-radius:10px; margin-left:auto;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>` : ""}
       </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid #10b981;">
@@ -3344,7 +3344,6 @@ function renderTechnicalSignalDetail(s, container) {
             <i class="fa-solid fa-tag" style="font-size:0.6rem; opacity:0.5;"></i>
             ${s.buyAreaLow} – ${s.buyAreaHigh}
           </div>
-          <!-- PERBAIKAN: ikon selalu abu-abu + margin-right -->
           <div style="font-size:0.5rem; color:${isExpired ? "#71717a" : "var(--text-secondary)"}; margin-top:0.1rem; display:flex; align-items:center; gap:0; opacity:0.7;">
             <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.5rem; margin-right:4px;"></i>
             ${s.buyType || "BREAKOUT SETUP"}
@@ -3414,6 +3413,35 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
+  // ==================== LOGIKA UTAMA: DYNAMIC TAKE PROFIT ESCALATION ====================
+  const t1Low = Number(s.target1Low || s.tp1 || 0);
+  const t1High = Number(s.target1High || 0);
+  const t2Low = Number(s.target2Low || s.tp2 || 0);
+  const t2High = Number(s.target2High || 0);
+
+  // Cek harga acuan berdasarkan status close (exitPrice) atau running (currentPrice)
+  let checkPrice = (isClosed && s.exitPrice) ? Number(s.exitPrice) : Number(currentPrice || 0);
+  
+  // Eskalasi target naik bertahap jika tembus tingkat sebelumnya
+  let dynamicTpVal = t1Low;
+  if (checkPrice >= t1Low && t1High > 0) {
+    dynamicTpVal = t1High;
+  }
+  if (checkPrice >= t1High && t2Low > 0) {
+    dynamicTpVal = t2Low;
+  }
+  if (checkPrice >= t2Low && t2High > 0) {
+    dynamicTpVal = t2High;
+  }
+  
+  // Hitung persentase return dinamis berdasarkan level target aktif
+  let dynamicTpPercent = 0;
+  if (entry > 0 && dynamicTpVal > 0) {
+    dynamicTpPercent = ((dynamicTpVal - entry) / entry) * 100;
+  }
+  const dynamicTpLabel = dynamicTpPercent > 0 ? `+${dynamicTpPercent.toFixed(1)}%` : `${dynamicTpPercent.toFixed(1)}%`;
+  // ======================================================================================
+
   const priceLadder = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0; flex-wrap:wrap;">
@@ -3424,20 +3452,16 @@ function renderTechnicalSignalDetail(s, container) {
           <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:var(--text-primary);">${s.entryPrice ? fmtPrice(s.entryPrice) : "—"}</span>
           <span class="change neutral" style="font-size:0.55rem; color:var(--text-secondary);">—</span>
         </div>
+        
+        <!-- PERBAIKAN: TP1 & TP2 dihapus, digabung menjadi TAKE PROFIT dinamis dengan EKG/Pulse SVG Icon -->
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-bullseye" style="font-size:0.7rem; color:#10b981;"></i> TP 1
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:12px;height:12px;margin-right:0.2rem;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT
           </span>
-          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#10b981;">${s.tp1 ? fmtPrice(s.tp1) : "—"}</span>
-          <span class="change positive" style="font-size:0.55rem; color:#10b981;">${tp1Label}</span>
+          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#10b981;">${dynamicTpVal ? fmtPrice(dynamicTpVal) : "—"}</span>
+          <span class="change positive" style="font-size:0.55rem; color:#10b981;">${dynamicTpLabel}</span>
         </div>
-        <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
-          <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
-            <i class="fa-solid fa-bullseye" style="font-size:0.7rem; color:#f59e0b;"></i> TP 2
-          </span>
-          <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#f59e0b;">${s.tp2 || s.target2Low ? fmtPrice(s.tp2 || s.target2Low) : "—"}</span>
-          <span class="change positive" style="font-size:0.55rem; color:#f59e0b;">${tp2Label}</span>
-        </div>
+        
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
           <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
             <i class="fa-solid fa-triangle-exclamation" style="font-size:0.7rem; color:#ef4444;"></i> STOP LOSS
@@ -3498,10 +3522,9 @@ function renderTechnicalSignalDetail(s, container) {
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
           
-<!-- PERBAIKAN TOTAL: Struktur disamakan persis dengan badge Technical -->
-<span class="emit-tag">
-  <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:5px;"></i>${setupText}
-</span>
+              <span class="emit-tag">
+                <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:5px;"></i>${setupText}
+              </span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
               ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
             </div>
