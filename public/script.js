@@ -2848,6 +2848,7 @@ async function showTechnicalSignalList() {
 
     const longName = info.longName || s.stockCode;
 
+    // SubDetailText
     if (s.status === "WAITING_ENTRY") {
       subDetailText = "";
     } else if (s.status === "RUNNING" || s.status === "TRAILING") {
@@ -2861,8 +2862,9 @@ async function showTechnicalSignalList() {
       subDetailText = `Closed: ${s.returnPercent?.toFixed(2)}%`;
     }
 
+    // ===== BADGE STATUS: tidak tampil untuk WAITING_ENTRY dan EXPIRED =====
     let statusBadge = "";
-    if (s.status !== "WAITING_ENTRY") {
+    if (s.status !== "WAITING_ENTRY" && s.status !== "EXPIRED") {
       let badgeColor = "#3b82f6";
       let badgeBg = "rgba(59,130,246,0.15)";
       let badgeText = s.status;
@@ -2881,6 +2883,7 @@ async function showTechnicalSignalList() {
       statusBadge = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:${badgeColor}; background:${badgeBg}; padding:0.15rem 0.5rem; border-radius:12px; border:1px solid ${badgeColor}33; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">${badgeText}</span>`;
     }
 
+    // Logo
     const stockbitUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
     const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
     const bgColor = getColorFromCode(s.stockCode);
@@ -2892,6 +2895,7 @@ async function showTechnicalSignalList() {
       </div>
     `;
 
+    // Tag TECHNICAL
     const techTag = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:#06b6d4; background:rgba(6,182,212,0.15); padding:0.15rem 0.5rem; border-radius:12px; border:1px solid rgba(6,182,212,0.3); display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">
       <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
     </span>`;
@@ -2960,6 +2964,7 @@ async function updateTechnicalSignalList() {
 function renderTechnicalSignalDetail(s, container) {
   const isExpired = s.status === "EXPIRED" || s.expired === true;
 
+  // Ambil current price untuk gain (sama seperti sebelumnya)
   let currentPrice = localPrices.get(s.stockCode) || null;
   let gainAbs = 0,
     gainPct = 0,
@@ -3035,6 +3040,7 @@ function renderTechnicalSignalDetail(s, container) {
     longName = infoCache.get(s.stockCode).data.longName || s.stockCode;
   }
 
+  // Build Strategy Flow
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
   const tp1 = s.tp1 || 0;
@@ -3047,19 +3053,14 @@ function renderTechnicalSignalDetail(s, container) {
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
 
-  const slLabel =
-    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tp1Label =
-    tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
-  const tp2Label =
-    tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
+  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tp1Label = tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
+  const tp2Label = tp2Percent > 0 ? `+${tp2Percent.toFixed(1)}%` : `${tp2Percent.toFixed(1)}%`;
 
+  // Step aktif hanya jika tidak expired
   const step1Active = !isExpired;
-  const step2Active =
-    !isExpired &&
-    (s.breakEven === true || s.status === "TRAILING" || s.status === "TP");
-  const step3Active =
-    !isExpired && (s.status === "TRAILING" || s.status === "TP");
+  const step2Active = !isExpired && (s.breakEven === true || s.status === "TRAILING" || s.status === "TP");
+  const step3Active = !isExpired && (s.status === "TRAILING" || s.status === "TP");
 
   let step1State = "default";
   let step2State = "default";
@@ -3119,6 +3120,7 @@ function renderTechnicalSignalDetail(s, container) {
     `;
   }
 
+  // Progress bar - pastikan expired = abu-abu penuh
   let progressWidth = "0%";
   let progressGradient = "linear-gradient(90deg, #3a3a3a, #3a3a3a)";
 
@@ -3140,9 +3142,10 @@ function renderTechnicalSignalDetail(s, container) {
     progressGradient = "linear-gradient(90deg, #10b981 50%, #f59e0b 50%)";
   }
 
+  // ===== BADGE STATUS DI DALAM FLOW: hilangkan untuk EXPIRED =====
   let statusBadgeHtml = "";
   if (isExpired) {
-    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(113,113,122,0.2); color:#71717a; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;">EXPIRED</span>`;
+    // Tidak tampilkan badge apapun untuk expired
   } else if (s.status === "RUNNING") {
     statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`;
   } else if (s.status === "TRAILING") {
@@ -3177,6 +3180,7 @@ function renderTechnicalSignalDetail(s, container) {
     </div>
   `;
 
+  // ===== Detail strategi, price ladder, buy area, target ranges (sama seperti sebelumnya) =====
   const strategyDetail = `
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
       <div style="display:flex; align-items:start;">
@@ -3304,7 +3308,7 @@ function renderTechnicalSignalDetail(s, container) {
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
               <span class="emit-tag"><i class="fa-regular fa-clock" style="margin-right:3px; font-size:0.65rem;"></i>${setupText}</span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
-              ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
+              <!-- ===== BADGE EXPIRED DI HAPUS ===== -->
             </div>
             <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
           </div>
