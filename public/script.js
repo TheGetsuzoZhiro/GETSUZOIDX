@@ -2325,7 +2325,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
     if (signalType === "TECHNICAL") {
       badgeColor = "#06b6d4";
       badgeBg = "rgba(6,182,212,0.15)";
-      badgeIcon = "fa-chart-candlestick";
+      badgeIcon = "fa-chart-line";
     } else if (signalType === "BSJP") {
       badgeColor = "#8b5cf6";
       badgeBg = "rgba(139,92,246,0.15)";
@@ -2907,7 +2907,7 @@ function renderTechnicalRows(signals, priceMap, infoMap) {
       white-space:nowrap;
       margin-left:0.3rem;
     ">
-      <i class="fa-solid fa-chart-candlestick" style="font-size:0.5rem;"></i> TECHNICAL
+      <i class="fa-solid fa-chart-line" style="font-size:0.5rem;"></i> TECHNICAL
     </span>`;
 
     rows += `<div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
