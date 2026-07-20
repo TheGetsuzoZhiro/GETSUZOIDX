@@ -4879,19 +4879,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const technicalParent = document.getElementById("technicalParent");
   const technicalSubMenu = document.getElementById("technicalSubMenu");
   if (technicalParent && technicalSubMenu) {
-    technicalParent.addEventListener('click', () => {
-    
-    technicalParent.classList.toggle('open'); 
-    
-    
-    technicalSubMenu.classList.toggle('open');
-    
-   
-    const arrow = technicalParent.querySelector('.nav-arrow');
-    if (arrow) {
-        arrow.classList.toggle('open');
-    }
-});
+    technicalParent.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = technicalSubMenu.classList.toggle("open");
+      technicalSubMenu.style.display = isOpen ? "block" : "none";
+      this.classList.toggle("open");
+      const arrow = this.querySelector(".nav-arrow");
+      if (arrow) arrow.classList.toggle("open");
+    });
   }
 
   initMobileMenu();
