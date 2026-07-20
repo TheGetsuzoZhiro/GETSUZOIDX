@@ -3678,6 +3678,7 @@ function renderTechnicalSignalDetail(s, container) {
       showTechnicalSignalList();
     });
   }
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function showSignalDetailByStock(stockCode, signalDate) {
@@ -3720,6 +3721,7 @@ async function showSignalDetail(index) {
 
   if (s.signalType === "BSJP") {
     renderBsjpDetail(s, container, () => showSignalList());
+    window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
 
@@ -3735,6 +3737,7 @@ async function showSignalDetail(index) {
   } catch (e) {}
 
   await renderSignalDetailToContainer(s, container, () => showSignalList());
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function renderBrokerFlow(
