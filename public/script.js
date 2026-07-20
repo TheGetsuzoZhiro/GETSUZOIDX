@@ -2323,9 +2323,9 @@ function renderSignalRows(signals, priceMap, infoMap) {
     let badgeBg = "rgba(113,113,122,0.15)";
     let badgeIcon = "fa-eye";
     if (signalType === "TECHNICAL") {
-  badgeColor = "#06b6d4";
-  badgeBg = "rgba(6,182,212,0.15)";
-  badgeIcon = `
+      badgeColor = "#06b6d4";
+      badgeBg = "rgba(6,182,212,0.15)";
+      badgeIcon = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 3px;">
       <line x1="5" y1="16" x2="5" y2="20" />
       <line x1="10" y1="11" x2="10" y2="20" />
@@ -2334,7 +2334,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
       <path d="M 4 13 L 10 6 L 15 10 L 21 4" />
     </svg>
   `;
-} else if (signalType === "BSJP") {
+    } else if (signalType === "BSJP") {
       badgeColor = "#8b5cf6";
       badgeBg = "rgba(139,92,246,0.15)";
       badgeIcon = "fa-chart-simple";
@@ -2374,7 +2374,7 @@ function renderSignalRows(signals, priceMap, infoMap) {
       white-space:nowrap;
       margin-left:0.3rem;
     ">
-      ${badgeIcon.startsWith('<svg') ? badgeIcon : `<i class="fa-solid ${badgeIcon}" style="font-size:0.5rem;"></i>`}
+      ${badgeIcon.startsWith("<svg") ? badgeIcon : `<i class="fa-solid ${badgeIcon}" style="font-size:0.5rem;"></i>`}
       ${signalType.replace("STRONG ", "S.")}
     </span>`;
 
@@ -4561,13 +4561,10 @@ function initTabs() {
     btn.addEventListener("click", function (e) {
       e.preventDefault();
       triggerHaptic();
+      closeAllDropdowns();
 
       const tabId = this.getAttribute("data-tab");
       const isSub = this.classList.contains("nav-sub-link");
-
-      if (!isSub) {
-        closeAllDropdowns();
-      }
 
       if (isSub) {
         if (tabId.startsWith("technical-")) {
@@ -4578,24 +4575,18 @@ function initTabs() {
             .querySelector('.nav-link[data-tab="technical-signals"]')
             ?.classList.add("active");
           this.classList.add("active");
-
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
           return;
         } else {
-          if (tabId === "signals-today") {
-            selectSignalFilter("today");
-          } else if (tabId === "signals-running") {
-            selectSignalFilter("running");
-          } else {
-            selectSignalFilter("all");
-          }
+          if (tabId === "signals-today") selectSignalFilter("today");
+          else if (tabId === "signals-running") selectSignalFilter("running");
+          else selectSignalFilter("all");
           btns.forEach((b) => b.classList.remove("active"));
           document
             .querySelector('.nav-link[data-tab="signals"]')
             ?.classList.add("active");
           this.classList.add("active");
-
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
           return;
