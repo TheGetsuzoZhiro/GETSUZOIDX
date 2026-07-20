@@ -1146,9 +1146,9 @@ async function showDailySignalDetail(stockCode, signalDate) {
         renderPerformanceSignalList(activeStatus);
       });
     }
-    // FIX: scroll ke atas saat detail ditampilkan
+
     detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.scrollTo({ top: 0, behavior: "smooth" }); // tambahan untuk memastikan posisi top
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 }
 
@@ -1658,6 +1658,10 @@ function renderBsjpDetailContent(
       console.warn("Refresh BSJP detail error:", e);
     }
   }, 10000);
+  if (!container._scrolled) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    container._scrolled = true;
+  }
 }
 
 async function renderSignalDetailToContainer(signal, container, onBack) {
@@ -2792,7 +2796,6 @@ function selectTechnicalFilter(filter) {
   technicalListRendered = false;
   fetchSignals(true);
 
-  // BUKA DROPDOWN TECHNICAL
   const techParent = document.getElementById("technicalParent");
   const techSub = document.getElementById("technicalSubMenu");
   if (techParent && techSub) {
@@ -3691,7 +3694,7 @@ function renderTechnicalSignalDetail(s, container) {
       showTechnicalSignalList();
     });
   }
-  // FIX: scroll ke atas setelah detail teknikal dirender
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -3734,9 +3737,8 @@ async function showSignalDetail(index) {
   const container = document.getElementById("signals");
 
   if (s.signalType === "BSJP") {
+    container._scrolled = false;
     renderBsjpDetail(s, container, () => showSignalList());
-    // FIX: scroll ke atas setelah BSJP detail
-    window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
 
@@ -3752,7 +3754,7 @@ async function showSignalDetail(index) {
   } catch (e) {}
 
   await renderSignalDetailToContainer(s, container, () => showSignalList());
-  // FIX: scroll ke atas setelah detail biasa dirender
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -4062,7 +4064,6 @@ function selectSignalFilter(filter) {
   signalListRendered = false;
   fetchSignals(true);
 
-  // BUKA DROPDOWN SIGNALS
   const signalParent = document.getElementById("signalsParent");
   const signalSub = document.getElementById("signalSubMenu");
   if (signalParent && signalSub) {
@@ -4685,7 +4686,6 @@ function initTabs() {
     if (btn.id === "signalsParent" || btn.id === "technicalParent") return;
 
     btn.addEventListener("click", function (e) {
-      // FIX: tambahkan e.stopPropagation() agar parent tidak ikut terpicu
       e.preventDefault();
       e.stopPropagation();
       triggerHaptic();
