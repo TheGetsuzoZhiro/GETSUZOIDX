@@ -2778,6 +2778,197 @@ function selectTechnicalFilter(filter) {
   fetchSignals(true);
 }
 
+function renderTechnicalRows(signals, priceMap, infoMap) {
+  let rows = "";
+  signals.forEach((s) => {
+    let priceDisplay = "—";
+    let gainStr = "";
+    let gainColor = "";
+    let arrowIcon = "";
+    let arrowPrice = "";
+    let statusBadge = "";
+
+    if (s.status === "TP") {
+      const exitPrice = s.exitPrice || s.tp1;
+      const entryPrice = s.entryPrice;
+      const ret =
+        entryPrice && exitPrice
+          ? ((exitPrice - entryPrice) / entryPrice) * 100
+          : 0;
+      const priceVal = exitPrice != null ? fmtPriceNoRp(exitPrice) : "—";
+      const sign = ret >= 0 ? "+" : "";
+      gainStr = `${sign}${ret.toFixed(2)}%`;
+      gainColor =
+        ret > 0.01
+          ? "#10b981"
+          : ret < -0.01
+            ? "#ef4444"
+            : "var(--text-secondary)";
+      if (ret > 0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`;
+      } else if (ret < -0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
+      } else {
+        arrowIcon = "";
+        arrowPrice = "";
+      }
+      priceDisplay = `${arrowPrice} ${priceVal}`;
+      statusBadge = `<span class="sig-status-stamp">${hitSvgrow}</span>`;
+    } else if (s.status === "SL" || s.status === "STOP LOSS") {
+      const exitPrice = s.exitPrice || s.sl;
+      const entryPrice = s.entryPrice;
+      const ret =
+        entryPrice && exitPrice
+          ? ((exitPrice - entryPrice) / entryPrice) * 100
+          : 0;
+      const priceVal = exitPrice != null ? fmtPriceNoRp(exitPrice) : "—";
+      const sign = ret >= 0 ? "+" : "";
+      gainStr = `${sign}${ret.toFixed(2)}%`;
+      gainColor =
+        ret > 0.01
+          ? "#10b981"
+          : ret < -0.01
+            ? "#ef4444"
+            : "var(--text-secondary)";
+      if (ret > 0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-up" style="font-size:0.6rem; color:#10b981; margin-right:0.1rem;"></i>`;
+      } else if (ret < -0.01) {
+        arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+        arrowPrice = `<i class="fa-solid fa-arrow-down" style="font-size:0.6rem; color:#ef4444; margin-right:0.1rem;"></i>`;
+      } else {
+        arrowIcon = "";
+        arrowPrice = "";
+      }
+      priceDisplay = `${arrowPrice} ${priceVal}`;
+      statusBadge = `<span class="sig-status-stamp">${missedSvgrow}</span>`;
+    } else {
+      const currentPrice = priceMap[s.stockCode];
+      const priceVal = currentPrice != null ? fmtPriceNoRp(currentPrice) : "—";
+      priceDisplay = priceVal;
+      const isRunning =
+        (s.status === "RUNNING" || s.status === "TRAILING") &&
+        s.entryPrice &&
+        currentPrice;
+      if (isRunning) {
+        const gainAbs = currentPrice - s.entryPrice;
+        const gainPct = (gainAbs / s.entryPrice) * 100;
+        const absGain = Math.abs(gainAbs).toFixed(0);
+        const absPct = Math.abs(gainPct).toFixed(2);
+        if (Math.abs(gainAbs) < 0.01) {
+          gainColor = "var(--text-secondary)";
+          gainStr = `0 (0.00%)`;
+          arrowIcon = "";
+        } else if (gainAbs > 0) {
+          arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+          gainColor = "#10b981";
+          gainStr = `${arrowIcon} ${absGain} (+${absPct}%)`;
+        } else {
+          arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+          gainColor = "#ef4444";
+          gainStr = `${arrowIcon} ${absGain} (-${absPct}%)`;
+        }
+      } else {
+        gainStr = "—";
+        gainColor = "var(--text-secondary)";
+        arrowIcon = "";
+      }
+    }
+
+    const info = infoMap[s.stockCode] || { longName: s.stockCode };
+    const stockbitUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
+    const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
+    const bgColor = getColorFromCode(s.stockCode);
+    const logoHtml = `
+      <div class="stock-logo-wrapper">
+        <img src="${stockbitUrl}" alt="${s.stockCode}" class="stock-logo"
+          onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='flex'; }">
+        <div class="stock-logo-fallback" style="display:none; background:${bgColor};">${s.stockCode.substring(0, 2)}</div>
+      </div>
+    `;
+
+    const techBadge = `<span class="sig-type-badge" style="
+      font-size:0.55rem; 
+      font-weight:600; 
+      color:#06b6d4; 
+      background:rgba(6,182,212,0.15); 
+      padding:0.15rem 0.5rem; 
+      border-radius:12px; 
+      border:1px solid rgba(6,182,212,0.3); 
+      display:inline-flex; 
+      align-items:center; 
+      gap:0.2rem;
+      white-space:nowrap;
+      margin-left:0.3rem;
+    ">
+      <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
+    </span>`;
+
+    let statusBadgeText = "";
+    if (s.status === "WAITING_ENTRY") {
+      statusBadgeText = `<span class="sig-type-badge" style="
+        font-size:0.55rem; 
+        font-weight:600; 
+        color:#f59e0b; 
+        background:rgba(245,158,11,0.15); 
+        padding:0.15rem 0.5rem; 
+        border-radius:12px; 
+        border:1px solid rgba(245,158,11,0.3); 
+        display:inline-flex; 
+        align-items:center; 
+        gap:0.2rem;
+        white-space:nowrap;
+        margin-left:0.3rem;
+      ">
+        <i class="fa-regular fa-clock" style="font-size:0.5rem;"></i> WAITING
+      </span>`;
+    } else if (s.status === "RUNNING" || s.status === "TRAILING") {
+      statusBadgeText = `<span class="sig-type-badge" style="
+        font-size:0.55rem; 
+        font-weight:600; 
+        color:#10b981; 
+        background:rgba(16,185,129,0.15); 
+        padding:0.15rem 0.5rem; 
+        border-radius:12px; 
+        border:1px solid rgba(16,185,129,0.3); 
+        display:inline-flex; 
+        align-items:center; 
+        gap:0.2rem;
+        white-space:nowrap;
+        margin-left:0.3rem;
+      ">
+        <i class="fa-regular fa-play" style="font-size:0.5rem;"></i> ACTIVE
+      </span>`;
+    }
+
+    rows += `<div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
+      ${logoHtml}
+      <div class="sig-list-name">
+        <div class="sig-name-row">
+          <div class="sig-stock-info">
+            <div class="sig-stock-top">
+              <span class="sig-stock-code">${escapeHtml(s.stockCode)}</span>
+              ${techBadge}
+              ${statusBadgeText}
+            </div>
+            <div class="sig-stock-longname">${escapeHtml(info.longName)}</div>
+          </div>
+          <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
+              <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.1rem;">${priceDisplay}</span>
+              <span style="font-family:'JetBrains Mono'; font-size:0.65rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>
+            </div>
+            ${statusBadge}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+  return rows;
+}
+
 async function showTechnicalSignalList() {
   const container = document.getElementById("technical-signals");
   if (!container) return;
@@ -2822,7 +3013,6 @@ async function showTechnicalSignalList() {
     Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
     Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
   ]);
-
   const priceMap = {};
   const infoMap = {};
   symbols.forEach((sym, idx) => {
@@ -2838,90 +3028,10 @@ async function showTechnicalSignalList() {
       </span>
     </div>
     <div class="sig-list">
+      ${renderTechnicalRows(techSignals, priceMap, infoMap)}
+    </div>
   `;
 
-  techSignals.forEach((s) => {
-    const currentPrice = priceMap[s.stockCode];
-    let priceDisplay = currentPrice != null ? fmtPriceNoRp(currentPrice) : "—";
-    let subDetailText = "";
-    const info = infoMap[s.stockCode] || { longName: s.stockCode };
-
-    const longName = info.longName || s.stockCode;
-
-    if (s.status === "WAITING_ENTRY") {
-      subDetailText = "";
-    } else if (s.status === "RUNNING" || s.status === "TRAILING") {
-      if (s.entryPrice && currentPrice) {
-        const gain = ((currentPrice - s.entryPrice) / s.entryPrice) * 100;
-        subDetailText = `Entry: ${fmtPrice(s.entryPrice)} | Gain: ${gain >= 0 ? "+" : ""}${gain.toFixed(2)}%`;
-      } else {
-        subDetailText = `Entry: ${fmtPrice(s.entryPrice)}`;
-      }
-    } else if (s.status === "TP" || s.status === "SL") {
-      subDetailText = `Closed: ${s.returnPercent?.toFixed(2)}%`;
-    }
-
-    let statusBadge = "";
-    if (s.status !== "WAITING_ENTRY" && s.status !== "EXPIRED") {
-      let badgeColor = "#3b82f6";
-      let badgeBg = "rgba(59,130,246,0.15)";
-      let badgeText = s.status;
-
-      if (s.status === "RUNNING" || s.status === "TRAILING") {
-        badgeColor = "#10b981";
-        badgeBg = "rgba(16,185,129,0.15)";
-      } else if (s.status === "TP") {
-        badgeColor = "#10b981";
-        badgeBg = "rgba(16,185,129,0.15)";
-      } else if (s.status === "SL") {
-        badgeColor = "#ef4444";
-        badgeBg = "rgba(239,68,68,0.15)";
-      }
-
-      statusBadge = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:${badgeColor}; background:${badgeBg}; padding:0.15rem 0.5rem; border-radius:12px; border:1px solid ${badgeColor}33; display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">${badgeText}</span>`;
-    }
-
-    const stockbitUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
-    const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
-    const bgColor = getColorFromCode(s.stockCode);
-    const logoHtml = `
-      <div class="stock-logo-wrapper">
-        <img src="${stockbitUrl}" alt="${s.stockCode}" class="stock-logo"
-          onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='flex'; }">
-        <div class="stock-logo-fallback" style="display:none; background:${bgColor};">${s.stockCode.substring(0, 2)}</div>
-      </div>
-    `;
-
-    const techTag = `<span class="sig-type-badge" style="font-size:0.55rem; font-weight:600; color:#06b6d4; background:rgba(6,182,212,0.15); padding:0.15rem 0.5rem; border-radius:12px; border:1px solid rgba(6,182,212,0.3); display:inline-flex; align-items:center; gap:0.2rem; white-space:nowrap; margin-left:0.3rem;">
-      <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
-    </span>`;
-
-    html += `
-      <div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
-        ${logoHtml}
-        <div class="sig-list-name">
-          <div class="sig-name-row">
-            <div class="sig-stock-info">
-              <div class="sig-stock-top">
-                <span class="sig-stock-code">${escapeHtml(s.stockCode)}</span>
-                ${techTag}
-                ${statusBadge}
-              </div>
-              <div class="sig-stock-longname">${escapeHtml(longName)}</div>
-            </div>
-            <div class="sig-right" style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0; margin-left:auto;">
-              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
-                <span class="stock-price" style="font-size:0.9rem; font-weight:600; color:var(--text-primary);">${priceDisplay}</span>
-                ${subDetailText ? `<span style="font-family:'JetBrains Mono'; font-size:0.6rem; color:var(--text-secondary);">${escapeHtml(subDetailText)}</span>` : ""}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  html += `</div>`;
   container.innerHTML = html;
   technicalListRendered = true;
 
@@ -2945,16 +3055,90 @@ async function updateTechnicalSignalList() {
   const container = document.getElementById("technical-signals");
   if (!container) return;
 
-  const rows = container.querySelectorAll(".sig-list-row");
-  for (const row of rows) {
-    const stock = row.dataset.stock;
-    if (!stock) continue;
-    const price = await fetchStockPrice(stock);
-    if (price != null) {
-      const priceEl = row.querySelector(".stock-price");
-      if (priceEl) priceEl.textContent = fmtPriceNoRp(price);
-    }
+  await fetchSignals(false);
+
+  const allSignals = [..._allRunning, ..._allClosed];
+  let techSignals = allSignals.filter((s) => s.signalType === "TECHNICAL");
+  if (!techSignals.length) return;
+
+  const today = getTodayWIB();
+  if (currentTechnicalFilter === "today") {
+    techSignals = techSignals.filter(
+      (s) => s.signalDate && s.signalDate.startsWith(today),
+    );
+  } else if (currentTechnicalFilter === "running") {
+    techSignals = techSignals.filter(
+      (s) => s.status === "RUNNING" || s.status === "TRAILING",
+    );
+  } else if (currentTechnicalFilter === "waiting") {
+    techSignals = techSignals.filter((s) => s.status === "WAITING_ENTRY");
   }
+
+  if (!techSignals.length) return;
+
+  const symbols = [...new Set(techSignals.map((s) => s.stockCode))];
+  const priceResults = await Promise.all(
+    symbols.map((sym) => fetchStockPrice(sym)),
+  );
+  const priceMap = {};
+  symbols.forEach((sym, idx) => {
+    priceMap[sym] = priceResults[idx];
+  });
+
+  const rows = container.querySelectorAll(".sig-list-row");
+  rows.forEach((row) => {
+    const stock = row.dataset.stock;
+    const date = row.dataset.date;
+    if (!stock || !date) return;
+    const signal = techSignals.find(
+      (s) => s.stockCode === stock && s.signalDate === date,
+    );
+    if (!signal) return;
+    const price = priceMap[stock];
+    const priceEl = row.querySelector(".stock-price");
+    const gainEl = row.querySelector(".sig-right span:last-child");
+    if (!priceEl) return;
+
+    if (
+      signal.status !== "TP" &&
+      signal.status !== "SL" &&
+      signal.status !== "STOP LOSS"
+    ) {
+      if (price != null) {
+        let arrowPrice = "";
+        const gainAbs = price - signal.entryPrice;
+        const gainPct = (gainAbs / signal.entryPrice) * 100;
+        const absGain = Math.abs(gainAbs).toFixed(0);
+        const absPct = Math.abs(gainPct).toFixed(2);
+        let gainStr = "";
+        let gainColor = "";
+        if (Math.abs(gainAbs) < 0.01) {
+          gainStr = `0 (0.00%)`;
+          gainColor = "var(--text-secondary)";
+          arrowPrice = "";
+        } else if (gainAbs > 0) {
+          arrowPrice = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.6rem; margin-right:0.1rem;"></i>`;
+          gainStr = `+${absGain} (+${absPct}%)`;
+          gainColor = "#10b981";
+        } else {
+          arrowPrice = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.6rem; margin-right:0.1rem;"></i>`;
+          gainStr = `-${absGain} (-${absPct}%)`;
+          gainColor = "#ef4444";
+        }
+        priceEl.innerHTML = `${arrowPrice} ${fmtPriceNoRp(price)}`;
+        if (gainEl) {
+          gainEl.style.color = gainColor;
+          gainEl.innerHTML = gainStr;
+        }
+      } else {
+        priceEl.textContent = "—";
+        if (gainEl) {
+          gainEl.textContent = "—";
+          gainEl.style.color = "var(--text-secondary)";
+        }
+      }
+    }
+  });
 }
 
 function renderTechnicalSignalDetail(s, container) {
