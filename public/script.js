@@ -2910,43 +2910,6 @@ function renderTechnicalRows(signals, priceMap, infoMap) {
       <i class="fa-solid fa-microchip" style="font-size:0.5rem;"></i> TECHNICAL
     </span>`;
 
-    let statusBadgeText = "";
-    if (s.status === "WAITING_ENTRY") {
-      statusBadgeText = `<span class="sig-type-badge" style="
-        font-size:0.55rem; 
-        font-weight:600; 
-        color:#f59e0b; 
-        background:rgba(245,158,11,0.15); 
-        padding:0.15rem 0.5rem; 
-        border-radius:12px; 
-        border:1px solid rgba(245,158,11,0.3); 
-        display:inline-flex; 
-        align-items:center; 
-        gap:0.2rem;
-        white-space:nowrap;
-        margin-left:0.3rem;
-      ">
-        <i class="fa-regular fa-clock" style="font-size:0.5rem;"></i> WAITING
-      </span>`;
-    } else if (s.status === "RUNNING" || s.status === "TRAILING") {
-      statusBadgeText = `<span class="sig-type-badge" style="
-        font-size:0.55rem; 
-        font-weight:600; 
-        color:#10b981; 
-        background:rgba(16,185,129,0.15); 
-        padding:0.15rem 0.5rem; 
-        border-radius:12px; 
-        border:1px solid rgba(16,185,129,0.3); 
-        display:inline-flex; 
-        align-items:center; 
-        gap:0.2rem;
-        white-space:nowrap;
-        margin-left:0.3rem;
-      ">
-        <i class="fa-regular fa-play" style="font-size:0.5rem;"></i> ACTIVE
-      </span>`;
-    }
-
     rows += `<div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
       ${logoHtml}
       <div class="sig-list-name">
@@ -2955,7 +2918,7 @@ function renderTechnicalRows(signals, priceMap, infoMap) {
             <div class="sig-stock-top">
               <span class="sig-stock-code">${escapeHtml(s.stockCode)}</span>
               ${techBadge}
-              ${statusBadgeText}
+              <!-- Badge status WAITING/ACTIVE dihapus -->
             </div>
             <div class="sig-stock-longname">${escapeHtml(info.longName)}</div>
           </div>
