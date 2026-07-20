@@ -4293,7 +4293,7 @@ body {
 }
 .tech-target-card:hover:not([style*="opacity:0.6"]) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 .tech-target-card .target-icon {
   transition: transform 0.3s ease;
@@ -4302,26 +4302,17 @@ body {
   transform: scale(1.2) rotate(-5deg);
 }
 
-/* Gabungkan selector agar kedua parent dropdown punya efek transisi radius */
-#signalsParent, #technicalParent {
+#signalsParent,
+#technicalParent {
   border-radius: 12px !important;
   transition: border-radius 0.2s;
 }
 
-/* Saat dropdown terbuka, hilangkan rounded di sudut bawah tombol */
-#signalsParent.open, #technicalParent.open {
+#signalsParent.open,
+#technicalParent.open {
   border-radius: 12px 12px 0 0 !important;
 }
 
-
-
-
-
-/* ========================================= */
-/* PERBAIKAN: PROPORSIONAL SEPERTI ORIGINAL */
-/* ========================================= */
-
-/* 1. Pastikan container laporan full width */
 #dailyContentWrapper,
 .pro-detail-container,
 #dailyDetailContainer {
@@ -4332,7 +4323,6 @@ body {
   margin: 0 auto !important;
 }
 
-/* 2. Kunci Grid Statistik tetap 3 Kolom */
 #statsGridContainer {
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
@@ -4341,43 +4331,38 @@ body {
   width: 100% !important;
 }
 
-/* 3. Kartu Statistik: Proporsi Tinggi Disamakan & Jarak Kiri Diperbaiki */
 #statsGridContainer > div {
-  /* Kurangi tinggi atas-bawah, tambahkan jarak kiri yang pas */
   padding: 1.4rem 0.5rem 1.4rem 0.8rem !important;
-  min-height: 100px !important; 
+  min-height: 100px !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: center !important; /* Agar pas di tengah secara vertikal */
+  justify-content: center !important;
   box-sizing: border-box !important;
 }
 
-/* 4. Pengaturan Ikon, Label (Atas), dan Angka (Bawah) */
 #statsGridContainer > div > div:first-child {
   font-size: 0.8rem !important;
-  margin-bottom: 0.3rem !important; /* Jarak pas antara label & angka */
+  margin-bottom: 0.3rem !important;
   display: flex !important;
   align-items: center !important;
-  gap: 0.5rem !important; /* Jarak antara Ikon dan Teks */
+  gap: 0.5rem !important;
 }
 
 #statsGridContainer > div > div:last-child {
-  font-size: 2rem !important; /* Ukuran angka statistik */
+  font-size: 2rem !important;
 }
 
-/* 5. Penyesuaian Responsif untuk Layar HP (Tetap 3 kolom, proporsi original) */
 @media (max-width: 520px) {
   #statsGridContainer > div {
-    padding: 1rem 0.5rem 1rem 0.6rem !important; /* Kurangi space atas bawah di HP */
+    padding: 1rem 0.5rem 1rem 0.6rem !important;
     min-height: 80px !important;
   }
-  
+
   #statsGridContainer {
     gap: 0.5rem !important;
     margin-bottom: 1rem !important;
   }
-  
-  /* Perbesarkan font di HP agar masih terbaca, tapi proporsi tetap sama */
+
   #statsGridContainer > div > div:first-child {
     font-size: 0.7rem !important;
     margin-bottom: 0.2rem !important;
@@ -4386,8 +4371,7 @@ body {
   #statsGridContainer > div > div:last-child {
     font-size: 1.6rem !important;
   }
-  
-  /* Penyesuaian Best/Worst Trade */
+
   #bestWorstContainer {
     gap: 0.5rem !important;
     font-size: 0.9rem !important;
@@ -4395,8 +4379,7 @@ body {
   #bestWorstContainer .pro-card {
     padding: 0.6rem 0.8rem !important;
   }
-  
-  /* Perkecil judul utama laporan */
+
   #reportHeader .emit-ticker {
     font-size: 1.2rem !important;
   }
@@ -4405,7 +4388,6 @@ body {
   }
 }
 
-/* Penyesuaian ekstra untuk HP layar sangat sempit (320px - 360px) */
 @media (max-width: 380px) {
   #statsGridContainer > div {
     padding: 0.8rem 0.4rem 0.8rem 0.4rem !important;
