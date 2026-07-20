@@ -2322,7 +2322,11 @@ function renderSignalRows(signals, priceMap, infoMap) {
     let badgeColor = "#71717a";
     let badgeBg = "rgba(113,113,122,0.15)";
     let badgeIcon = "fa-eye";
-    if (signalType === "BSJP") {
+    if (signalType === "TECHNICAL") {
+      badgeColor = "#06b6d4";
+      badgeBg = "rgba(6,182,212,0.15)";
+      badgeIcon = "fa-microchip";
+    } else if (signalType === "BSJP") {
       badgeColor = "#8b5cf6";
       badgeBg = "rgba(139,92,246,0.15)";
       badgeIcon = "fa-chart-simple";
