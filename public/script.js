@@ -4085,6 +4085,9 @@ function selectSignalFilter(filter) {
 }
 
 async function fetchSignals(showLoadingIndicator = true) {
+  if (currentTab === "home" && homeLoaded) {
+    return;
+  }
   if (isDetailView) {
     try {
       const res = await fetch(`${apiBase}/signals`);
