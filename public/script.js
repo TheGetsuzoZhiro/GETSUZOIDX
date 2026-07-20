@@ -3535,10 +3535,10 @@ function renderTechnicalSignalDetail(s, container) {
             <div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem; display:flex; flex-wrap:wrap; align-items:center; gap:0.2rem;">
               <span class="emit-tag"><i class="fa-solid fa-chart-line" style="margin-right:3px; font-size:0.65rem;"></i>Technical</span>
               <!-- PERBAIKAN: ikon selalu abu-abu + margin-right -->
-              <span class="emit-tag" style="display:inline-flex; align-items:center; gap:0;">
-                <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:4px;"></i>
-                ${setupText}
-              </span>
+              <span class="emit-tag" style="display:inline-flex; align-items:center; gap:4px;">
+    <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem;"></i>
+    ${setupText}
+  </span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
               ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
             </div>
