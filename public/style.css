@@ -4318,7 +4318,7 @@ body {
 
 
 /* ========================================= */
-/* PERBAIKAN: TAMPILAN FULL WIDTH, RESPONSIVE, & SEPERTI ORIGINAL */
+/* PERBAIKAN: PROPORSIONAL SEPERTI ORIGINAL */
 /* ========================================= */
 
 /* 1. Pastikan container laporan full width */
@@ -4341,50 +4341,50 @@ body {
   width: 100% !important;
 }
 
-/* 3. Pembungkus Kartu Statistik: Buat tinggi, rata kiri, dan tidak di tengah */
+/* 3. Kartu Statistik: Proporsi Tinggi Disamakan & Jarak Kiri Diperbaiki */
 #statsGridContainer > div {
-  padding: 2.4rem 0.5rem !important;  /* Tinggi vertikal tetap lega */
-  min-height: 130px !important;       /* Jaga tinggi minimal */
+  /* Kurangi tinggi atas-bawah, tambahkan jarak kiri yang pas */
+  padding: 1.4rem 0.5rem 1.4rem 0.8rem !important;
+  min-height: 100px !important; 
   display: flex !important;
   flex-direction: column !important;
-  justify-content: center !important; /* Rata tengah secara vertikal (agar atas bawah seimbang) */
-  /* align-items: center; => DIHAPUS untuk membuat ikon & teks menempel di kiri */
-  padding-left: 1rem !important;      /* Geser konten ke kanan sedikit dari tepi kiri */
+  justify-content: center !important; /* Agar pas di tengah secara vertikal */
   box-sizing: border-box !important;
 }
 
-/* 4. Membesarkan Ukuran Font Sesuai Original (Desktop) */
+/* 4. Pengaturan Ikon, Label (Atas), dan Angka (Bawah) */
 #statsGridContainer > div > div:first-child {
   font-size: 0.8rem !important;
-  margin-bottom: 0.2rem !important;
+  margin-bottom: 0.3rem !important; /* Jarak pas antara label & angka */
   display: flex !important;
   align-items: center !important;
-  gap: 0.5rem !important; /* Jarak antara Ikon dan Label */
-}
-#statsGridContainer > div > div:last-child {
-  font-size: 2rem !important; /* Perbesar angka statistik */
+  gap: 0.5rem !important; /* Jarak antara Ikon dan Teks */
 }
 
-/* 5. Penyesuaian Responsif untuk Layar HP (Tetap 3 kolom, font besar) */
+#statsGridContainer > div > div:last-child {
+  font-size: 2rem !important; /* Ukuran angka statistik */
+}
+
+/* 5. Penyesuaian Responsif untuk Layar HP (Tetap 3 kolom, proporsi original) */
 @media (max-width: 520px) {
   #statsGridContainer > div {
-    padding: 1.8rem 0.5rem !important; /* Vertikal sedikit dikurangi tapi tetap tinggi */
-    min-height: 100px !important;
-    padding-left: 0.5rem !important; /* Geser konten ke kanan */
+    padding: 1rem 0.5rem 1rem 0.6rem !important; /* Kurangi space atas bawah di HP */
+    min-height: 80px !important;
   }
+  
   #statsGridContainer {
     gap: 0.5rem !important;
     margin-bottom: 1rem !important;
   }
   
-  /* Perbesar Font di HP agar sama dengan original */
+  /* Perbesarkan font di HP agar masih terbaca, tapi proporsi tetap sama */
   #statsGridContainer > div > div:first-child {
-    font-size: 0.7rem !important;  /* Label (contoh: "SINYAL BARU") */
+    font-size: 0.7rem !important;
     margin-bottom: 0.2rem !important;
-    gap: 0.3rem !important;        /* Jarak Ikon dan Label */
+    gap: 0.4rem !important;
   }
   #statsGridContainer > div > div:last-child {
-    font-size: 1.5rem !important;  /* Angka Nilai (contoh: "32") */
+    font-size: 1.6rem !important;
   }
   
   /* Penyesuaian Best/Worst Trade */
@@ -4393,7 +4393,7 @@ body {
     font-size: 0.9rem !important;
   }
   #bestWorstContainer .pro-card {
-    padding: 0.8rem 0.8rem !important;
+    padding: 0.6rem 0.8rem !important;
   }
   
   /* Perkecil judul utama laporan */
@@ -4408,13 +4408,12 @@ body {
 /* Penyesuaian ekstra untuk HP layar sangat sempit (320px - 360px) */
 @media (max-width: 380px) {
   #statsGridContainer > div {
-    padding: 1rem 0.4rem !important;
-    min-height: 70px !important;
-    padding-left: 0.4rem !important;
+    padding: 0.8rem 0.4rem 0.8rem 0.4rem !important;
+    min-height: 60px !important;
   }
   #statsGridContainer > div > div:first-child {
     font-size: 0.55rem !important;
-    gap: 0.2rem !important;
+    gap: 0.3rem !important;
   }
   #statsGridContainer > div > div:last-child {
     font-size: 1.2rem !important;
