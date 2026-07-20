@@ -3275,7 +3275,6 @@ function renderTechnicalSignalDetail(s, container) {
   `;
 
   const setupText = s.buyType || "BUY ON SUPPORT (RETRACEMENT)";
-
   const expiredContainerStyle = isExpired ? `opacity:0.7;` : "";
 
   const html = `
