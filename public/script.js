@@ -69,6 +69,8 @@ let currentDateRange = null;
 let notificationHistory = [];
 const NOTIF_KEY = "notificationHistory";
 
+let _fetchingSignals = false; // 🔥 Tambahkan flag untuk mencegah multiple fetch
+
 function loadNotifications() {
   try {
     const data = localStorage.getItem(NOTIF_KEY);
@@ -2812,12 +2814,15 @@ function selectTechnicalFilter(filter) {
     window.location.hash = "#technical-waiting";
   }
 
+  // Reset state agar fetch ulang dengan benar
+  technicalListRendered = false;
   document
     .querySelectorAll(".view")
     .forEach((v) => v.classList.remove("active"));
   document.getElementById("technical-signals").classList.add("active");
   currentTab = "technical-signals";
-  technicalListRendered = false;
+  
+  // Panggil fetch dengan showLoading true
   fetchSignals(true);
 
   const techParent = document.getElementById("technicalParent");
@@ -2991,6 +2996,7 @@ function renderTechnicalRows(signals, priceMap, infoMap) {
   return rows;
 }
 
+// 🔥 FIX: Hanya render sekali, tidak ada duplikasi header
 async function showTechnicalSignalList() {
   const container = document.getElementById("technical-signals");
   if (!container) return;
@@ -3116,6 +3122,7 @@ async function showTechnicalSignalList() {
   container._techPriceMap = priceMap;
 }
 
+// 🔥 FIX: Update harga & gain saja, tanpa mengganti header
 async function updateTechnicalSignalList() {
   if (isDetailView) return;
   const container = document.getElementById("technical-signals");
@@ -3151,6 +3158,7 @@ async function updateTechnicalSignalList() {
     priceMap[sym] = priceResults[idx];
   });
 
+  // Update setiap baris yang ada
   const rows = container.querySelectorAll(".sig-list-row");
   rows.forEach((row) => {
     const stock = row.dataset.stock;
@@ -3206,6 +3214,7 @@ async function updateTechnicalSignalList() {
     }
   });
 
+  // Update gain di header (cari elemen #techListGain)
   const gainSpan = document.getElementById("techListGain");
   if (gainSpan) {
     let totalGainPct = 0;
@@ -4115,10 +4124,16 @@ function selectSignalFilter(filter) {
   }
 }
 
+// 🔥 FIX: Tambahkan flag _fetchingSignals, reset loading dengan benar
 async function fetchSignals(showLoadingIndicator = true) {
+  if (_fetchingSignals) return;
+  _fetchingSignals = true;
+
   if (currentTab === "home" && homeLoaded) {
+    _fetchingSignals = false;
     return;
   }
+
   if (isDetailView) {
     try {
       const res = await fetch(`${apiBase}/signals`);
@@ -4131,6 +4146,8 @@ async function fetchSignals(showLoadingIndicator = true) {
       checkSignalChanges(_allRunning, _allClosed);
     } catch (err) {
       console.warn("Background fetch error:", err);
+    } finally {
+      _fetchingSignals = false;
     }
     return;
   }
@@ -4169,6 +4186,7 @@ async function fetchSignals(showLoadingIndicator = true) {
       if (isDetailView) {
         isDetailView = false;
       }
+      // 🔥 Panggil show atau update tanpa double render
       if (technicalListRendered) {
         await updateTechnicalSignalList();
       } else {
@@ -4219,6 +4237,8 @@ async function fetchSignals(showLoadingIndicator = true) {
       `;
       technicalListRendered = false;
     }
+  } finally {
+    _fetchingSignals = false;
   }
 }
 
