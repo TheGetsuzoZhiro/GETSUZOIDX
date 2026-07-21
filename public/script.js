@@ -740,7 +740,6 @@ async function renderDaily() {
             <span class="emit-date"><i class="far fa-calendar-alt" style="margin-right:0.3rem;"></i> ${new Date().toLocaleString("id-ID")}</span>
           </div>
         </div>
-
         <div id="statsGridContainer" class="stats-grid">
           ${createStatCard("Sinyal Baru", agg.totalSignals, "#3b82f6", "fa-solid fa-bell")}
           ${createStatCard("TP", agg.tp, "#10b981", "fa-solid fa-check-circle")}
