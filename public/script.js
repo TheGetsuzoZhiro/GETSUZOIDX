@@ -1665,6 +1665,99 @@ function renderBsjpDetailContent(
   }
 }
 
+// ====== FUNGSI BANTU UNTUK STATUS BADGE ======
+function getStatusBadge(status, type = "default") {
+  const colors = {
+    Bullish: { bg: "#d4edda", text: "#155724", icon: "🟢" },
+    Bearish: { bg: "#f8d7da", text: "#721c24", icon: "🔴" },
+    Overbought: { bg: "#fff3cd", text: "#856404", icon: "🟡" },
+    Oversold: { bg: "#cce5ff", text: "#004085", icon: "🔵" },
+    Neutral: { bg: "#e2e3e5", text: "#383d41", icon: "⚪" },
+    Strong: { bg: "#d4edda", text: "#155724", icon: "💪" },
+    Below: { bg: "#f8d7da", text: "#721c24", icon: "🔽" },
+    Above: { bg: "#d4edda", text: "#155724", icon: "🔼" },
+  };
+  const style = colors[status] || colors.Neutral;
+  return `<span style="background:${style.bg};color:${style.text};padding:2px 10px;border-radius:20px;font-size:0.8rem;font-weight:bold;display:inline-flex;align-items:center;gap:4px;">${style.icon} ${status}</span>`;
+}
+
+function indicatorCard(label, value, status, details = "") {
+  return `
+    <div style="background:#f8f9fa;border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:0.8rem;color:#6c757d;font-weight:600;">${label}</div>
+        <div style="font-size:1.1rem;font-weight:600;color:#212529;">${value}</div>
+        ${details ? `<div style="font-size:0.75rem;color:#6c757d;">${details}</div>` : ""}
+      </div>
+      <div>${getStatusBadge(status)}</div>
+    </div>
+  `;
+}
+
+// Fungsi untuk menghitung status indikator
+function getMacdStatus(s) {
+  if (s.macd == null || s.macdSignal == null) return { value: "N/A", status: "Neutral" };
+  const diff = s.macd - s.macdSignal;
+  if (diff > 0) return { value: `${s.macd.toFixed(2)} (Sig: ${s.macdSignal.toFixed(2)})`, status: "Bullish" };
+  else if (diff < 0) return { value: `${s.macd.toFixed(2)} (Sig: ${s.macdSignal.toFixed(2)})`, status: "Bearish" };
+  else return { value: `${s.macd.toFixed(2)} (Sig: ${s.macdSignal.toFixed(2)})`, status: "Neutral" };
+}
+
+function getRsiStatus(s) {
+  if (s.rsi == null) return { value: "N/A", status: "Neutral" };
+  const r = s.rsi;
+  if (r > 70) return { value: r.toFixed(2), status: "Overbought" };
+  else if (r < 30) return { value: r.toFixed(2), status: "Oversold" };
+  else return { value: r.toFixed(2), status: "Neutral" };
+}
+
+function getEmaStatus(s) {
+  if (s.ema20 == null || s.ema50 == null) return { value: `20: ${s.ema20 || "N/A"} / 50: ${s.ema50 || "N/A"}`, status: "Neutral" };
+  const price = s.entryPrice || 0;
+  if (price > s.ema20 && s.ema20 > s.ema50) return { value: `Rp${s.ema20} / Rp${s.ema50}`, status: "Bullish" };
+  else if (price < s.ema20 && s.ema20 < s.ema50) return { value: `Rp${s.ema20} / Rp${s.ema50}`, status: "Bearish" };
+  else return { value: `Rp${s.ema20} / Rp${s.ema50}`, status: "Neutral" };
+}
+
+function getVwapStatus(s) {
+  if (s.vwap == null) return { value: "N/A", status: "Neutral" };
+  const price = s.entryPrice || 0;
+  const diff = price - s.vwap;
+  if (diff > 0) return { value: `Rp${s.vwap}`, status: "Above" };
+  else if (diff < 0) return { value: `Rp${s.vwap}`, status: "Below" };
+  else return { value: `Rp${s.vwap}`, status: "Neutral" };
+}
+
+function getAdxStatus(s) {
+  if (s.adx == null) return { value: "N/A", status: "Neutral" };
+  if (s.adx > 40) return { value: s.adx.toFixed(2), status: "Strong" };
+  else if (s.adx > 25) return { value: s.adx.toFixed(2), status: "Neutral" };
+  else return { value: s.adx.toFixed(2), status: "Bearish" };
+}
+
+function getBbStatus(s) {
+  if (s.bbLow == null || s.bbHigh == null) return { value: "N/A", status: "Neutral" };
+  const price = s.entryPrice || 0;
+  const mid = (s.bbLow + s.bbHigh) / 2;
+  if (price > s.bbHigh) return { value: `[${s.bbLow} - ${s.bbHigh}]`, status: "Overbought" };
+  else if (price < s.bbLow) return { value: `[${s.bbLow} - ${s.bbHigh}]`, status: "Oversold" };
+  else if (price > mid) return { value: `[${s.bbLow} - ${s.bbHigh}]`, status: "Bullish" };
+  else return { value: `[${s.bbLow} - ${s.bbHigh}]`, status: "Bearish" };
+}
+
+function getVolumeStatus(s) {
+  if (s.volumeText == null || s.volumePercent == null) {
+    return { value: "Tidak tersedia", status: "Neutral" };
+  }
+  let status = s.volumeStatus || "Neutral";
+  let value = `${s.volumeText} (${s.volumePercent}%)`;
+  if (s.volumePercent > 200) status = "Bullish";
+  else if (s.volumePercent < 50) status = "Bearish";
+  else status = "Neutral";
+  return { value, status };
+}
+
+// ====== RENDER DETAIL SINYAL (DENGAN VOLUME DAN STATUS) ======
 async function renderSignalDetailToContainer(signal, container, onBack) {
   const s = signal;
 
@@ -1948,6 +2041,15 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   const foreignAbs = Math.abs(foreignNet).toLocaleString();
   const foreignPct = Math.min((Math.abs(foreignNet) / 1000) * 100, 100);
 
+  // --- Hitung status indikator untuk ditampilkan di card ---
+  const macd = getMacdStatus(s);
+  const rsi = getRsiStatus(s);
+  const ema = getEmaStatus(s);
+  const vwap = getVwapStatus(s);
+  const adx = getAdxStatus(s);
+  const bb = getBbStatus(s);
+  const volume = getVolumeStatus(s);
+
   const headerResetStyle = `<style>.emit-header-simple { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; padding:0.25rem 0; margin-bottom:0.75rem; gap:0.5rem; }.emit-header-simple .left { display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; flex:1 1 auto; }.emit-header-simple .left .stock-group { display:flex; align-items:center; gap:0.4rem; flex-shrink:0; }.emit-header-simple .left .stock-group .ticker { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary); white-space:nowrap; }.emit-header-simple .left .emit-tag-group { display:flex; flex-wrap:wrap; align-items:center; gap:0.25rem 0.4rem; flex:0 1 auto; }.emit-header-simple .right { font-size:0.7rem; color:var(--text-secondary); opacity:0.6; flex-shrink:0; }.pro-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }.pro-grid-2 .col-left { border-right: 1px solid rgba(255,255,255,0.08); padding-right: 0.5rem; }.pro-grid-2 .col-right { padding-left: 0.5rem; }.price-ladder { display: flex; justify-content: space-around; align-items: center; gap: 0.5rem; padding: 0.2rem 0; margin: 0; }.price-item { display: flex; align-items: center; gap: 0.3rem; flex: 1; justify-content: center; }@media (max-width: 640px) { .pro-grid-2 { display: flex !important; flex-direction: column !important; gap: 0.75rem !important; } .pro-grid-2 .col-left { border-right: none !important; padding-right: 0 !important; } .pro-grid-2 .col-right { padding-left: 0 !important; } .pro-detail-container { padding: 0 !important; } .emit-header-simple .left .stock-group .ticker { font-size:1rem; } .emit-header-simple .left .emit-tag-group .emit-tag { font-size:0.55rem; } .emit-header-simple .left .emit-tag-group .emit-tag i { font-size:0.5rem; } .emit-header-simple .right { font-size:0.6rem; } .price-ladder { flex-wrap: nowrap !important; gap: 0.2rem !important; } .price-item { flex: 1 1 0 !important; justify-content: center !important; } }</style>`;
 
   let html = `${headerResetStyle}<div class="pro-detail-container"><button class="sig-back-btn" id="dailyBackBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Kembali</button><div style="background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.08); overflow:hidden; margin-bottom:0.5rem;"><div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;"><div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;"><span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary);">${escapeHtml(s.stockCode)}</span><span style="font-size:0.8rem; color:var(--text-secondary); opacity:0.7;">${escapeHtml(stockInfo.longName)}</span></div><div style="grid-column:1; grid-row:2; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;"><span style="font-family:'JetBrains Mono'; font-weight:600; font-size:1rem; color:var(--text-primary); display:flex; align-items:center;">${priceArrow} ${displayPrice}</span><span style="font-family:'JetBrains Mono'; font-size:0.75rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>${statusStamp}</div><div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div><div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem;">${tagHtml}</div><div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div></div></div><div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:flex; align-items:center; gap:1rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:0.4rem;"><div style="width:48px; height:48px; border-radius:50%; background:${signalBorder}15; border:2px solid ${signalBorder}; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:${signalBorder};">${signalIcon}</div><div style="flex:1;"><div style="font-size:0.55rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-secondary);">Signal Type</div><div style="font-family:'JetBrains Mono'; font-weight:700; font-size:1.3rem; color:${signalBorder}; line-height:1.2;">${signalLabelText}<span style="font-size:0.7rem; font-weight:400; color:var(--text-secondary); margin-left:0.5rem;">${signalLabel}</span></div></div><div style="font-size:0.5rem; background:${signalBorder}15; color:${signalBorder}; padding:2px 10px; border-radius:20px; border:1px solid ${signalBorder}25; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">${signalDesc}</div></div><div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0;"><div class="price-item" style="display:flex; align-items:center; gap:0.3rem; flex:1; justify-content:center;"><span class="label" style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Entry</span><span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--text-primary);">${fmtPrice(s.entryPrice)}</span><span class="change neutral" style="font-size:0.6rem; color:var(--text-secondary);">—</span></div><div class="price-item" style="display:flex; align-items:center; gap:0.3rem; flex:1; justify-content:center;"><span class="label" style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT</span><span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--success);">${fmtPrice(s.tp1)}</span><span class="change positive" style="font-size:0.6rem; color:var(--success);">+${pctTp}%</span></div><div class="price-item" style="display:flex; align-items:center; gap:0.3rem; flex:1; justify-content:center;"><span class="label" style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;"><i class="fa-solid fa-triangle-exclamation"></i> STOP LOSS</span><span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--danger);">${fmtPrice(s.sl)}</span><span class="change negative" style="font-size:0.6rem; color:var(--danger);">${pctSl}%</span></div></div></div>
@@ -1959,6 +2061,20 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
 
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       ${confVisual.replace(/<div class="pro-card" style="position:relative;">/, '<div style="position:relative;">')}
+    </div>
+
+    <!-- ======== CARD INDIKATOR TEKNIKAL + VOLUME ======== -->
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="font-weight:600; font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.5rem;">
+        <i class="fa-solid fa-chart-simple" style="margin-right:0.3rem;"></i> Technical Indicators
+      </div>
+      ${indicatorCard("MACD", macd.value, macd.status)}
+      ${indicatorCard("RSI (14)", rsi.value, rsi.status)}
+      ${indicatorCard("EMA 20/50", ema.value, ema.status)}
+      ${indicatorCard("VWAP", vwap.value, vwap.status)}
+      ${indicatorCard("ADX", adx.value, adx.status)}
+      ${indicatorCard("Bollinger Bands", bb.value, bb.status)}
+      ${indicatorCard("Volume (vs avg 5d)", volume.value, volume.status)}
     </div>
 
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
@@ -2040,6 +2156,7 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
     }, 50);
   });
 }
+// ====== AKHIR renderSignalDetailToContainer ======
 
 async function renderPerformanceSignalList(status) {
   const container = document.getElementById("signalListContainer");
@@ -2950,7 +3067,6 @@ function renderTechnicalRows(signals, priceMap, infoMap) {
             <div class="sig-stock-top">
               <span class="sig-stock-code">${escapeHtml(s.stockCode)}</span>
               ${techBadge}
-              <!-- Badge status WAITING/ACTIVE dihapus -->
             </div>
             <div class="sig-stock-longname">${escapeHtml(info.longName)}</div>
           </div>
