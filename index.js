@@ -7,7 +7,7 @@ const webpush = require("web-push");
 const mongoose = require("mongoose");
 
 const sentPushesCache = new Map();
-const infoCache = new Map(); 
+const infoCache = new Map();
 const lastPrices = new Map();
 const sseClients = [];
 
@@ -31,7 +31,6 @@ mongoose
     console.log("✅ Berhasil terhubung ke MongoDB Atlas (Read-Only Mode)!"),
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
-
 
 const SignalSchema = new mongoose.Schema(
   {
@@ -94,7 +93,6 @@ const SubscriptionModel = mongoose.model(
   "push_subscriptions",
 );
 
-
 const TokenSchema = new mongoose.Schema(
   {
     _id: { type: String, default: "stockbit_token" },
@@ -108,7 +106,6 @@ const TokenModel = mongoose.model(
   TokenSchema,
   "stockbit_tokens",
 );
-
 
 async function getStockbitToken() {
   try {
@@ -126,7 +123,6 @@ async function getStockbitToken() {
     return null;
   }
 }
-
 
 const liburCache = { date: null, isLibur: false };
 let currentHolidayName = null;
@@ -203,13 +199,11 @@ async function isMarketOpen() {
   }
 }
 
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
-
 
 app.get("/api/sse/prices", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -259,19 +253,15 @@ app.post("/api/sse/price-update", (req, res) => {
   res.json({ success: true, clients: sseClients.length });
 });
 
-
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
 
-  
   if (infoCache.has(symbol)) {
     return res.json(infoCache.get(symbol));
   }
 
-  
   const token = await getStockbitToken();
   if (!token) {
-    
     const fallback = {
       symbol,
       longName: symbol,
@@ -281,7 +271,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
     return res.json(fallback);
   }
 
-  
   try {
     const url = `https://exodus.stockbit.com/emitten/${symbol}/info`;
     const response = await axios.get(url, {
@@ -308,7 +297,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       logoUrl: `https://assets.stockbit.com/logos/companies/${symbol}.png`,
     };
 
-    
     infoCache.set(symbol, result);
     res.json(result);
   } catch (err) {
@@ -316,7 +304,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
       `[STOCKBIT] Gagal ambil info ${symbol}:`,
       err.response?.status || err.message,
     );
-    
+
     const fallback = {
       symbol,
       longName: symbol,
@@ -326,7 +314,6 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
     res.json(fallback);
   }
 });
-
 
 app.get("/api/signals", async (req, res) => {
   try {
@@ -338,7 +325,6 @@ app.get("/api/signals", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
@@ -391,7 +377,6 @@ app.get("/api/market-status", async (req, res) => {
     holidayName: currentHolidayName,
   });
 });
-
 
 app.post("/api/save-subscription", async (req, res) => {
   const subscription = req.body;
@@ -449,7 +434,6 @@ app.post("/api/send-push", async (req, res) => {
   }
 });
 
-
 async function getPublicIP() {
   const sources = [
     "https://api.ipify.org?format=text",
@@ -479,7 +463,6 @@ app.get("/", (req, res) => {
   res.send("Server Frontend Read-Only Aktif!");
 });
 
-
 app.listen(PORT, "0.0.0.0", async () => {
   const ip = await getPublicIP();
   console.log(`\n🌐 Frontend API server available at:`);
@@ -487,7 +470,6 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`   • http://${ip}:${PORT}`);
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
-
 
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
@@ -573,16 +555,36 @@ async function checkDatabaseForNewSignals() {
       const newSignals = running.filter((s) =>
         newRunning.includes(`${s.stockCode}-${s.signalDate}`),
       );
-      const groups = { session1: [], session2: [], bsjp: [], other: [] };
-      newSignals.forEach((s) => {
-        if (s.signalType === "BSJP") groups.bsjp.push(s);
-        else {
-          const session = getSessionFromDate(s.signalDate);
-          if (session === 1) groups.session1.push(s);
-          else if (session === 2) groups.session2.push(s);
-          else groups.other.push(s);
-        }
+
+      // ===== PERUBAHAN UTAMA =====
+      // Pisahkan sinyal baru menjadi BSJP, TECHNICAL, dan regular
+      const bsjpSignals = newSignals.filter(s => s.signalType === "BSJP");
+      const technicalSignals = newSignals.filter(s => s.signalType === "TECHNICAL");
+      const regularSignals = newSignals.filter(s => s.signalType !== "BSJP" && s.signalType !== "TECHNICAL");
+
+      // Push individual untuk setiap BSJP
+      for (const s of bsjpSignals) {
+        const title = `NEW BSJP: ${s.stockCode}`;
+        const body = `Sinyal BSJP baru untuk ${s.stockCode}`;
+        await triggerInternalPush(title, body);
+      }
+
+      // Push individual untuk setiap TECHNICAL
+      for (const s of technicalSignals) {
+        const title = `NEW TECHNICAL: ${s.stockCode}`;
+        const body = `Sinyal Technical baru untuk ${s.stockCode}`;
+        await triggerInternalPush(title, body);
+      }
+
+      // Kelompokkan regular signals berdasarkan sesi (seperti sebelumnya)
+      const groups = { session1: [], session2: [], other: [] };
+      regularSignals.forEach((s) => {
+        const session = getSessionFromDate(s.signalDate);
+        if (session === 1) groups.session1.push(s);
+        else if (session === 2) groups.session2.push(s);
+        else groups.other.push(s);
       });
+
       if (groups.session1.length)
         triggerInternalPush(
           "NEW SIGNALS SESI 1",
@@ -593,11 +595,6 @@ async function checkDatabaseForNewSignals() {
           "NEW SIGNALS SESI 2",
           `${groups.session2.length} sinyal saham baru untuk SESI 2.`,
         );
-      if (groups.bsjp.length)
-        triggerInternalPush(
-          "NEW SIGNALS BSJP",
-          `${groups.bsjp.length} sinyal saham baru untuk BSJP.`,
-        );
       if (groups.other.length)
         triggerInternalPush(
           "NEW SIGNALS LAINNYA",
@@ -605,6 +602,7 @@ async function checkDatabaseForNewSignals() {
         );
     }
 
+    // Push individual untuk setiap sinyal yang berubah menjadi TP
     const tpSignals = allSignals.filter((s) => s.status === "TP");
     for (const s of tpSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
