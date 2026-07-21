@@ -3255,7 +3255,7 @@ function renderTechnicalSignalDetail(s, container) {
   let gainAbs = 0,
     gainPct = 0,
     gainStr = "—",
-    gainColor = "#a1a1aa";
+    gainColor = "var(--text-secondary)";
   let arrowIcon = "";
   const isRunning = s.status === "RUNNING" || s.status === "TRAILING";
   const isClosed = s.status === "TP" || s.status === "SL";
@@ -3267,7 +3267,7 @@ function renderTechnicalSignalDetail(s, container) {
     const absPct = Math.abs(gainPct).toFixed(2);
     if (Math.abs(gainAbs) < 0.01) {
       gainStr = "0 (0.00%)";
-      gainColor = "#a1a1aa";
+      gainColor = "var(--text-secondary)";
     } else if (gainAbs > 0) {
       arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
       gainColor = "#10b981";
@@ -3337,7 +3337,7 @@ function renderTechnicalSignalDetail(s, container) {
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
 
-  // FIX: Tampilkan tanda plus (+) jika slPercent bernilai positif (seperti saat Trailing SL terkuci di atas entry)
+  // Tampilkan tanda plus (+) jika slPercent bernilai positif (saat Trailing SL terkunci di atas entry)
   const slSign = slPercent > 0 ? "+" : "";
   const slLabel = `${slSign}${slPercent.toFixed(1)}%`;
   
@@ -3369,7 +3369,7 @@ function renderTechnicalSignalDetail(s, container) {
     if (isExpired) {
       bg = "#3a3a3a";
       border = "rgba(255,255,255,0.08)";
-      color = "#a1a1aa";
+      color = "#71717a";
       shadow = "0 0 0 4px rgba(0,0,0,0.3)";
     } else if (state === "failed") {
       bg = "#ef4444";
@@ -3389,10 +3389,10 @@ function renderTechnicalSignalDetail(s, container) {
     } else {
       bg = "#2a2a2a";
       border = "rgba(255,255,255,0.05)";
-      color = "#a1a1aa";
+      color = "var(--text-secondary)";
       shadow = "0 0 0 4px #121212";
     }
-    let descColor = "#a1a1aa";
+    let descColor = "var(--text-secondary)";
     if (isExpired) descColor = "#71717a";
     else if (state === "failed") descColor = "#ef4444";
     else if (state === "warning") descColor = "#f59e0b";
@@ -3403,8 +3403,8 @@ function renderTechnicalSignalDetail(s, container) {
         <div style="width:34px; height:34px; background:${bg}; border:2px solid ${border}; color:${color}; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto; font-size:0.8rem; font-weight:700; box-shadow: ${shadow}; transition:all 0.3s ease;">
           ${icon}
         </div>
-        <div style="font-size:0.7rem; font-weight:600; color:${active || state !== "default" ? "var(--text-primary)" : "#a1a1aa"}; margin-top:0.4rem;">${label}</div>
-        <div style="font-size:0.55rem; color:${descColor}; margin-top:0.1rem; font-weight:500;">${desc}</div>
+        <div style="font-size:0.7rem; font-weight:600; color:${active || state !== "default" ? "var(--text-primary)" : "var(--text-secondary)"}; margin-top:0.4rem;">${label}</div>
+        <div style="font-size:0.5rem; color:${descColor}; margin-top:0.1rem; opacity:0.8;">${desc}</div>
       </div>
     `;
   }
@@ -3426,37 +3426,36 @@ function renderTechnicalSignalDetail(s, container) {
     progressGradient = "linear-gradient(90deg, #ef4444, #f87171)";
   }
 
-  // FIX: Peningkatan kontras badge Priority dan Extended
   const targetRanges = `
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div style="font-size:0.7rem; color:#a1a1aa; text-transform:uppercase; margin-bottom:0.4rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+      <div style="font-size:0.7rem; color:var(--text-secondary); text-transform:uppercase; margin-bottom:0.4rem; font-weight:600; display:flex; align-items:center; gap:0.5rem;">
         <i class="fas fa-bullseye" style="color:#10b981; font-size:0.9rem;"></i> 
         Target Profit Range Objectives
-        ${isExpired ? `<span style="font-size:0.55rem; color:#a1a1aa; background:rgba(113,113,122,0.2); padding:0.1rem 0.5rem; border-radius:10px; margin-left:auto;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>` : ""}
+        ${isExpired ? `<span style="font-size:0.55rem; color:#71717a; background:rgba(113,113,122,0.15); padding:0.1rem 0.5rem; border-radius:10px; margin-left:auto;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>` : ""}
       </div>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid #10b981;">
           <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.15rem;">
             <span class="target-icon" style="font-size:0.7rem; color:#10b981;"><i class="fa-solid fa-arrow-up-right-dots"></i></span>
-            <span style="font-size:0.6rem; color:#a1a1aa; font-weight:500;">Target Area 1</span>
-            <span style="font-size:0.55rem; color:#10b981; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:0.05rem 0.4rem; border-radius:6px; margin-left:auto; font-weight:600;"><i class="fa-regular fa-flag"></i> PRIORITY</span>
+            <span style="font-size:0.6rem; color:var(--text-secondary); font-weight:500;">Target Area 1</span>
+            <span style="font-size:0.5rem; color:#10b981; background:rgba(16,185,129,0.1); padding:0.05rem 0.4rem; border-radius:8px; margin-left:auto;"><i class="fa-regular fa-flag"></i> PRIORITY</span>
           </div>
           <div style="font-family:'JetBrains Mono'; font-weight:700; font-size:0.95rem; color:#10b981; display:flex; align-items:center; gap:0.3rem;">
             <i class="fa-solid fa-arrow-right" style="font-size:0.6rem; opacity:0.5;"></i>
             ${s.target1Low || s.tp1 || 0} – ${s.target1High || 0}
-            <span style="font-size:0.55rem; color:#a1a1aa; opacity:0.7; margin-left:auto;"><i class="fa-regular fa-clock"></i> TP 1</span>
+            <span style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-left:auto;"><i class="fa-regular fa-clock"></i> TP 1</span>
           </div>
         </div>
         <div class="tech-target-card" style="background:rgba(0,0,0,0.25); padding:0.5rem 0.6rem; border-radius:8px; border-left:3px solid #f59e0b;">
           <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.15rem;">
             <span class="target-icon" style="font-size:0.7rem; color:#f59e0b;"><i class="fa-solid fa-trophy"></i></span>
-            <span style="font-size:0.6rem; color:#a1a1aa; font-weight:500;">Target Area 2</span>
-            <span style="font-size:0.55rem; color:#f59e0b; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:0.05rem 0.4rem; border-radius:6px; margin-left:auto; font-weight:600;"><i class="fa-regular fa-star"></i> EXTENDED</span>
+            <span style="font-size:0.6rem; color:var(--text-secondary); font-weight:500;">Target Area 2</span>
+            <span style="font-size:0.5rem; color:#f59e0b; background:rgba(245,158,11,0.1); padding:0.05rem 0.4rem; border-radius:8px; margin-left:auto;"><i class="fa-regular fa-star"></i> EXTENDED</span>
           </div>
           <div style="font-family:'JetBrains Mono'; font-weight:700; font-size:0.95rem; color:#f59e0b; display:flex; align-items:center; gap:0.3rem;">
             <i class="fa-solid fa-arrow-right" style="font-size:0.6rem; opacity:0.5;"></i>
             ${s.target2Low || s.tp2 || 0} – ${s.target2High || 0}
-            <span style="font-size:0.55rem; color:#a1a1aa; opacity:0.7; margin-left:auto;"><i class="fa-regular fa-clock"></i> TP 2</span>
+            <span style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-left:auto;"><i class="fa-regular fa-clock"></i> TP 2</span>
           </div>
         </div>
       </div>
@@ -3467,27 +3466,27 @@ function renderTechnicalSignalDetail(s, container) {
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
-          <div style="font-size:0.6rem; color:#a1a1aa; text-transform:uppercase; letter-spacing:0.3px; display:flex; align-items:center; gap:0.3rem; font-weight:600;">
+          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px; display:flex; align-items:center; gap:0.3rem;">
             <i class="fa-solid fa-cart-shopping" style="color:#3b82f6;"></i> Buy Area Reference
           </div>
           <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#3b82f6; margin-top:0.15rem; display:flex; align-items:center; gap:0.3rem;">
             <i class="fa-solid fa-tag" style="font-size:0.6rem; opacity:0.5;"></i>
             ${s.buyAreaLow} – ${s.buyAreaHigh}
           </div>
-          <div style="font-size:0.55rem; color:${isExpired ? "#71717a" : "#a1a1aa"}; margin-top:0.1rem; display:flex; align-items:center; gap:0;">
-            <i class="fa-solid fa-arrow-trend-up" style="color:#a1a1aa; font-size:0.5rem; margin-right:4px;"></i>
+          <div style="font-size:0.5rem; color:${isExpired ? "#71717a" : "var(--text-secondary)"}; margin-top:0.1rem; display:flex; align-items:center; gap:0; opacity:0.7;">
+            <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.5rem; margin-right:4px;"></i>
             ${s.buyType || "BREAKOUT SETUP"}
           </div>
         </div>
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:0.65rem 0.6rem;">
-          <div style="font-size:0.6rem; color:#a1a1aa; text-transform:uppercase; letter-spacing:0.3px; display:flex; align-items:center; gap:0.3rem; font-weight:600;">
+          <div style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px; display:flex; align-items:center; gap:0.3rem;">
             <i class="fa-solid fa-shield" style="color:#ef4444;"></i> Stop Loss Baseline
           </div>
           <div style="font-family:'JetBrains Mono'; font-size:1.1rem; font-weight:700; color:#ef4444; margin-top:0.15rem; display:flex; align-items:center; gap:0.3rem;">
             <i class="fa-solid fa-arrow-down" style="font-size:0.6rem; opacity:0.5;"></i>
             -${s.stopLossPercent || 5}%
           </div>
-          <div style="font-size:0.55rem; color:#a1a1aa; margin-top:0.1rem;">
+          <div style="font-size:0.5rem; color:var(--text-secondary); opacity:0.5; margin-top:0.1rem;">
             <i class="fa-regular fa-circle"></i> ${s.sl ? fmtPrice(s.sl) : "Calculated at entry"}
           </div>
         </div>
@@ -3497,18 +3496,17 @@ function renderTechnicalSignalDetail(s, container) {
 
   let statusBadgeHtml = "";
   if (isExpired) {
-    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(113,113,122,0.2); color:#a1a1aa; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>`;
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(113,113,122,0.2); color:#71717a; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;"><i class="fa-regular fa-circle-xmark" style="margin-right:0.2rem;"></i>EXPIRED</span>`;
   } else if (s.status === "RUNNING") {
-    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;">Active</span>`;
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`;
   } else if (s.status === "TRAILING") {
-    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;"><i class="fa-solid fa-person-running" style="margin-right:0.2rem;"></i>Trailing Active</span>`;
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;"><i class="fa-solid fa-person-running" style="margin-right:0.2rem;"></i>Trailing Active</span>`;
   } else if (s.status === "WAITING_ENTRY") {
-    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;">Waiting</span>`;
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`;
   } else {
-    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:#a1a1aa; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto; font-weight:600;">${s.status}</span>`;
+    statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`;
   }
 
-  // FIX: Banner tunggal yang informatif saat Trailing Active
   const strategyFlow = `
     <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
@@ -3526,7 +3524,7 @@ function renderTechnicalSignalDetail(s, container) {
         ${stepCircle(step2Active, "TP 1", `${tp1Label}`, "2", step2State)}
         ${stepCircle(step3Active, "TP 2", `${tp2Label}`, "3", step3State)}
       </div>
-      <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:#a1a1aa; margin-top:0.2rem; ${isExpired ? "opacity:0.4;" : ""}">
+      <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem; ${isExpired ? "opacity:0.4;" : ""}">
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit</span>
@@ -3538,10 +3536,10 @@ function renderTechnicalSignalDetail(s, container) {
           <i class="fa-regular fa-clock" style="margin-right:0.3rem;"></i> Signal telah kedaluwarsa — Tidak ada alur aktif
         </div>`
           : s.status === "TRAILING"
-          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25); font-weight:500;">
+          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
           <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i> <strong>Trailing Stop 3% Aktif:</strong> Proteksi profit dinaikkan ke <strong>Rp${s.sl ? fmtPrice(s.sl) : "TP1"}</strong> (${slLabel})
         </div>`
-          : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:#a1a1aa; opacity:0.6;">
+          : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
           <i class="fa-regular fa-circle-check" style="margin-right:0.2rem; color:#10b981;"></i> Alur strategi berjalan sesuai rencana
         </div>`
       }
@@ -3576,7 +3574,6 @@ function renderTechnicalSignalDetail(s, container) {
       ? `+${dynamicTpPercent.toFixed(1)}%`
       : `${dynamicTpPercent.toFixed(1)}%`;
 
-  // FIX: Mengatur warna & label Stop Loss/Trailing SL di Price Ladder
   const isTrailingMode = s.status === "TRAILING" || (s.status === "TP" && s.breakEven);
   const slColor = isTrailingMode ? "#f59e0b" : "#ef4444";
   const slTitle = isTrailingMode ? "TRAILING SL" : "STOP LOSS";
@@ -3585,15 +3582,15 @@ function renderTechnicalSignalDetail(s, container) {
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0; flex-wrap:wrap;">
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
-          <span class="label" style="font-size:0.55rem; color:#a1a1aa; display:flex; align-items:center; gap:0.2rem; font-weight:500;">
+          <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Entry
           </span>
           <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:var(--text-primary);">${s.entryPrice ? fmtPrice(s.entryPrice) : "—"}</span>
-          <span class="change neutral" style="font-size:0.55rem; color:#a1a1aa;">—</span>
+          <span class="change neutral" style="font-size:0.55rem; color:var(--text-secondary);">—</span>
         </div>
         
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
-          <span class="label" style="font-size:0.55rem; color:#a1a1aa; display:flex; align-items:center; gap:0.2rem; font-weight:500;">
+          <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
             <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" style="width:12px;height:12px;margin-right:0.2rem;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT
           </span>
           <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:#10b981;">${dynamicTpVal ? fmtPrice(dynamicTpVal) : "—"}</span>
@@ -3601,19 +3598,18 @@ function renderTechnicalSignalDetail(s, container) {
         </div>
         
         <div class="price-item" style="display:flex; flex-direction:column; align-items:center; gap:0.2rem; flex:1; min-width:70px; padding:0.3rem; background:rgba(0,0,0,0.15); border-radius:8px;">
-          <span class="label" style="font-size:0.55rem; color:#a1a1aa; display:flex; align-items:center; gap:0.2rem; font-weight:500;">
+          <span class="label" style="font-size:0.55rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
             <i class="fa-solid fa-triangle-exclamation" style="font-size:0.7rem; color:${slColor};"></i> ${slTitle}
           </span>
           <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.85rem; color:${slColor};">${s.sl ? fmtPrice(s.sl) : "—"}</span>
-          <span class="change" style="font-size:0.55rem; color:${slColor}; font-weight:600;">${slLabel}</span>
+          <span class="change" style="font-size:0.55rem; color:${slColor};">${slLabel}</span>
         </div>
       </div>
     </div>
   `;
 
-  // FIX: Menghapus box banner redundan di atas poin list
   const strategyDetail = `
-    <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:#a1a1aa; line-height:1.3;">
+    <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
       <div style="display:flex; align-items:start;">
         <i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
         <span>Entry dilakukan saat harga berada di <strong>Buy Area ${s.buyAreaLow} – ${s.buyAreaHigh}</strong>.</span>
@@ -3652,7 +3648,7 @@ function renderTechnicalSignalDetail(s, container) {
           <div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;">
             <div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;">
               <span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary);">${escapeHtml(s.stockCode)}</span>
-              <span style="font-size:0.8rem; color:#a1a1aa;">${escapeHtml(longName)}</span>
+              <span style="font-size:0.8rem; color:var(--text-secondary); opacity:0.7;">${escapeHtml(longName)}</span>
             </div>
             <div style="grid-column:1; grid-row:2; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
               <span style="font-family:'JetBrains Mono'; font-weight:600; font-size:1rem; color:var(--text-primary); display:flex; align-items:center;">
@@ -3674,12 +3670,12 @@ function renderTechnicalSignalDetail(s, container) {
               </span>
           
               <span class="emit-tag">
-                <i class="fa-solid fa-arrow-trend-up" style="color:#a1a1aa; font-size:0.6rem; margin-right:5px;"></i>${setupText}
+                <i class="fa-solid fa-arrow-trend-up" style="color:#71717a; font-size:0.6rem; margin-right:5px;"></i>${setupText}
               </span>
               ${s.status === "WAITING_ENTRY" ? `<span class="emit-tag"><i class="fa-regular fa-hourglass-half" style="margin-right:3px; font-size:0.65rem;"></i>Waiting Entry</span>` : ""}
               ${isExpired ? `<span class="emit-tag" style="color:#71717a; border-color:#71717a;"><i class="fa-regular fa-circle-xmark" style="margin-right:3px; font-size:0.65rem;"></i>EXPIRED</span>` : ""}
             </div>
-            <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:#a1a1aa; opacity:0.8; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
+            <div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div>
           </div>
         </div>
 
@@ -3694,7 +3690,7 @@ function renderTechnicalSignalDetail(s, container) {
         </div>
 
         <!-- FOOTER -->
-        <div style="padding:0.5rem 0.75rem; text-align:center; font-size:0.55rem; color:#a1a1aa; border-top:1px solid rgba(255,255,255,0.04);">
+        <div style="padding:0.5rem 0.75rem; text-align:center; font-size:0.55rem; color:var(--text-secondary); opacity:0.4; border-top:1px solid rgba(255,255,255,0.04);">
           <i class="fa-solid fa-microchip" style="margin-right:0.2rem;"></i> Technical Strategy
         </div>
       </div>
