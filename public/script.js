@@ -414,12 +414,12 @@ function getDateRangeText(filterType, customStart, customEnd) {
 
 function createStatCard(label, value, color, icon) {
   return `
-    <div class="stat-card-item">
-      <div class="stat-card-header" style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem;">
-        <i class="${icon} stat-card-icon" style="color:${color}; font-size:0.85rem; flex-shrink:0;"></i>
-        <span class="stat-card-label" style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${label}</span>
+    <div style="background:rgba(255,255,255,0.02); border-radius:12px; padding:1rem; border:1px solid rgba(255,255,255,0.06); transition:all 0.2s; backdrop-filter:blur(4px);">
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
+        <i class="${icon}" style="color:${color}; font-size:1rem;"></i>
+        <span style="font-size:0.65rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">${label}</span>
       </div>
-      <div class="stat-card-value" style="color:${color};">${value}</div>
+      <div style="font-family:'JetBrains Mono'; font-size:1.5rem; font-weight:700; color:${color};">${value}</div>
     </div>
   `;
 }
@@ -740,7 +740,8 @@ async function renderDaily() {
             <span class="emit-date"><i class="far fa-calendar-alt" style="margin-right:0.3rem;"></i> ${new Date().toLocaleString("id-ID")}</span>
           </div>
         </div>
-        <div id="statsGridContainer" class="stats-grid">
+
+        <div id="statsGridContainer" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
           ${createStatCard("Sinyal Baru", agg.totalSignals, "#3b82f6", "fa-solid fa-bell")}
           ${createStatCard("TP", agg.tp, "#10b981", "fa-solid fa-check-circle")}
           ${createStatCard("SL", agg.sl, "#ef4444", "fa-solid fa-times-circle")}
@@ -3336,10 +3337,9 @@ function renderTechnicalSignalDetail(s, container) {
   if (entry > 0 && tp1 > 0) tp1Percent = ((tp1 - entry) / entry) * 100;
   if (entry > 0 && tp2 > 0) tp2Percent = ((tp2 - entry) / entry) * 100;
 
-  // Tampilkan tanda plus (+) jika slPercent bernilai positif (saat Trailing SL terkunci di atas entry)
   const slSign = slPercent > 0 ? "+" : "";
   const slLabel = `${slSign}${slPercent.toFixed(1)}%`;
-  
+
   const tp1Label =
     tp1Percent > 0 ? `+${tp1Percent.toFixed(1)}%` : `${tp1Percent.toFixed(1)}%`;
   const tp2Label =
@@ -3535,10 +3535,10 @@ function renderTechnicalSignalDetail(s, container) {
           <i class="fa-regular fa-clock" style="margin-right:0.3rem;"></i> Signal telah kedaluwarsa — Tidak ada alur aktif
         </div>`
           : s.status === "TRAILING"
-          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
+            ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
           <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i> <strong>Trailing Stop 3% Aktif:</strong> Proteksi profit dinaikkan ke <strong>Rp${s.sl ? fmtPrice(s.sl) : "TP1"}</strong> (${slLabel})
         </div>`
-          : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
+            : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
           <i class="fa-regular fa-circle-check" style="margin-right:0.2rem; color:#10b981;"></i> Alur strategi berjalan sesuai rencana
         </div>`
       }
@@ -3573,7 +3573,8 @@ function renderTechnicalSignalDetail(s, container) {
       ? `+${dynamicTpPercent.toFixed(1)}%`
       : `${dynamicTpPercent.toFixed(1)}%`;
 
-  const isTrailingMode = s.status === "TRAILING" || (s.status === "TP" && s.breakEven);
+  const isTrailingMode =
+    s.status === "TRAILING" || (s.status === "TP" && s.breakEven);
   const slColor = isTrailingMode ? "#f59e0b" : "#ef4444";
   const slTitle = isTrailingMode ? "TRAILING SL" : "STOP LOSS";
 
