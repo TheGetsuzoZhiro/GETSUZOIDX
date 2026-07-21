@@ -1242,6 +1242,7 @@ function renderStrategyFlowForSignal(s) {
     progressGradient = "linear-gradient(90deg, #10b981 50%, #f59e0b 50%)";
   }
 
+  // 🔽 Perbaikan teks trailing menjadi 5% untuk non-BSJP
   return `
     <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
@@ -1264,7 +1265,7 @@ function renderStrategyFlowForSignal(s) {
         </div>
         ${stepCircle(step1Active, "Entry", `SL ${slLabel}`, "1", step1State)}
         ${stepCircle(step2Active, "Take Profit", `TP ${tpLabel}`, "2", step2State)}
-        ${stepCircle(step3Active, "Trailing Stop", "TS 3%", "3", step3State)}
+        ${stepCircle(step3Active, "Trailing Stop", "TS 5%", "3", step3State)}
       </div>
       
       <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem;">
@@ -1450,15 +1451,16 @@ function renderBsjpDetailContent(
     progressGradient = "linear-gradient(90deg, #ef4444, #ef4444)";
   }
 
+  // 🔽 Perbaikan semua teks BSJP menjadi 3% (bukan 2%)
   const strategyVisual = `
     <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
       <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.08); z-index:1;">
         <div style="height:100%; width:${progressWidth}; background:${progressGradient}; border-radius:2px; transition:width 0.8s ease;"></div>
       </div>
       
-      ${stepCircle(isStep1Active, "Entry", "SL -2%", "1", step1State)}
-      ${stepCircle(isStep2Active, "Take Profit", "Lock 2%", "2")}
-      ${stepCircle(isStep3Active, "Trailing Stop", "Trailing Stop 2%", "3", step3State)}
+      ${stepCircle(isStep1Active, "Entry", "SL -3%", "1", step1State)}
+      ${stepCircle(isStep2Active, "Take Profit", "Lock 3%", "2")}
+      ${stepCircle(isStep3Active, "Trailing Stop", "Trailing Stop 3%", "3", step3State)}
     </div>
     <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem;">
       <span style="display:flex; align-items:center; gap:0.2rem;">
@@ -1469,9 +1471,9 @@ function renderBsjpDetailContent(
       </span>
     </div>
     <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.5rem 0.6rem; margin-top:0.5rem; border:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:0.35rem; font-size:0.65rem; color:var(--text-secondary); line-height:1.3;">
-      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Stop Loss awal <strong>-2%</strong> dari Entry.</span></div>
-      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Jika TP 2% tercapai, SL pindah ke <strong>Lock 2%</strong> (minimal profit 2%).</span></div>
-      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Setelah Lock, trailing 2% dengan <strong>minimum 2% profit</strong>.</span></div>
+      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle" style="color:#8b5cf6; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Stop Loss awal <strong>-3%</strong> dari Entry.</span></div>
+      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Jika TP 3% tercapai, SL pindah ke <strong>Lock 3%</strong> (minimal profit 3%).</span></div>
+      <div style="display:flex; align-items:start;"><i class="fa-regular fa-circle-check" style="color:#10b981; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i> <span>Setelah Lock, trailing 3% dengan <strong>minimum 3% profit</strong>.</span></div>
     </div>
   `;
 
@@ -1512,7 +1514,7 @@ function renderBsjpDetailContent(
   } else if (s.breakEven) {
     trailingDisplay = `
       <div style="background:rgba(255,255,255,0.02); border-radius:6px; padding:0.65rem 0.6rem; border:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; justify-content:center;">
-        <div style="color:var(--text-secondary); font-size:0.6rem; margin-bottom:0.3rem;"><i class="fa-solid fa-chart-line" style="margin-right:0.2rem;"></i>Trailing Stop (2%)</div>
+        <div style="color:var(--text-secondary); font-size:0.6rem; margin-bottom:0.3rem;"><i class="fa-solid fa-chart-line" style="margin-right:0.2rem;"></i>Trailing Stop (3%)</div>
         <div style="font-weight:600; color:var(--success); font-size:0.85rem;">${fmtPrice(s.sl)}</div>
       </div>
     `;
@@ -1567,14 +1569,14 @@ function renderBsjpDetailContent(
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT
               </span>
               <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--success);">${fmtPrice(s.tp1)}</span>
-              <span class="change positive" style="font-size:0.6rem; color:var(--success);">+2.00%</span>
+              <span class="change positive" style="font-size:0.6rem; color:var(--success);">+3.00%</span>
             </div>
             <div class="price-item" style="display:flex; align-items:center; gap:0.3rem; flex:1; justify-content:center;">
               <span class="label" style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;">
                 <i class="fa-solid fa-triangle-exclamation"></i> STOP LOSS
               </span>
               <span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--danger);">${fmtPrice(s.sl)}</span>
-              <span class="change negative" style="font-size:0.6rem; color:var(--danger);">-2.00%</span>
+              <span class="change negative" style="font-size:0.6rem; color:var(--danger);">-3.00%</span>
             </div>
           </div>
         </div>
@@ -3527,6 +3529,7 @@ function renderTechnicalSignalDetail(s, container) {
     statusBadgeHtml = `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`;
   }
 
+  // 🔽 Perbaikan: Trailing Stop 5% untuk Technical (bukan 3%)
   const strategyFlow = `
     <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
@@ -3557,7 +3560,7 @@ function renderTechnicalSignalDetail(s, container) {
         </div>`
           : s.status === "TRAILING"
             ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
-          <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i> <strong>Trailing Stop 3% Aktif:</strong> Proteksi profit dinaikkan ke <strong>Rp${s.sl ? fmtPrice(s.sl) : "TP1"}</strong> (${slLabel})
+          <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i> <strong>Trailing Stop 5% Aktif:</strong> Proteksi profit dinaikkan ke <strong>Rp${s.sl ? fmtPrice(s.sl) : "TP1"}</strong> (${slLabel})
         </div>`
             : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
           <i class="fa-regular fa-circle-check" style="margin-right:0.2rem; color:#10b981;"></i> Alur strategi berjalan sesuai rencana
@@ -3641,7 +3644,7 @@ function renderTechnicalSignalDetail(s, container) {
       </div>
       <div style="display:flex; align-items:start;">
         <i class="fa-solid fa-arrows-up-to-line" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
-        <span><strong>Trailing Stop (3%)</strong> aktif otomatis saat TP 1 tersentuh untuk mengunci profit.</span>
+        <span><strong>Trailing Stop (5%)</strong> aktif otomatis saat TP 1 tersentuh untuk mengunci profit.</span>
       </div>
       <div style="display:flex; align-items:start;">
         <i class="fa-regular fa-circle-check" style="color:#f59e0b; font-size:0.5rem; margin-right:0.4rem; margin-top:0.15rem;"></i>
