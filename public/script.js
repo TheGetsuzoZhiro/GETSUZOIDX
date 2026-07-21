@@ -1947,6 +1947,13 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   const foreignClass = isForeignBuy ? "buy" : "sell";
   const foreignAbs = Math.abs(foreignNet).toLocaleString();
   const foreignPct = Math.min((Math.abs(foreignNet) / 1000) * 100, 100);
+  // Fungsi untuk warna volume (di dalam renderSignalDetailToContainer)
+const getVolumeColor = (pct) => {
+  if (pct == null) return 'var(--text-secondary)';
+  if (pct < 70) return '#ff6b6b';   // Merah (Rendah)
+  if (pct < 130) return '#ffffff';  // Putih (Normal)
+  return '#69db7c';                 // Hijau (Tinggi)
+};
 
   const headerResetStyle = `<style>.emit-header-simple { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; padding:0.25rem 0; margin-bottom:0.75rem; gap:0.5rem; }.emit-header-simple .left { display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; flex:1 1 auto; }.emit-header-simple .left .stock-group { display:flex; align-items:center; gap:0.4rem; flex-shrink:0; }.emit-header-simple .left .stock-group .ticker { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary); white-space:nowrap; }.emit-header-simple .left .emit-tag-group { display:flex; flex-wrap:wrap; align-items:center; gap:0.25rem 0.4rem; flex:0 1 auto; }.emit-header-simple .right { font-size:0.7rem; color:var(--text-secondary); opacity:0.6; flex-shrink:0; }.pro-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }.pro-grid-2 .col-left { border-right: 1px solid rgba(255,255,255,0.08); padding-right: 0.5rem; }.pro-grid-2 .col-right { padding-left: 0.5rem; }.price-ladder { display: flex; justify-content: space-around; align-items: center; gap: 0.5rem; padding: 0.2rem 0; margin: 0; }.price-item { display: flex; align-items: center; gap: 0.3rem; flex: 1; justify-content: center; }@media (max-width: 640px) { .pro-grid-2 { display: flex !important; flex-direction: column !important; gap: 0.75rem !important; } .pro-grid-2 .col-left { border-right: none !important; padding-right: 0 !important; } .pro-grid-2 .col-right { padding-left: 0 !important; } .pro-detail-container { padding: 0 !important; } .emit-header-simple .left .stock-group .ticker { font-size:1rem; } .emit-header-simple .left .emit-tag-group .emit-tag { font-size:0.55rem; } .emit-header-simple .left .emit-tag-group .emit-tag i { font-size:0.5rem; } .emit-header-simple .right { font-size:0.6rem; } .price-ladder { flex-wrap: nowrap !important; gap: 0.2rem !important; } .price-item { flex: 1 1 0 !important; justify-content: center !important; } }</style>`;
 
@@ -2004,15 +2011,29 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
     </div>
 
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-      <div class="pro-grid-2">
-        <div class="col-right" style="width:100%;">
-          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Teknikal
+  <div class="pro-grid-2">
+    <div class="col-right" style="width:100%;">
+      <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Teknikal
+      </div>
+      <div class="pro-indicator-list">
+        <!-- VOLUME -->
+        <div class="pro-ind-row">
+          <span class="pro-ind-label">Volume</span>
+          <div class="pro-ind-track">
+            <div class="pro-ind-fill" style="width: ${Math.min(s.volumePercent ?? 0, 200)}%; background: ${getVolumeColor(s.volumePercent)};"></div>
           </div>
-          <div class="pro-indicator-list">${renderIndRow("EMA 20", fmtPrice(s.ema20), s.ema20, s.entryPrice)}${renderIndRow("EMA 50", fmtPrice(s.ema50), s.ema50, s.entryPrice)}${renderIndRow("VWAP", fmtPrice(s.vwap), s.vwap, s.entryPrice)}${s.adx != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ADX</span><div class="pro-ind-track"><div class="pro-ind-fill bg-warning" style="width:${Math.min(s.adx, 100)}%;"></div></div><span class="pro-ind-val">${s.adx}</span></div>` : ""}${s.atr != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ATR</span><div class="pro-ind-track"><div class="pro-ind-fill bg-neutral" style="width:${Math.min((s.atr / (s.entryPrice || 1)) * 100, 100)}%;"></div></div><span class="pro-ind-val">${fmtPrice(s.atr)}</span></div>` : ""}</div>
+          <span class="pro-ind-val">${s.volumePercent != null ? s.volumePercent + '%' : 'N/A'}</span>
         </div>
+        ${renderIndRow("EMA 20", fmtPrice(s.ema20), s.ema20, s.entryPrice)}
+        ${renderIndRow("EMA 50", fmtPrice(s.ema50), s.ema50, s.entryPrice)}
+        ${renderIndRow("VWAP", fmtPrice(s.vwap), s.vwap, s.entryPrice)}
+        ${s.adx != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ADX</span><div class="pro-ind-track"><div class="pro-ind-fill bg-warning" style="width:${Math.min(s.adx, 100)}%;"></div></div><span class="pro-ind-val">${s.adx}</span></div>` : ""}
+        ${s.atr != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ATR</span><div class="pro-ind-track"><div class="pro-ind-fill bg-neutral" style="width:${Math.min((s.atr / (s.entryPrice || 1)) * 100, 100)}%;"></div></div><span class="pro-ind-val">${fmtPrice(s.atr)}</span></div>` : ""}
       </div>
     </div>
+  </div>
+</div>
 
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
