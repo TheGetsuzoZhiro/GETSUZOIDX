@@ -414,12 +414,12 @@ function getDateRangeText(filterType, customStart, customEnd) {
 
 function createStatCard(label, value, color, icon) {
   return `
-    <div style="background:rgba(255,255,255,0.02); border-radius:12px; padding:1rem; border:1px solid rgba(255,255,255,0.06); transition:all 0.2s; backdrop-filter:blur(4px);">
-      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.3rem;">
-        <i class="${icon}" style="color:${color}; font-size:1rem;"></i>
-        <span style="font-size:0.65rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">${label}</span>
+    <div class="stat-card-item">
+      <div class="stat-card-header" style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.2rem;">
+        <i class="${icon} stat-card-icon" style="color:${color}; font-size:0.85rem; flex-shrink:0;"></i>
+        <span class="stat-card-label" style="font-size:0.6rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${label}</span>
       </div>
-      <div style="font-family:'JetBrains Mono'; font-size:1.5rem; font-weight:700; color:${color};">${value}</div>
+      <div class="stat-card-value" style="color:${color};">${value}</div>
     </div>
   `;
 }
@@ -741,7 +741,7 @@ async function renderDaily() {
           </div>
         </div>
 
-        <div id="statsGridContainer" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:1.5rem;">
+        <div id="statsGridContainer" class="stats-grid">
           ${createStatCard("Sinyal Baru", agg.totalSignals, "#3b82f6", "fa-solid fa-bell")}
           ${createStatCard("TP", agg.tp, "#10b981", "fa-solid fa-check-circle")}
           ${createStatCard("SL", agg.sl, "#ef4444", "fa-solid fa-times-circle")}
