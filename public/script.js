@@ -3108,9 +3108,6 @@ async function showTechnicalSignalList() {
           TECHNICAL TRACKER LIST
           <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${techSignals.length})</span>
         </span>
-        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-          GAIN: ${arrowIconTotal} <span id="techListGain" style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
-        </span>
       </div>
       <div class="sig-list">
         ${renderTechnicalRows(techSignals, priceMap, infoMap)}
