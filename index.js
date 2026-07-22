@@ -414,7 +414,8 @@ app.post("/api/send-push", async (req, res) => {
   const pushOptions = { TTL: 86400, urgency: "high" };
 
   try {
-    const subscriptions = await SubscriptionModel.find({});
+    // Ditambahkan .lean() agar mengembalikan plain JavaScript Object
+    const subscriptions = await SubscriptionModel.find({}).lean();
     if (subscriptions.length === 0) {
       sentPushesCache.delete(pushKey);
       return res.json({ success: true, message: "Tidak ada subscriber" });
@@ -497,7 +498,8 @@ async function triggerInternalPush(title, body) {
   const payload = JSON.stringify({ title, body });
   const pushOptions = { TTL: 86400, urgency: "high" };
   try {
-    const subscriptions = await SubscriptionModel.find({});
+    // Ditambahkan .lean() agar mengembalikan plain JavaScript Object
+    const subscriptions = await SubscriptionModel.find({}).lean();
     if (subscriptions.length === 0) {
       sentPushesCache.delete(pushKey);
       return;
@@ -556,27 +558,26 @@ async function checkDatabaseForNewSignals() {
         newRunning.includes(`${s.stockCode}-${s.signalDate}`),
       );
 
-      // ===== PERUBAHAN UTAMA =====
-      // Pisahkan sinyal baru menjadi BSJP, TECHNICAL, dan regular
-      const bsjpSignals = newSignals.filter(s => s.signalType === "BSJP");
-      const technicalSignals = newSignals.filter(s => s.signalType === "TECHNICAL");
-      const regularSignals = newSignals.filter(s => s.signalType !== "BSJP" && s.signalType !== "TECHNICAL");
+      const bsjpSignals = newSignals.filter((s) => s.signalType === "BSJP");
+      const technicalSignals = newSignals.filter(
+        (s) => s.signalType === "TECHNICAL",
+      );
+      const regularSignals = newSignals.filter(
+        (s) => s.signalType !== "BSJP" && s.signalType !== "TECHNICAL",
+      );
 
-      // Push individual untuk setiap BSJP
       for (const s of bsjpSignals) {
         const title = `NEW BSJP: ${s.stockCode}`;
         const body = `Sinyal BSJP baru untuk ${s.stockCode}`;
         await triggerInternalPush(title, body);
       }
 
-      // Push individual untuk setiap TECHNICAL
       for (const s of technicalSignals) {
         const title = `NEW TECHNICAL: ${s.stockCode}`;
         const body = `Sinyal Technical baru untuk ${s.stockCode}`;
         await triggerInternalPush(title, body);
       }
 
-      // Kelompokkan regular signals berdasarkan sesi (seperti sebelumnya)
       const groups = { session1: [], session2: [], other: [] };
       regularSignals.forEach((s) => {
         const session = getSessionFromDate(s.signalDate);
@@ -602,7 +603,6 @@ async function checkDatabaseForNewSignals() {
         );
     }
 
-    // Push individual untuk setiap sinyal yang berubah menjadi TP
     const tpSignals = allSignals.filter((s) => s.status === "TP");
     for (const s of tpSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
