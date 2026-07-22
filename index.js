@@ -631,4 +631,4 @@ async function checkDatabaseForNewSignals() {
 }
 
 checkDatabaseForNewSignals();
-setInterval(checkDatabaseForNewSignals, 30000);
+setInterval(checkDatabaseForNewSignals, 3000);
