@@ -3,6 +3,7 @@
   "scope": "/",
   "name": "GetSuzoIDX",
   "short_name": "GetSuzoIDX",
+  "gcm_sender_id": "103953800507",
   "description": "Platform analisis teknikal profesional untuk trading saham Indonesia.",
   "start_url": "/",
   "display": "standalone",
@@ -22,17 +23,17 @@
       "type": "image/png",
       "purpose": "any"
     },
-  {
-    "purpose": "maskable",
-    "sizes": "588x588",
-    "src": "/assets/favicon/maskable_icon.png",
-    "type": "image/png"
-  },
-  {
-    "purpose": "maskable",
-    "sizes": "512x512",
-    "src": "/assets/favicon/maskable_icon_x512.png",
-    "type": "image/png"
-  }
+    {
+      "purpose": "maskable",
+      "sizes": "588x588",
+      "src": "/assets/favicon/maskable_icon.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "512x512",
+      "src": "/assets/favicon/maskable_icon_x512.png",
+      "type": "image/png"
+    }
   ]
 }
