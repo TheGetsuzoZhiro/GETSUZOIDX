@@ -2132,8 +2132,8 @@ async function renderPerformanceSignalList(status) {
 
     const symbols = [...new Set(filteredByStatus.map((s) => s.stockCode))];
     const [priceResults, infoResults] = await Promise.all([
-    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
-    Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
+      Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
+      Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
     ]);
 
     const priceMap = {};
@@ -3104,6 +3104,9 @@ async function showTechnicalSignalList() {
           TECHNICAL TRACKER LIST
           <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${techSignals.length})</span>
         </span>
+        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+          GAIN: ${arrowIconTotal} <span id="techListGain" style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
+        </span>
       </div>
       <div class="sig-list">
         ${renderTechnicalRows(techSignals, priceMap, infoMap)}
@@ -3265,10 +3268,8 @@ async function updateTechnicalSignalList() {
       arrowIconTotal = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
     }
 
-    const header = gainSpan.closest(".sig-list-header");
-    if (header) {
-      const leftSpan = header.querySelector("span:first-child");
-      const rightSpan = header.querySelector("span:last-child");
+    if (gainSpan) {
+      const rightSpan = gainSpan.parentElement;
       if (rightSpan) {
         rightSpan.innerHTML = `GAIN: ${arrowIconTotal} <span id="techListGain" style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>`;
       }
