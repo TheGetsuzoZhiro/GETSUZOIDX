@@ -2132,12 +2132,8 @@ async function renderPerformanceSignalList(status) {
 
     const symbols = [...new Set(filteredByStatus.map((s) => s.stockCode))];
     const [priceResults, infoResults] = await Promise.all([
-      Promise.all(symbols.map((sym) => fetchStockPrice(sym).catch(() => null))),
-      Promise.all(
-        symbols.map((sym) =>
-          fetchStockInfo(sym).catch(() => ({ longName: sym })),
-        ),
-      ),
+    Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
+    Promise.all(symbols.map((sym) => fetchStockInfo(sym))),
     ]);
 
     const priceMap = {};
