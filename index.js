@@ -5,6 +5,7 @@ const path = require("path");
 const os = require("os");
 const webpush = require("web-push");
 const mongoose = require("mongoose");
+const compression = require("compression"); // Middleware Kompresi Gzip/Brotli
 
 const sentPushesCache = new Map();
 const infoCache = new Map();
@@ -77,6 +78,10 @@ const SignalSchema = new mongoose.Schema(
   { versionKey: false },
 );
 
+// Indeks Database MongoDB
+SignalSchema.index({ status: 1 });
+SignalSchema.index({ stockCode: 1, signalDate: 1 });
+
 const SignalModel = mongoose.model("Signal", SignalSchema, "signals");
 
 const SubscriptionSchema = new mongoose.Schema(
@@ -109,7 +114,7 @@ const TokenModel = mongoose.model(
 
 async function getStockbitToken() {
   try {
-    const doc = await TokenModel.findById("stockbit_token");
+    const doc = await TokenModel.findById("stockbit_token").lean();
     if (doc && doc.token) {
       let token = doc.token.trim();
       if (!token.startsWith("Bearer ")) {
@@ -201,6 +206,9 @@ async function isMarketOpen() {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// [OPTIMASI MIDDLEWARE] Kompresi Payload Gzip/Brotli
+app.use(compression({ level: 6 }));
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -315,12 +323,61 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 });
 
+// [ULTRA OPTIMIZATION CACHE SYSTEM]
+let cachedJsonString = null; // Menyimpan string JSON yang sudah ter-serialize
+let cachedEtag = null;       // Header ETag unik untuk browser 304 validation
+let isRefreshingCache = false;
+
+async function fetchAndSerializeSignals() {
+  if (isRefreshingCache) return;
+  isRefreshingCache = true;
+  try {
+    const allSignals = await SignalModel.find({}).lean();
+    const running = [];
+    const closed = [];
+    
+    for (let i = 0; i < allSignals.length; i++) {
+      if (allSignals[i].status === "RUNNING") {
+        running.push(allSignals[i]);
+      } else {
+        closed.push(allSignals[i]);
+      }
+    }
+
+    // Pre-serialize JSON String di background
+    cachedJsonString = JSON.stringify({ running, closed });
+    cachedEtag = `W/"sig-${Date.now()}"`;
+
+    return { allSignals, running, closed };
+  } catch (err) {
+    console.error("❌ [CACHE] Gagal memperbarui cache:", err.message);
+    return null;
+  } finally {
+    isRefreshingCache = false;
+  }
+}
+
+// [ENDPOINT SIGNALS - ZERO WAIT RESPONSE TIME]
 app.get("/api/signals", async (req, res) => {
   try {
-    const allSignals = await SignalModel.find({});
-    const running = allSignals.filter((s) => s.status === "RUNNING");
-    const closed = allSignals.filter((s) => s.status !== "RUNNING");
-    res.json({ running, closed });
+    // 1. Jika server baru pertama kali nyala dan cache belum ada
+    if (!cachedJsonString) {
+      await fetchAndSerializeSignals();
+    }
+
+    // 2. Cek ETag dari browser (HTTP 304 Not Modified -> 0 Byte Payload)
+    if (req.headers["if-none-match"] === cachedEtag) {
+      return res.status(304).end();
+    }
+
+    // 3. Set Header Response Caching & ETag
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("ETag", cachedEtag);
+    res.setHeader("Cache-Control", "public, max-age=15, stale-while-revalidate=15");
+    res.setHeader("X-Cache", "HIT-ULTRA");
+
+    // 4. Langsung kirim string mentah dari RAM (Zero CPU stringify overhead)
+    return res.send(cachedJsonString);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -517,11 +574,14 @@ async function triggerInternalPush(title, body) {
   }
 }
 
+// [UNIFIED BACKGROUND WATCHDOG & CACHE WARMING]
 async function checkDatabaseForNewSignals() {
   try {
-    const allSignals = await SignalModel.find({});
-    const running = allSignals.filter((s) => s.status === "RUNNING");
-    const closed = allSignals.filter((s) => s.status !== "RUNNING");
+    // Ambil data sekaligus perbarui cache di background (Zero Lag bagi User)
+    const result = await fetchAndSerializeSignals();
+    if (!result) return;
+
+    const { allSignals, running, closed } = result;
 
     const currentRunningIds = running
       .map((s) => `${s.stockCode}-${s.signalDate}`)
@@ -540,7 +600,7 @@ async function checkDatabaseForNewSignals() {
         serverLastStatus.set(key, s.status);
       });
       console.log(
-        "🔄 [WATCHDOG] Server siap. Memantau sinyal saham di background 24/7...",
+        "🔄 [WATCHDOG & CACHE] Server siap. Memantau sinyal saham & memanaskan cache 24/7...",
       );
       return;
     }
@@ -628,5 +688,6 @@ async function checkDatabaseForNewSignals() {
   }
 }
 
+// Jalankan saat pertama kali booting & ulangi tiap 25 detik
 checkDatabaseForNewSignals();
-setInterval(checkDatabaseForNewSignals, 30000);
+setInterval(checkDatabaseForNewSignals, 25000);
