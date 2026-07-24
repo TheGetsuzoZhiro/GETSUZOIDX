@@ -5,7 +5,7 @@ const path = require("path");
 const os = require("os");
 const webpush = require("web-push");
 const mongoose = require("mongoose");
-const compression = require("compression"); // Middleware Kompresi Gzip/Brotli
+const compression = require("compression");
 
 const sentPushesCache = new Map();
 const infoCache = new Map();
