@@ -5,7 +5,7 @@ const path = require("path");
 const os = require("os");
 const webpush = require("web-push");
 const mongoose = require("mongoose");
-const compression = require("compression");
+const compression = require("compression"); // Middleware Kompresi Gzip/Brotli
 
 const sentPushesCache = new Map();
 const infoCache = new Map();
@@ -207,16 +207,31 @@ async function isMarketOpen() {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// [OPTIMASI MIDDLEWARE] Kompresi Payload Gzip/Brotli
-app.use(compression({ level: 6 }));
+// [FIX BUG SSE] Middleware Compression mengecualikan SSE streaming
+app.use(
+  compression({
+    level: 6,
+    filter: (req, res) => {
+      if (
+        req.headers["accept"] === "text/event-stream" ||
+        req.path.includes("/sse")
+      ) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  })
+);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// [ENDPOINT SSE - LIVE PRICE STREAMING FIX]
 app.get("/api/sse/prices", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
   const client = { id: Date.now(), res };
@@ -227,6 +242,7 @@ app.get("/api/sse/prices", (req, res) => {
     const payload = JSON.stringify({ type: "price", updates });
     try {
       res.write(`data: ${payload}\n\n`);
+      if (typeof res.flush === "function") res.flush();
     } catch (e) {}
   }
 
@@ -243,20 +259,32 @@ app.post("/api/sse/price-update", (req, res) => {
   }
 
   updates.forEach((u) => {
-    if (u.symbol && u.price != null) {
-      lastPrices.set(u.symbol, u);
+    const sym = u.symbol || u.stockCode;
+    if (sym && u.price != null) {
+      const normalizedUpdate = {
+        symbol: sym,
+        stockCode: sym,
+        price: u.price,
+        change: u.change || 0,
+        changePercent: u.changePercent || 0,
+      };
+      lastPrices.set(sym, normalizedUpdate);
     }
   });
 
   const payload = JSON.stringify({ type: "price", updates });
-  sseClients.forEach((client) => {
+
+  for (let i = sseClients.length - 1; i >= 0; i--) {
+    const client = sseClients[i];
     try {
       client.res.write(`data: ${payload}\n\n`);
+      if (typeof client.res.flush === "function") {
+        client.res.flush();
+      }
     } catch (e) {
-      const idx = sseClients.indexOf(client);
-      if (idx > -1) sseClients.splice(idx, 1);
+      sseClients.splice(i, 1);
     }
-  });
+  }
 
   res.json({ success: true, clients: sseClients.length });
 });
