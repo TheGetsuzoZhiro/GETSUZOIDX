@@ -5,7 +5,7 @@ const path = require("path");
 const os = require("os");
 const webpush = require("web-push");
 const mongoose = require("mongoose");
-const compression = require("compression"); // Middleware Kompresi Gzip/Brotli
+const compression = require("compression");
 
 const sentPushesCache = new Map();
 const infoCache = new Map();
@@ -78,7 +78,6 @@ const SignalSchema = new mongoose.Schema(
   { versionKey: false },
 );
 
-// Indeks Database MongoDB
 SignalSchema.index({ status: 1 });
 SignalSchema.index({ stockCode: 1, signalDate: 1 });
 
@@ -207,7 +206,6 @@ async function isMarketOpen() {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// [FIX BUG SSE] Middleware Compression mengecualikan SSE streaming
 app.use(
   compression({
     level: 6,
@@ -226,7 +224,6 @@ app.use(
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// [ENDPOINT SSE - LIVE PRICE STREAMING FIX]
 app.get("/api/sse/prices", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -351,9 +348,8 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 });
 
-// [ULTRA OPTIMIZATION CACHE SYSTEM]
-let cachedJsonString = null; // Menyimpan string JSON yang sudah ter-serialize
-let cachedEtag = null;       // Header ETag unik untuk browser 304 validation
+let cachedJsonString = null;
+let cachedEtag = null;
 let isRefreshingCache = false;
 
 async function fetchAndSerializeSignals() {
@@ -372,7 +368,6 @@ async function fetchAndSerializeSignals() {
       }
     }
 
-    // Pre-serialize JSON String di background
     cachedJsonString = JSON.stringify({ running, closed });
     cachedEtag = `W/"sig-${Date.now()}"`;
 
@@ -385,26 +380,21 @@ async function fetchAndSerializeSignals() {
   }
 }
 
-// [ENDPOINT SIGNALS - ZERO WAIT RESPONSE TIME]
 app.get("/api/signals", async (req, res) => {
   try {
-    // 1. Jika server baru pertama kali nyala dan cache belum ada
     if (!cachedJsonString) {
       await fetchAndSerializeSignals();
     }
 
-    // 2. Cek ETag dari browser (HTTP 304 Not Modified -> 0 Byte Payload)
     if (req.headers["if-none-match"] === cachedEtag) {
       return res.status(304).end();
     }
 
-    // 3. Set Header Response Caching & ETag
     res.setHeader("Content-Type", "application/json");
     res.setHeader("ETag", cachedEtag);
     res.setHeader("Cache-Control", "public, max-age=15, stale-while-revalidate=15");
     res.setHeader("X-Cache", "HIT-ULTRA");
 
-    // 4. Langsung kirim string mentah dari RAM (Zero CPU stringify overhead)
     return res.send(cachedJsonString);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -559,6 +549,7 @@ app.listen(PORT, "0.0.0.0", async () => {
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
 const serverLastStatus = new Map();
+let serverLastTechnicalWaitingIds = null;
 
 function getSessionFromDate(signalDate) {
   if (!signalDate) return null;
@@ -602,10 +593,8 @@ async function triggerInternalPush(title, body) {
   }
 }
 
-// [UNIFIED BACKGROUND WATCHDOG & CACHE WARMING]
 async function checkDatabaseForNewSignals() {
   try {
-    // Ambil data sekaligus perbarui cache di background (Zero Lag bagi User)
     const result = await fetchAndSerializeSignals();
     if (!result) return;
 
@@ -620,12 +609,45 @@ async function checkDatabaseForNewSignals() {
       .sort()
       .join(",");
 
+    // --- DETEKSI TECHNICAL WAITING_ENTRY BARU ---
+    const technicalWaiting = allSignals.filter(
+      s => s.signalType === "TECHNICAL" && s.status === "WAITING_ENTRY"
+    );
+    const currentTechnicalWaitingIds = technicalWaiting
+      .map((s) => `${s.stockCode}-${s.signalDate}`)
+      .sort()
+      .join(",");
+
+    if (serverLastTechnicalWaitingIds !== null) {
+      const prevWaitingArr = serverLastTechnicalWaitingIds.split(",");
+      const currWaitingArr = currentTechnicalWaitingIds.split(",");
+      const newWaiting = currWaitingArr.filter(id => !prevWaitingArr.includes(id));
+
+      if (newWaiting.length > 0) {
+        const newSignals = technicalWaiting.filter(s =>
+          newWaiting.includes(`${s.stockCode}-${s.signalDate}`)
+        );
+        for (const s of newSignals) {
+          const title = `NEW TECHNICAL WAITING: ${s.stockCode}`;
+          const body = `Sinyal Technical ${s.stockCode} siap di Buy Area (${s.buyAreaLow}–${s.buyAreaHigh})`;
+          await triggerInternalPush(title, body);
+          // Catat status WAITING_ENTRY di serverLastStatus agar RUNNING tidak duplikat
+          const key = `${s.stockCode}-${s.signalDate}`;
+          serverLastStatus.set(key, "WAITING_ENTRY");
+        }
+      }
+    }
+    serverLastTechnicalWaitingIds = currentTechnicalWaitingIds;
+    // --- AKHIR DETEKSI TECHNICAL WAITING_ENTRY ---
+
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
       serverLastClosedIds = currentClosedIds;
       allSignals.forEach((s) => {
         const key = `${s.stockCode}-${s.signalDate}`;
-        serverLastStatus.set(key, s.status);
+        if (!serverLastStatus.has(key)) {
+          serverLastStatus.set(key, s.status);
+        }
       });
       console.log(
         "🔄 [WATCHDOG & CACHE] Server siap. Memantau sinyal saham & memanaskan cache 24/7...",
@@ -633,6 +655,7 @@ async function checkDatabaseForNewSignals() {
       return;
     }
 
+    // --- DETEKSI RUNNING BARU (termasuk TECHNICAL) ---
     const prevRunningArr = serverLastRunningIds.split(",");
     const currentRunningArr = currentRunningIds.split(",");
     const newRunning = currentRunningArr.filter(
@@ -659,6 +682,13 @@ async function checkDatabaseForNewSignals() {
       }
 
       for (const s of technicalSignals) {
+        const key = `${s.stockCode}-${s.signalDate}`;
+        const prevStatus = serverLastStatus.get(key);
+        // Jika sebelumnya WAITING_ENTRY, maka notifikasi WAITING sudah terkirim, skip RUNNING
+        if (prevStatus === "WAITING_ENTRY") {
+          console.log(`[WATCHDOG] Skip RUNNING notif untuk ${s.stockCode} karena sudah WAITING_ENTRY`);
+          continue;
+        }
         const title = `NEW TECHNICAL: ${s.stockCode}`;
         const body = `Sinyal Technical baru untuk ${s.stockCode}`;
         await triggerInternalPush(title, body);
@@ -689,6 +719,7 @@ async function checkDatabaseForNewSignals() {
         );
     }
 
+    // --- DETEKSI TP BARU ---
     const tpSignals = allSignals.filter((s) => s.status === "TP");
     for (const s of tpSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
@@ -703,6 +734,7 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
+    // --- UPDATE STATE ---
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
     allSignals.forEach((s) => {
@@ -716,6 +748,5 @@ async function checkDatabaseForNewSignals() {
   }
 }
 
-// Jalankan saat pertama kali booting & ulangi tiap 25 detik
 checkDatabaseForNewSignals();
 setInterval(checkDatabaseForNewSignals, 25000);
