@@ -71,6 +71,7 @@ const NOTIF_KEY = "notificationHistory";
 
 let _fetchingSignals = false;
 
+// ====== NOTIFICATIONS ======
 function loadNotifications() {
   try {
     const data = localStorage.getItem(NOTIF_KEY);
@@ -946,37 +947,17 @@ function renderTradeSummary() {
   if (isOpen) {
     html += `
       <div style="display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap; margin-top:0.3rem; padding:0.3rem 0.4rem; background:rgba(255,255,255,0.02); border-radius:6px;">
-        <button class="filter-btn" data-filter="today" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "today"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Today</button>
-        <button class="filter-btn" data-filter="7days" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "7days"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">7 Hari</button>
-        <button class="filter-btn" data-filter="1month" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "1month"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">1 Bulan</button>
-        <button class="filter-btn" data-filter="custom" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${
-          currentFilterState.type === "custom"
-            ? "rgba(255,255,255,0.1)"
-            : "transparent"
-        }; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Custom</button>
+        <button class="filter-btn" data-filter="today" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "today" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Today</button>
+        <button class="filter-btn" data-filter="7days" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "7days" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">7 Hari</button>
+        <button class="filter-btn" data-filter="1month" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "1month" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">1 Bulan</button>
+        <button class="filter-btn" data-filter="custom" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "custom" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Custom</button>
     `;
     if (currentFilterState.type === "custom") {
       html += `
         <div style="display:flex; gap:0.2rem; align-items:center; flex-wrap:wrap;">
-          <input type="date" id="customStartDate" value="${
-            currentFilterState.customStart || ""
-          }" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
+          <input type="date" id="customStartDate" value="${currentFilterState.customStart || ""}" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
           <span style="color:var(--text-secondary); font-size:0.55rem;">s/d</span>
-          <input type="date" id="customEndDate" value="${
-            currentFilterState.customEnd || ""
-          }" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
+          <input type="date" id="customEndDate" value="${currentFilterState.customEnd || ""}" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
           <button id="applyCustomFilter" style="padding:0.15rem 0.4rem; border-radius:4px; background:rgba(59,130,246,0.2); border:1px solid #3b82f6; color:#3b82f6; cursor:pointer; font-size:0.55rem;">Terapkan</button>
         </div>
       `;
@@ -1170,10 +1151,8 @@ function renderStrategyFlowForSignal(s) {
   if (entry > 0 && tp > 0) {
     tpPercent = ((tp - entry) / entry) * 100;
   }
-  const slLabel =
-    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tpLabel =
-    tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
+  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tpLabel = tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
 
   const step1Active = true;
   let step1State = "default";
@@ -1252,14 +1231,13 @@ function renderStrategyFlowForSignal(s) {
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
         <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Strategy Flow</span>
-        ${
-          s.status === "RUNNING"
-            ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-            : s.status === "TRAILING"
-              ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-              : s.status === "WAITING_ENTRY"
-                ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
-                : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+        ${s.status === "RUNNING"
+          ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+          : s.status === "TRAILING"
+            ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+            : s.status === "WAITING_ENTRY"
+              ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
+              : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
         }
       </div>
       
@@ -1589,12 +1567,11 @@ function renderBsjpDetailContent(
             <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
               <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
               <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">BSJP Strategy Flow</span>
-              ${
-                s.status === "RUNNING"
-                  ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-                  : s.status === "TRAILING"
-                    ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-                    : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+              ${s.status === "RUNNING"
+                ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+                : s.status === "TRAILING"
+                  ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+                  : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
               }
             </div>
             ${strategyVisual}
@@ -2477,11 +2454,40 @@ function closeAllDropdowns() {
   }
 }
 
+// ====== NEWS FUNCTION ======
+let _isUpdatingNewsHash = false;
+const _newsCategoryMap = {
+  buyback: "BUY BACK AND BACKDOOR",
+  akuisisi: "AKUISISI AND MERGER",
+  private: "PRIVATE PLACEMENT",
+  rightissue: "RIGHT ISSUE",
+  dividen: "DIVIDEN",
+  labarugi: "LABA RUGI",
+  tender: "TENDER OFFER",
+  net: "NET SELL AND NET BUY ASING",
+  konglomerasi: "KONGLOMERASI",
+  sentimen: "SENTIMEN LAINYA",
+};
+
 function selectNewsCategory(category) {
+  if (_isUpdatingNewsHash) return;
   isDetailView = false;
   const pageTitle = document.querySelector(".page-title");
   const pageSubtitle = document.querySelector(".page-subtitle");
   const titleKey = `news-${category}`;
+  const titles = {
+    "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
+    "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
+    "news-private": { t: "Private Placement", s: "Berita private placement" },
+    "news-rightissue": { t: "Right Issue", s: "Berita right issue" },
+    "news-dividen": { t: "Dividen", s: "Berita dividen" },
+    "news-labarugi": { t: "Laba Rugi", s: "Berita laba rugi" },
+    "news-tender": { t: "Tender Offer", s: "Berita tender offer" },
+    "news-net": { t: "Net Sell / Buy Asing", s: "Berita net asing" },
+    "news-konglomerasi": { t: "Konglomerasi", s: "Berita konglomerasi" },
+    "news-sentimen": { t: "Sentimen Lainnya", s: "Berita sentimen" },
+  };
+
   if (titles[titleKey]) {
     pageTitle.innerText = titles[titleKey].t;
     pageSubtitle.innerText = titles[titleKey].s;
@@ -2489,40 +2495,18 @@ function selectNewsCategory(category) {
     pageTitle.innerText = "Berita";
     pageSubtitle.innerText = "Kategori berita";
   }
-  window.location.hash = `#${titleKey}`;
 
+  // Aktifkan view news
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.getElementById("news").classList.add("active");
   currentTab = "news";
 
-  // Panggil loadNews dari news.js
-  if (typeof loadNews === 'function') {
-    // Mapping dari slug ke kategori asli
-    const categoryMap = {
-      'buyback': 'BUY BACK AND BACKDOOR',
-      'akuisisi': 'AKUISISI AND MERGER',
-      'private': 'PRIVATE PLACEMENT',
-      'rightissue': 'RIGHT ISSUE',
-      'dividen': 'DIVIDEN',
-      'labarugi': 'LABA RUGI',
-      'tender': 'TENDER OFFER',
-      'net': 'NET SELL AND NET BUY ASING',
-      'konglomerasi': 'KONGLOMERASI',
-      'sentimen': 'SENTIMEN LAINYA'
-    };
-    const realCategory = categoryMap[category] || category.toUpperCase();
-    loadNews(realCategory);
-  } else {
-    // Fallback jika news.js belum dimuat
-    const container = document.getElementById("news");
-    container.innerHTML = `
-      <div class="loading-state" style="text-align:center; padding:2rem;">
-        <p style="color:var(--text-secondary);">📰 Memuat berita untuk kategori <strong>${pageTitle.innerText}</strong>...</p>
-      </div>
-    `;
-  }
+  // Ubah hash tanpa memicu loop
+  _isUpdatingNewsHash = true;
+  window.location.hash = `#${titleKey}`;
+  _isUpdatingNewsHash = false;
 
-  // Buka dropdown News di sidebar
+  // Buka dropdown News tetap terbuka
   const parent = document.getElementById("newsParent");
   const sub = document.getElementById("newsSubMenu");
   if (parent && sub) {
@@ -2533,7 +2517,22 @@ function selectNewsCategory(category) {
     if (arrow) arrow.classList.add("open");
   }
 
-  // Tutup sidebar di mobile
+  // Muat berita
+  if (typeof loadNews === "function") {
+    const realCategory = _newsCategoryMap[category] || category.toUpperCase();
+    loadNews(realCategory);
+  } else {
+    const container = document.getElementById("news");
+    if (container) {
+      container.innerHTML = `
+        <div class="loading-state" style="text-align:center; padding:2rem;">
+          <p style="color:var(--text-secondary);">📰 Memuat berita untuk kategori <strong>${pageTitle.innerText}</strong>...</p>
+        </div>
+      `;
+    }
+  }
+
+  // Tutup sidebar mobile
   document.querySelector(".sidebar")?.classList.remove("open");
   document.querySelector(".overlay")?.classList.remove("active");
 }
@@ -3645,16 +3644,15 @@ function renderTechnicalSignalDetail(s, container) {
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit</span>
         ${isExpired ? `<span style="display:flex; align-items:center; gap:0.2rem; color:#71717a;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3a3a3a;"></span> Expired</span>` : ""}
       </div>
-      ${
-        isExpired
-          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(113,113,122,0.08); border-radius:6px; font-size:0.6rem; color:#71717a; border:1px dashed rgba(113,113,122,0.15);">
+      ${isExpired
+        ? `<div style="text-align:center; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(113,113,122,0.08); border-radius:6px; font-size:0.6rem; color:#71717a; border:1px dashed rgba(113,113,122,0.15);">
           <i class="fa-regular fa-clock" style="margin-right:0.3rem;"></i> Signal telah kedaluwarsa — Tidak ada alur aktif
         </div>`
-          : s.status === "TRAILING"
-            ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
+        : s.status === "TRAILING"
+          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
           <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i> <strong>Trailing Stop 5% Aktif:</strong> Proteksi profit dinaikkan ke <strong>Rp${s.sl ? fmtPrice(s.sl) : "TP1"}</strong> (${slLabel})
         </div>`
-            : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
+          : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
           <i class="fa-regular fa-circle-check" style="margin-right:0.2rem; color:#10b981;"></i> Alur strategi berjalan sesuai rencana
         </div>`
       }
@@ -4831,6 +4829,7 @@ function initTabs() {
       t: "Technical: Waiting",
       s: "Pending execution setups",
     },
+
     // NEWS TITLES
     "news": { t: "Berita", s: "Kategori berita" },
     "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
@@ -5208,11 +5207,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ============ DROPDOWN NEWS (SAMA PERSIS) ============
+  // ============ DROPDOWN NEWS ============
   const newsParent = document.getElementById("newsParent");
   const newsSubMenu = document.getElementById("newsSubMenu");
   if (newsParent && newsSubMenu) {
-    // Pastikan dropdown tertutup di awal
+    // Pastikan default tertutup
     newsSubMenu.classList.remove("open");
     newsSubMenu.style.display = "none";
     newsParent.classList.remove("open");
@@ -5254,7 +5253,7 @@ document.addEventListener("DOMContentLoaded", () => {
       selectTechnicalFilter("running");
     } else if (hash === "#technical-waiting") {
       selectTechnicalFilter("waiting");
-    } else if (hash.startsWith("#news-")) {
+    } else if (hash.startsWith("#news-") && !_isUpdatingNewsHash) {
       const category = hash.replace("#news-", "");
       selectNewsCategory(category);
     } else if (hash === "#home") {
