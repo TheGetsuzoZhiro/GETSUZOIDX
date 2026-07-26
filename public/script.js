@@ -2519,7 +2519,7 @@ function selectNewsCategory(category) {
 
   // Muat berita
   if (typeof loadNews === "function") {
-    const realCategory = _newsCategoryMap[category] || category.toUpperCase();
+    const realCategory = window.CATEGORY_MAP?.[category] || category.toUpperCase();
     loadNews(realCategory);
   } else {
     const container = document.getElementById("news");
