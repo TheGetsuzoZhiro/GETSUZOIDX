@@ -1,14 +1,28 @@
 // news.js - UI untuk menampilkan daftar berita berdasarkan kategori
 
-const newsCache = new Map();
+// Mapping dari slug URL ke kategori di database (huruf besar semua)
+const CATEGORY_MAP = {
+  buyback: 'BUY BACK AND BACKDOOR',
+  akuisisi: 'AKUISISI AND MERGER',
+  private: 'PRIVATE PLACEMENT',
+  rightissue: 'RIGHT ISSUE',
+  dividen: 'DIVIDEN',
+  labarugi: 'LABA RUGI',
+  tender: 'TENDER OFFER',
+  net: 'NET SELL AND NET BUY ASING',
+  konglomerasi: 'KONGLOMERASI',
+  sentimen: 'SENTIMEN LAINYA'
+};
 
 /**
- * Memuat berita berdasarkan kategori
- * @param {string} category - Kategori berita (contoh: "BUY BACK AND BACKDOOR")
+ * Memuat berita berdasarkan kategori (harus dalam huruf besar, sesuai database)
  */
 async function loadNews(category) {
   const container = document.getElementById('news');
-  if (!container) return;
+  if (!container) {
+    console.warn('Element #news tidak ditemukan');
+    return;
+  }
 
   // Tampilkan loading
   container.innerHTML = `
@@ -18,14 +32,14 @@ async function loadNews(category) {
         <div class="loader-ring"></div>
         <div class="loader-ring"></div>
       </div>
-      <p>Memuat berita...</p>
+      <p>Memuat berita untuk <strong>${escapeHtml(category)}</strong>...</p>
     </div>
   `;
 
   try {
     const url = `/api/news?category=${encodeURIComponent(category)}&limit=50`;
     const response = await fetch(url);
-    if (!response.ok) throw new Error('Gagal memuat berita');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = await response.json();
 
@@ -39,7 +53,7 @@ async function loadNews(category) {
       return;
     }
 
-    // Render berita
+    // Render kartu berita
     container.innerHTML = `
       <div class="news-header">
         <h2 class="news-category-title">
@@ -59,6 +73,7 @@ async function loadNews(category) {
       <div class="news-error">
         <i class="fas fa-circle-exclamation"></i>
         <p>Gagal memuat berita. Silakan coba lagi nanti.</p>
+        <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">${escapeHtml(error.message)}</p>
       </div>
     `;
   }
@@ -69,13 +84,15 @@ async function loadNews(category) {
  */
 function renderNewsCard(news) {
   const published = news.publishedAt ? new Date(news.publishedAt) : null;
-  const timeStr = published ? published.toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }) : '';
+  const timeStr = published
+    ? published.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : '';
 
   const stockTags = (news.stockCodes || [])
     .filter(code => code && code.trim())
@@ -111,36 +128,30 @@ function renderNewsCard(news) {
 }
 
 /**
- * Escape HTML untuk mencegah XSS
+ * Escape HTML (gunakan fungsi global jika ada, fallback)
  */
 function escapeHtml(str) {
   if (!str) return '';
+  if (typeof window.escapeHtml === 'function') return window.escapeHtml(str);
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
 }
 
-// Jika ada hash #news-* saat halaman dimuat, langsung load kategori
+// ============================================================
+// INIT – Jika halaman dimuat dengan hash #news-*, langsung load
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   const hash = window.location.hash;
   if (hash.startsWith('#news-')) {
-    const category = hash.replace('#news-', '').replace(/-/g, ' ').toUpperCase();
-    // Mapping kategori dari slug ke nama asli (jika perlu)
-    const categoryMap = {
-      'buyback': 'BUY BACK AND BACKDOOR',
-      'akuisisi': 'AKUISISI AND MERGER',
-      'private': 'PRIVATE PLACEMENT',
-      'rightissue': 'RIGHT ISSUE',
-      'dividen': 'DIVIDEN',
-      'labarugi': 'LABA RUGI',
-      'tender': 'TENDER OFFER',
-      'net': 'NET SELL AND NET BUY ASING',
-      'konglomerasi': 'KONGLOMERASI',
-      'sentimen': 'SENTIMEN LAINYA'
-    };
-    const realCategory = categoryMap[category] || category;
-    if (realCategory) {
-      loadNews(realCategory);
+    const slug = hash.replace('#news-', '');
+    const category = CATEGORY_MAP[slug] || slug.toUpperCase();
+    if (category) {
+      loadNews(category);
     }
   }
 });
+
+// Ekspos fungsi ke global agar bisa dipanggil dari script.js
+window.loadNews = loadNews;
+window.CATEGORY_MAP = CATEGORY_MAP;
