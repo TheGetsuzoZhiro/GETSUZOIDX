@@ -4825,18 +4825,18 @@ body::-webkit-scrollbar {
   flex-shrink: 0 !important;
 }
 
-/* Mengubah icon SVG Stockbit dari Ungu menjadi Monochrome / Abu-Abu Netral */
 .nav-sub-icon-img {
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 0.95rem;
+  height: 0.95rem;
   object-fit: contain;
-  /* Kunci rahasianya: hilangkan warna (grayscale) & naikkan kecerahan */
   filter: grayscale(100%) brightness(1.4);
   opacity: 0.7;
-  transition: filter 0.2s ease, opacity 0.2s ease;
+  transition:
+    filter 0.2s ease,
+    opacity 0.2s ease;
+  vertical-align: middle;
 }
 
-/* Efek saat menu di-hover atau aktif (jadi lebih terang/putih) */
 .nav-sub-link:hover .nav-sub-icon-img,
 .nav-sub-link.active .nav-sub-icon-img {
   filter: grayscale(100%) brightness(2.5);
