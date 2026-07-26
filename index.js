@@ -80,6 +80,7 @@ const SignalSchema = new mongoose.Schema(
 
 SignalSchema.index({ status: 1 });
 SignalSchema.index({ stockCode: 1, signalDate: 1 });
+SignalSchema.index({ signalType: 1, status: 1 });
 
 const SignalModel = mongoose.model("Signal", SignalSchema, "signals");
 
@@ -95,6 +96,7 @@ const NewsSchema = new mongoose.Schema(
   },
   { versionKey: false },
 );
+
 NewsSchema.index({ stockCodes: 1, publishedAt: -1 });
 NewsSchema.index({ category: 1, publishedAt: -1 });
 NewsSchema.index({ publishedAt: -1 });
@@ -366,13 +368,13 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 });
 
-let cachedJsonString = null;
-let cachedEtag = null;
-let isRefreshingCache = false;
+let cachedSignalsJsonString = null;
+let cachedSignalsEtag = null;
+let isRefreshingSignalsCache = false;
 
 async function fetchAndSerializeSignals() {
-  if (isRefreshingCache) return;
-  isRefreshingCache = true;
+  if (isRefreshingSignalsCache) return;
+  isRefreshingSignalsCache = true;
   try {
     const allSignals = await SignalModel.find({}).lean();
     const running = [];
@@ -386,48 +388,100 @@ async function fetchAndSerializeSignals() {
       }
     }
 
-    cachedJsonString = JSON.stringify({ running, closed });
-    cachedEtag = `W/"sig-${Date.now()}"`;
+    cachedSignalsJsonString = JSON.stringify({ running, closed });
+    cachedSignalsEtag = `W/"sig-${Date.now()}"`;
 
     return { allSignals, running, closed };
   } catch (err) {
-    console.error("❌ [CACHE] Gagal memperbarui cache:", err.message);
+    console.error("❌ [CACHE SIGNALS] Gagal memperbarui cache:", err.message);
     return null;
   } finally {
-    isRefreshingCache = false;
+    isRefreshingSignalsCache = false;
   }
 }
 
 app.get("/api/signals", async (req, res) => {
   try {
-    if (!cachedJsonString) {
+    if (!cachedSignalsJsonString) {
       await fetchAndSerializeSignals();
     }
 
-    if (req.headers["if-none-match"] === cachedEtag) {
+    if (req.headers["if-none-match"] === cachedSignalsEtag) {
       return res.status(304).end();
     }
 
     res.setHeader("Content-Type", "application/json");
-    res.setHeader("ETag", cachedEtag);
+    res.setHeader("ETag", cachedSignalsEtag);
     res.setHeader(
       "Cache-Control",
       "public, max-age=15, stale-while-revalidate=15",
     );
-    res.setHeader("X-Cache", "HIT-ULTRA");
+    res.setHeader("X-Cache", "HIT-PRESERIALIZED-RAM");
 
-    return res.send(cachedJsonString);
+    return res.send(cachedSignalsJsonString);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-/* =========================================================
-   OPTIMIZED ULTRA-FAST NEWS ENDPOINT
-   ========================================================= */
+let cachedNewsJsonString = null;
+let cachedNewsEtag = null;
+let isRefreshingNewsCache = false;
+
+async function fetchAndSerializeNews() {
+  if (isRefreshingNewsCache) return;
+  isRefreshingNewsCache = true;
+  try {
+    const news = await NewsModel.find({})
+      .select("link category stockCodes title description imageUrl publishedAt")
+      .sort({ publishedAt: -1 })
+      .limit(50)
+      .lean();
+
+    cachedNewsJsonString = JSON.stringify(news);
+    cachedNewsEtag = `W/"news-${Date.now()}"`;
+    return news;
+  } catch (err) {
+    console.error(
+      "❌ [CACHE NEWS] Gagal memperbarui cache berita:",
+      err.message,
+    );
+    return null;
+  } finally {
+    isRefreshingNewsCache = false;
+  }
+}
+
 app.get("/api/news", async (req, res) => {
   try {
     const { stockCode, category, limit, page } = req.query;
+
+    const isDefaultFeed =
+      !stockCode &&
+      !category &&
+      (!page || parseInt(page) === 1) &&
+      (!limit || parseInt(limit) <= 50);
+
+    if (isDefaultFeed) {
+      if (!cachedNewsJsonString) {
+        await fetchAndSerializeNews();
+      }
+
+      if (req.headers["if-none-match"] === cachedNewsEtag) {
+        return res.status(304).end();
+      }
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("ETag", cachedNewsEtag);
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=10, stale-while-revalidate=20",
+      );
+      res.setHeader("X-Cache", "HIT-PRESERIALIZED-RAM");
+
+      return res.send(cachedNewsJsonString);
+    }
+
     const filter = {};
     if (stockCode) filter.stockCodes = stockCode.toUpperCase();
     if (category) filter.category = category.toUpperCase();
@@ -436,24 +490,18 @@ app.get("/api/news", async (req, res) => {
     const limitNum = parseInt(limit) || 10;
     const skip = (pageNum - 1) * limitNum;
 
-    // Set HTTP Cache Header agar akses berulang di browser super instan
     res.setHeader(
       "Cache-Control",
       "public, max-age=10, stale-while-revalidate=20",
     );
 
-    // Gunakan Projection (.select) untuk memangkas ukuran payload JSON
-    const query = NewsModel.find(filter)
-      .select("link category stockCodes title description imageUrl publishedAt")
-      .sort({ publishedAt: -1 })
-      .lean();
-
     if (page && limit) {
-      // Jalankan query data & count dokumen secara paralel via Promise.all
       const [totalItems, news] = await Promise.all([
         NewsModel.countDocuments(filter),
         NewsModel.find(filter)
-          .select("link category stockCodes title description imageUrl publishedAt")
+          .select(
+            "link category stockCodes title description imageUrl publishedAt",
+          )
           .sort({ publishedAt: -1 })
           .skip(skip)
           .limit(limitNum)
@@ -471,14 +519,15 @@ app.get("/api/news", async (req, res) => {
       });
     }
 
-    if (limitNum > 0) {
-      query.limit(limitNum);
-    }
+    const news = await NewsModel.find(filter)
+      .select("link category stockCodes title description imageUrl publishedAt")
+      .sort({ publishedAt: -1 })
+      .limit(limitNum > 0 ? limitNum : 50)
+      .lean();
 
-    const news = await query;
     res.json(news);
   } catch (error) {
-    console.error("❌ [NEWS] Gagal ambil data:", error.message);
+    console.error("❌ [NEWS API] Gagal ambil data:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -628,17 +677,23 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
 
-/* =========================================================
-   WATCHDOG & PUSH NOTIFICATION ENGINE
-   ========================================================= */
-
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
 const serverLastStatus = new Map();
 let serverLastTechnicalWaitingIds = null;
 
-// Cache khusus untuk memantau berita baru agar aman dari restart
 let serverLastNewsLinks = null;
+
+let isCheckingSignals = false;
+let isCheckingNews = false;
+
+function cleanupCacheSet(setInstance, maxSize = 1000) {
+  if (setInstance.size > maxSize) {
+    const items = Array.from(setInstance);
+    const toRemove = items.slice(0, items.length - maxSize);
+    toRemove.forEach((item) => setInstance.delete(item));
+  }
+}
 
 function getSessionFromDate(signalDate) {
   if (!signalDate) return null;
@@ -669,6 +724,7 @@ async function triggerInternalPush(title, body, customPushKey = null) {
       sentPushesCache.delete(pushKey);
       return;
     }
+
     const promises = subscriptions.map((sub) =>
       webpush.sendNotification(sub, payload, pushOptions).catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
@@ -684,8 +740,10 @@ async function triggerInternalPush(title, body, customPushKey = null) {
   }
 }
 
-/* --- WATCHDOG 1: MONITORING SINYAL SAHAM --- */
 async function checkDatabaseForNewSignals() {
+  if (isCheckingSignals) return;
+  isCheckingSignals = true;
+
   try {
     const result = await fetchAndSerializeSignals();
     if (!result) return;
@@ -834,19 +892,24 @@ async function checkDatabaseForNewSignals() {
     });
   } catch (err) {
     console.error("❌ [WATCHDOG SINYAL] Gagal polling database:", err.message);
+  } finally {
+    isCheckingSignals = false;
   }
 }
 
-/* --- WATCHDOG 2: MONITORING BERITA BARU & DETEKSI EMOJI API 🔥 --- */
 async function checkDatabaseForNews() {
+  if (isCheckingNews) return;
+  isCheckingNews = true;
+
   try {
+    await fetchAndSerializeNews();
+
     const recentNews = await NewsModel.find({})
       .select("link category stockCodes title description publishedAt")
       .sort({ publishedAt: -1 })
       .limit(100)
       .lean();
 
-    // 1. Inisialisasi awal saat server restart/start -> cegah spam notif berita lama!
     if (serverLastNewsLinks === null) {
       serverLastNewsLinks = new Set(recentNews.map((n) => n.link));
       console.log(
@@ -855,13 +918,11 @@ async function checkDatabaseForNews() {
       return;
     }
 
-    // 2. Filter berita yang benar-benar baru masuk ke database
     const newNewsItems = recentNews.filter(
       (n) => !serverLastNewsLinks.has(n.link),
     );
 
     if (newNewsItems.length > 0) {
-      // Ambil sinyal AKTIF (status RUNNING/WAITING_ENTRY dan BELUM ADA closeDate)
       const activeSignals = await SignalModel.find({
         status: { $in: ["RUNNING", "WAITING_ENTRY"] },
         $or: [
@@ -873,14 +934,12 @@ async function checkDatabaseForNews() {
         .select("stockCode status closeDate")
         .lean();
 
-      // Kumpulkan emiten yang punya sinyal aktif
       const activeStockCodes = new Set(
         activeSignals
           .map((s) => (s.stockCode ? s.stockCode.toUpperCase() : null))
           .filter(Boolean),
       );
 
-      // Urutkan berita dari yang paling lama ke paling baru agar urutan notif pas
       const sortedNews = [...newNewsItems].reverse();
 
       for (const news of sortedNews) {
@@ -890,7 +949,6 @@ async function checkDatabaseForNews() {
           .map((code) => code.toUpperCase())
           .filter(Boolean);
 
-        // Cek apakah ada emiten di berita ini yang sedang memilki SINYAL AKTIF
         const matchedActiveStocks = newsStocks.filter((code) =>
           activeStockCodes.has(code),
         );
@@ -901,19 +959,17 @@ async function checkDatabaseForNews() {
         let title = "";
         let body = "";
 
-        // Format Body: Kombinasi Judul & Deskripsi Singkat
         if (news.title && news.description) {
           const shortDesc =
             news.description.length > 120
               ? news.description.substring(0, 117) + "..."
               : news.description;
-          body = `${shortDesc}`;
+          body = `${news.title}\n${shortDesc}`;
         } else {
           body = news.title || news.description || "Ada berita pasar baru.";
         }
 
         if (hasActiveSignalMatch) {
-          // Beri penanda EMOJI API 🔥 khusus emiten aktif
           const activeStr = matchedActiveStocks.join(", ");
           title = `🔥 BERITA ACTIVE (${activeStr})`;
         } else if (stockStr) {
@@ -922,21 +978,23 @@ async function checkDatabaseForNews() {
           title = `📰 BERITA TERKINI`;
         }
 
-        // Gunakan key unik berbasis link berita agar tidak duplikat
         const customPushKey = `NEWS_PUSH_${news.link}`;
         await triggerInternalPush(title, body, customPushKey);
       }
+
+      cleanupCacheSet(serverLastNewsLinks, 1000);
     }
   } catch (err) {
     console.error("❌ [WATCHDOG BERITA] Gagal polling berita:", err.message);
+  } finally {
+    isCheckingNews = false;
   }
 }
 
-// Jalankan watchdog saat server mulai dan secara berkala setiap 25 detik
 checkDatabaseForNewSignals();
 checkDatabaseForNews();
 
 setInterval(() => {
   checkDatabaseForNewSignals();
   checkDatabaseForNews();
-}, 25000);
+}, 20000);
