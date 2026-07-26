@@ -83,6 +83,24 @@ SignalSchema.index({ stockCode: 1, signalDate: 1 });
 
 const SignalModel = mongoose.model("Signal", SignalSchema, "signals");
 
+const NewsSchema = new mongoose.Schema(
+  {
+    link: { type: String, required: true, unique: true },
+    category: { type: String, required: true },
+    stockCodes: [String],
+    title: String,
+    description: String,
+    imageUrl: String,
+    publishedAt: Date,
+  },
+  { versionKey: false },
+);
+NewsSchema.index({ stockCodes: 1 });
+NewsSchema.index({ category: 1 });
+NewsSchema.index({ publishedAt: -1 });
+
+const NewsModel = mongoose.model("News", NewsSchema, "news");
+
 const SubscriptionSchema = new mongoose.Schema(
   {
     endpoint: { type: String, required: true, unique: true },
@@ -404,6 +422,54 @@ app.get("/api/signals", async (req, res) => {
   }
 });
 
+let newsCache = null;
+let newsCacheTime = 0;
+const NEWS_CACHE_TTL = 30 * 1000;
+
+app.get("/api/news", async (req, res) => {
+  try {
+    const { stockCode, category, limit } = req.query;
+    const filter = {};
+    if (stockCode) filter.stockCodes = stockCode.toUpperCase();
+    if (category) filter.category = category.toUpperCase();
+
+    let effectiveLimit = stockCode ? 1000 : 50;
+    if (limit) effectiveLimit = parseInt(limit);
+
+    const useCache = !stockCode && !category;
+    const now = Date.now();
+    if (useCache && newsCache && now - newsCacheTime < NEWS_CACHE_TTL) {
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=30, stale-while-revalidate=30",
+      );
+      return res.json(newsCache);
+    }
+
+    const query = NewsModel.find(filter).sort({ publishedAt: -1 });
+
+    if (effectiveLimit > 0) {
+      query.limit(effectiveLimit);
+    }
+
+    const news = await query.lean();
+
+    if (useCache) {
+      newsCache = news;
+      newsCacheTime = now;
+    }
+
+    res.setHeader(
+      "Cache-Control",
+      "public, max-age=30, stale-while-revalidate=30",
+    );
+    res.json(news);
+  } catch (error) {
+    console.error("❌ [NEWS] Gagal ambil data:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
   const now = moment().tz("Asia/Jakarta");
@@ -635,7 +701,6 @@ async function checkDatabaseForNewSignals() {
           const title = `NEW TECHNICAL WAITING: ${s.stockCode}`;
           const body = `Sinyal Technical ${s.stockCode} siap di Buy Area (${s.buyAreaLow}–${s.buyAreaHigh})`;
           await triggerInternalPush(title, body);
-
           const key = `${s.stockCode}-${s.signalDate}`;
           serverLastStatus.set(key, "WAITING_ENTRY");
         }
@@ -686,7 +751,6 @@ async function checkDatabaseForNewSignals() {
       for (const s of technicalSignals) {
         const key = `${s.stockCode}-${s.signalDate}`;
         const prevStatus = serverLastStatus.get(key);
-
         if (prevStatus === "WAITING_ENTRY") {
           console.log(
             `[WATCHDOG] Skip RUNNING notif untuk ${s.stockCode} karena sudah WAITING_ENTRY`,
