@@ -156,7 +156,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ====== NEWS FUNCTIONS ======
 const CATEGORY_MAP = {
   buyback: "BUY BACK AND BACKDOOR",
   akuisisi: "AKUISISI AND MERGER",
@@ -172,8 +171,12 @@ const CATEGORY_MAP = {
 
 async function loadNews(category) {
   const container = document.getElementById("news");
-  if (!container) return;
+  if (!container) {
+    console.error("Element #news tidak ditemukan");
+    return;
+  }
 
+  // Tampilkan loading
   container.innerHTML = `
     <div class="loading-state">
       <div class="loader">
@@ -187,16 +190,20 @@ async function loadNews(category) {
 
   try {
     const url = `/api/news?category=${encodeURIComponent(category)}&limit=50`;
+    console.log("🔍 Fetching news:", url); // Debug
+
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
 
     const data = await response.json();
+    console.log("📰 News data:", data); // Debug
 
     if (!data || data.length === 0) {
       container.innerHTML = `
         <div class="news-empty">
           <i class="fas fa-newspaper"></i>
           <p>Belum ada berita untuk kategori <strong>${escapeHtml(category)}</strong></p>
+          <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">Coba refresh atau pilih kategori lain.</p>
         </div>
       `;
       return;
@@ -216,12 +223,13 @@ async function loadNews(category) {
     `;
 
   } catch (error) {
-    console.error("Error loading news:", error);
+    console.error("❌ Error loading news:", error);
     container.innerHTML = `
       <div class="news-error">
         <i class="fas fa-circle-exclamation"></i>
         <p>Gagal memuat berita. Silakan coba lagi nanti.</p>
         <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">${escapeHtml(error.message)}</p>
+        <button onclick="loadNews('${escapeHtml(category)}')" style="margin-top:1rem; padding:0.5rem 1.5rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff; cursor:pointer;">Coba Lagi</button>
       </div>
     `;
   }
@@ -2601,10 +2609,12 @@ function selectNewsCategory(category) {
     pageSubtitle.innerText = "Kategori berita";
   }
 
+  // Aktifkan view news
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.getElementById("news").classList.add("active");
   currentTab = "news";
 
+  // Update hash tanpa looping
   _isUpdatingNewsHash = true;
   window.location.hash = `#${titleKey}`;
   _isUpdatingNewsHash = false;
@@ -2622,12 +2632,13 @@ function selectNewsCategory(category) {
 
   // Muat berita
   const realCategory = CATEGORY_MAP[category] || category.toUpperCase();
+  console.log("📌 Loading category:", realCategory); // Debug
   loadNews(realCategory);
 
+  // Tutup sidebar mobile
   document.querySelector(".sidebar")?.classList.remove("open");
   document.querySelector(".overlay")?.classList.remove("active");
 }
-
 // ====== END NEWS SELECTION ======
 
 async function showSignalList() {
