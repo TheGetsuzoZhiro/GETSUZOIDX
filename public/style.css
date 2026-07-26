@@ -4313,11 +4313,6 @@ body {
   border-radius: 12px 12px 0 0 !important;
 }
 
-/* ============================================
-   HIDE SCROLLBAR - SIDEBAR & NAVIGATION
-   ============================================ */
-
-/* Untuk browser berbasis WebKit (Chrome, Edge, Safari) */
 .sidebar::-webkit-scrollbar,
 .navigation::-webkit-scrollbar,
 .nav-sub::-webkit-scrollbar,
@@ -4333,7 +4328,6 @@ body {
   display: none !important;
 }
 
-/* Untuk Firefox */
 .sidebar,
 .navigation,
 .nav-sub,
@@ -4347,7 +4341,6 @@ body {
   -ms-overflow-style: none !important;
 }
 
-/* Pastikan scroll tetap berfungsi tapi tersembunyi */
 .sidebar {
   overflow-y: auto;
   scrollbar-width: none;
@@ -4356,7 +4349,6 @@ body {
   display: none;
 }
 
-/* Sembunyikan scrollbar di body utama jika diperlukan */
 body {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -4364,10 +4356,6 @@ body {
 body::-webkit-scrollbar {
   display: none;
 }
-
-/* ============================================
-   NEWS STYLES - Modern card layout
-   ============================================ */
 
 .news-header {
   display: flex;
@@ -4566,7 +4554,6 @@ body::-webkit-scrollbar {
   color: var(--text-primary);
 }
 
-/* Responsive */
 @media (max-width: 768px) {
   .news-grid {
     grid-template-columns: 1fr;
@@ -4597,7 +4584,6 @@ body::-webkit-scrollbar {
   }
 }
 
-/* ===== FIX DROPDOWN NEWS BORDER ===== */
 #newsParent {
   border-radius: 12px !important;
   transition: border-radius 0.2s;
@@ -4607,15 +4593,11 @@ body::-webkit-scrollbar {
   border-radius: 12px 12px 0 0 !important;
 }
 
-/* Pastikan sub menu News tidak memiliki margin top yang membuat celah */
 #newsSubMenu {
   margin-top: 0 !important;
   border-top: none !important;
 }
 
-/* =========================================================
-   1. GREEN SLANTED SMOOTH PULSING RIBBON (NEW <= 48 JAM)
-   ========================================================= */
 .news-card-image,
 .news-image-wrapper {
   position: relative;
@@ -4637,11 +4619,12 @@ body::-webkit-scrollbar {
   z-index: 10;
   text-transform: uppercase;
   user-select: none;
-  animation: pulseGreenSmooth 3s infinite ease-in-out; /* Denyut lambat & smooth */
+  animation: pulseGreenSmooth 3s infinite ease-in-out;
 }
 
 @keyframes pulseGreenSmooth {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 4px rgba(16, 185, 129, 0.3);
     transform: rotate(45deg) scale(1);
     opacity: 0.95;
@@ -4653,9 +4636,6 @@ body::-webkit-scrollbar {
   }
 }
 
-/* =========================================================
-   2. BADGE KATEGORI (RINGKAS, PILL SHAPE, FIT-CONTENT)
-   ========================================================= */
 .news-category-badge {
   display: inline-flex;
   align-items: center;
@@ -4666,11 +4646,11 @@ body::-webkit-scrollbar {
   font-size: 0.65rem;
   font-weight: 700;
   padding: 0.2rem 0.6rem;
-  border-radius: 20px; /* Shape Pill Ringkas */
+  border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 0.5rem;
-  width: fit-content; /* Tidak memanjang selebar card */
+  width: fit-content;
   backdrop-filter: blur(4px);
 }
 
@@ -4680,14 +4660,11 @@ body::-webkit-scrollbar {
   object-fit: contain;
 }
 
-/* =========================================================
-   3. STOCK TAG DENGAN LOGO STOCKBIT (MULTI-STOCK SAFE)
-   ========================================================= */
 .news-stocks {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  flex-wrap: wrap; /* Mencegah bentrok jika saham lebih dari 1 */
+  flex-wrap: wrap;
 }
 
 .news-stock-tag {
@@ -4699,7 +4676,7 @@ body::-webkit-scrollbar {
   color: #e4e4e7;
   font-size: 0.65rem;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   padding: 0.15rem 0.5rem;
   border-radius: 6px;
   transition: all 0.2s ease;
@@ -4719,9 +4696,6 @@ body::-webkit-scrollbar {
   flex-shrink: 0;
 }
 
-/* =========================================================
-   4. CAROUSEL BERITA DI DETAIL SINYAL (1 Slide per View)
-   ========================================================= */
 .detail-news-carousel-container {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -4778,7 +4752,7 @@ body::-webkit-scrollbar {
 }
 
 .carousel-counter {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 0.7rem;
   color: var(--text-secondary);
 }
@@ -4791,9 +4765,6 @@ body::-webkit-scrollbar {
   transition: opacity 0.3s ease;
 }
 
-/* =========================================================
-   5. PAGINATION UNTUK MENU KATEGORI
-   ========================================================= */
 .pagination-container {
   display: flex;
   align-items: center;
@@ -4811,7 +4782,7 @@ body::-webkit-scrollbar {
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
   font-size: 0.75rem;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   cursor: pointer;
   transition: 0.2s;
 }
@@ -4833,44 +4804,23 @@ body::-webkit-scrollbar {
   cursor: not-allowed;
 }
 
-/* =========================================================
-   FIX SIDEBAR SQUISH / DEMPET ISSUE
-   ========================================================= */
-
-/* 1. Kontainer Utama Sidebar / Navigasi */
-.sidebar,
-.sidebar-menu,
-nav {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow-y: auto; /* Izinkan scroll jika submenu terlalu panjang */
-  overflow-x: hidden;
+.brand-section,
+.sidebar-bottom {
+  flex-shrink: 0 !important;
 }
 
-/* Custom Scrollbar Halus untuk Sidebar (Opsional agar tetap estetik) */
-.sidebar::-webkit-scrollbar,
-.sidebar-menu::-webkit-scrollbar {
-  width: 4px;
-}
-.sidebar::-webkit-scrollbar-thumb,
-.sidebar-menu::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+.navigation {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
 
-/* 2. Kunci Setiap Item Menu Utama (Beranda, Performance, News, dll) */
-.nav-item,
-.sidebar-link,
-.menu-item {
-  flex-shrink: 0 !important; /* PENTING: Mencegah Flexbox menciutkan tinggi menu */
-  min-height: 48px;          /* Tinggi fix yang konsisten */
-  display: flex;
-  align-items: center;
-}
-
-/* 3. Kunci Juga Submenu News agar Tidak Ikut Tertekan */
-.submenu,
-.news-submenu {
+.nav-link,
+.nav-dropdown,
+.nav-sub,
+#signalsParent,
+#technicalParent,
+#newsParent {
   flex-shrink: 0 !important;
 }
