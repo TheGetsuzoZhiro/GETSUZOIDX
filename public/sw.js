@@ -1,6 +1,6 @@
-const CACHE_NAME = "getsuzo-cache-v3";
+const CACHE_NAME = "getsuzo-cache-v4";
 
-const urlsToCache = ["/", "/index.html", "/style.css", "/script.js"];
+const urlsToCache = ["/", "/index.html", "/style.css", "/script.js", "/news.js"];
 
 self.addEventListener("install", (event) => {
   console.log("[SW] Installed");
