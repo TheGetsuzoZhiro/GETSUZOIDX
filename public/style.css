@@ -4824,3 +4824,18 @@ body::-webkit-scrollbar {
 #newsParent {
   flex-shrink: 0 !important;
 }
+
+/* Styling khusus Icon SVG Eksternal di Submenu */
+.nav-sub-icon-img {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+/* Saat di-hover / aktif, tingkatkan opacity gambarnya */
+.nav-sub-link:hover .nav-sub-icon-img,
+.nav-sub-link.active .nav-sub-icon-img {
+  opacity: 1;
+}
