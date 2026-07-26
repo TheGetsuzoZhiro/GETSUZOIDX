@@ -4832,3 +4832,45 @@ body::-webkit-scrollbar {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+/* =========================================================
+   FIX SIDEBAR SQUISH / DEMPET ISSUE
+   ========================================================= */
+
+/* 1. Kontainer Utama Sidebar / Navigasi */
+.sidebar,
+.sidebar-menu,
+nav {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto; /* Izinkan scroll jika submenu terlalu panjang */
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar Halus untuk Sidebar (Opsional agar tetap estetik) */
+.sidebar::-webkit-scrollbar,
+.sidebar-menu::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb,
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* 2. Kunci Setiap Item Menu Utama (Beranda, Performance, News, dll) */
+.nav-item,
+.sidebar-link,
+.menu-item {
+  flex-shrink: 0 !important; /* PENTING: Mencegah Flexbox menciutkan tinggi menu */
+  min-height: 48px;          /* Tinggi fix yang konsisten */
+  display: flex;
+  align-items: center;
+}
+
+/* 3. Kunci Juga Submenu News agar Tidak Ikut Tertekan */
+.submenu,
+.news-submenu {
+  flex-shrink: 0 !important;
+}
