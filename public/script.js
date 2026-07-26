@@ -79,6 +79,81 @@ function isNewNews(publishedAt) {
   return diffInHours <= 48; // 48 Jam = 2 Hari
 }
 
+function getCategoryIconHtml(category) {
+  if (!category) return `<i class="fas fa-tag" style="font-size:0.6rem;"></i>`;
+
+  const c = category.trim().toUpperCase();
+
+  // 1. Buy Back & Backdoor
+  if (c.includes("BUY BACK") || c.includes("BUYBACK") || c.includes("BACKDOOR")) {
+    return `<i class="fas fa-rotate-left" style="color:#3b82f6; font-size:0.65rem;"></i>`;
+  }
+  // 2. Akuisisi & Merger
+  if (c.includes("AKUISISI") || c.includes("MERGER")) {
+    return `<i class="fas fa-handshake" style="color:#ec4899; font-size:0.65rem;"></i>`;
+  }
+  // 3. Private Placement
+  if (c.includes("PRIVATE") || c.includes("PLACEMENT")) {
+    return `<i class="fas fa-user-plus" style="color:#6366f1; font-size:0.65rem;"></i>`;
+  }
+  // 4. Right Issue (KHUSUS PAKAI SVG STOCKBIT)
+  if (c.includes("RIGHT") || c.includes("RIGHTS")) {
+    return `<img src="https://assets.stockbit.com/images/corp_action_event_icon.svg" class="cat-icon-img" alt="Right Issue">`;
+  }
+  // 5. Dividen
+  if (c.includes("DIVIDEN") || c.includes("DIVIDEND")) {
+    return `<i class="fas fa-coins" style="color:#f59e0b; font-size:0.65rem;"></i>`;
+  }
+  // 6. Laba Rugi
+  if (c.includes("LABA") || c.includes("RUGI") || c.includes("FINANCIAL")) {
+    return `<i class="fas fa-chart-pie" style="color:#10b981; font-size:0.65rem;"></i>`;
+  }
+  // 7. Tender Offer
+  if (c.includes("TENDER") || c.includes("OFFER")) {
+    return `<i class="fas fa-gavel" style="color:#eab308; font-size:0.65rem;"></i>`;
+  }
+  // 8. Net Sell / Buy Asing
+  if (c.includes("ASING") || c.includes("NET SELL") || c.includes("NET BUY")) {
+    return `<i class="fas fa-chart-line" style="color:#06b6d4; font-size:0.65rem;"></i>`;
+  }
+  // 9. Konglomerasi
+  if (c.includes("KONGLOMERASI") || c.includes("GROUP")) {
+    return `<i class="fas fa-building" style="color:#8b5cf6; font-size:0.65rem;"></i>`;
+  }
+  // 10. Sentimen Lainnya
+  if (c.includes("SENTIMEN") || c.includes("LAINNYA")) {
+    return `<i class="fas fa-comment-dots" style="color:#9ca3af; font-size:0.65rem;"></i>`;
+  }
+
+  // Default untuk kategori di luar daftar di atas
+  return `<i class="fas fa-tag" style="font-size:0.6rem; color:#a78bfa;"></i>`;
+}
+
+function renderStockTagsHtml(stockCodes) {
+  if (!stockCodes || !Array.isArray(stockCodes)) return "";
+
+  return stockCodes
+    .filter((code) => code && code.trim())
+    .map((code) => {
+      const c = code.trim().toUpperCase();
+      const logoUrl = `https://assets.stockbit.com/logos/companies/${c}.png`;
+      const fallbackUrl = `https://assets.parqet.com/logos/symbol/${c}.png`;
+
+      return `
+        <span class="news-stock-tag">
+          <img 
+            src="${logoUrl}" 
+            alt="${c}" 
+            class="news-stock-logo" 
+            onerror="this.onerror=null; this.src='${fallbackUrl}'; this.onerror=function(){ this.style.display='none'; }"
+          >
+          <span>${escapeHtml(c)}</span>
+        </span>
+      `;
+    })
+    .join("");
+}
+
 function loadNotifications() {
   try {
     const data = localStorage.getItem(NOTIF_KEY);
@@ -215,7 +290,6 @@ async function loadNews(category, page = 1) {
     let paginationHtml = "";
     if (pagination.totalPages > 1) {
       paginationHtml = `<div class="pagination-container">`;
-      
       paginationHtml += `
         <button class="page-btn" ${page === 1 ? "disabled" : ""} onclick="loadNews('${category}', ${page - 1})">
           <i class="fas fa-chevron-left"></i>
@@ -235,7 +309,6 @@ async function loadNews(category, page = 1) {
           <i class="fas fa-chevron-right"></i>
         </button>
       `;
-      
       paginationHtml += `</div>`;
     }
 
@@ -278,20 +351,17 @@ function renderNewsCard(news) {
   const isNew = isNewNews(news.publishedAt);
   const newRibbonHtml = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
 
-  const stockTags = (news.stockCodes || [])
-    .filter((code) => code && code.trim())
-    .map(
-      (code) =>
-        `<span class="news-stock-tag">${escapeHtml(code.trim())}</span>`
-    )
-    .join("");
+  const stockTags = renderStockTagsHtml(news.stockCodes);
 
   const imageHtml = news.imageUrl
     ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="this.style.display='none'">`
     : `<div class="news-image-placeholder"><i class="fas fa-newspaper"></i></div>`;
 
   const categoryBadgeHtml = news.category 
-    ? `<div class="news-category-badge"><i class="fas fa-tag"></i> ${escapeHtml(news.category)}</div>`
+    ? `<div class="news-category-badge">
+         ${getCategoryIconHtml(news.category)}
+         <span>${escapeHtml(news.category)}</span>
+       </div>`
     : "";
 
   return `
@@ -310,7 +380,7 @@ function renderNewsCard(news) {
         ${news.description ? `<p class="news-description">${escapeHtml(news.description)}</p>` : ""}
         <div class="news-meta">
           <span class="news-time"><i class="far fa-clock"></i> ${timeStr}</span>
-          ${stockTags ? `<span class="news-stocks"><i class="fas fa-tags"></i> ${stockTags}</span>` : ""}
+          ${stockTags ? `<div class="news-stocks">${stockTags}</div>` : ""}
         </div>
         <a href="${escapeHtml(news.link)}" target="_blank" class="news-read-more">
           Baca Selengkapnya <i class="fas fa-arrow-right"></i>
@@ -331,7 +401,6 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
   `;
 
   try {
-    // Ambil maksimal 10 berita untuk saham ini (paling baru muncul lebih dulu)
     const res = await fetch(`/api/news?stockCode=${encodeURIComponent(stockCode)}&limit=10`);
     if (!res.ok) throw new Error("Gagal mengambil berita");
     
@@ -341,7 +410,7 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
     if (!data || data.length === 0) {
       container.innerHTML = `
         <div style="font-size:0.7rem; color:var(--text-secondary); opacity:0.6; padding:0.5rem 0.75rem;">
-          <i class="far fa-newspaper" style="margin-right:0.3rem;"></i> Belum ada berita terkait saham ${escapeHtml(stockCode)}.
+          <i class="far fa-newspaper" style="margin-right:0.3rem;"></i> Belum ada berita terkini untuk ${escapeHtml(stockCode)}.
         </div>
       `;
       return;
@@ -366,8 +435,13 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
         : "";
 
       const categoryBadge = news.category 
-        ? `<span class="news-category-badge"><i class="fas fa-tag"></i> ${escapeHtml(news.category)}</span>`
+        ? `<div class="news-category-badge">
+             ${getCategoryIconHtml(news.category)}
+             <span>${escapeHtml(news.category)}</span>
+           </div>`
         : "";
+
+      const stockTags = renderStockTagsHtml(news.stockCodes);
 
       const imgHtml = news.imageUrl
         ? `<img src="${news.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px 6px 0 0;" onerror="this.style.display='none'">`
@@ -401,11 +475,9 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
                 </a>
               </h4>
               ${news.description ? `<p style="font-size:0.7rem; color:var(--text-secondary); opacity:0.8; margin-bottom:0.5rem; line-clamp:2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(news.description)}</p>` : ""}
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.6rem; color:var(--text-secondary); opacity:0.6; margin-top:0.4rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.6rem; color:var(--text-secondary); opacity:0.8; margin-top:0.4rem;">
                 <span><i class="far fa-clock"></i> ${timeStr}</span>
-                <a href="${escapeHtml(news.link)}" target="_blank" style="color:#8b5cf6; font-weight:600; text-decoration:none;">
-                  Baca Selengkapnya <i class="fas fa-arrow-right"></i>
-                </a>
+                ${stockTags ? `<div class="news-stocks">${stockTags}</div>` : ""}
               </div>
             </div>
           </div>
