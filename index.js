@@ -428,41 +428,37 @@ const NEWS_CACHE_TTL = 30 * 1000;
 
 app.get("/api/news", async (req, res) => {
   try {
-    const { stockCode, category, limit } = req.query;
+    const { stockCode, category, limit, page } = req.query;
     const filter = {};
     if (stockCode) filter.stockCodes = stockCode.toUpperCase();
     if (category) filter.category = category.toUpperCase();
 
-    let effectiveLimit = stockCode ? 1000 : 50;
-    if (limit) effectiveLimit = parseInt(limit);
-
-    const useCache = !stockCode && !category;
-    const now = Date.now();
-    if (useCache && newsCache && now - newsCacheTime < NEWS_CACHE_TTL) {
-      res.setHeader(
-        "Cache-Control",
-        "public, max-age=30, stale-while-revalidate=30",
-      );
-      return res.json(newsCache);
-    }
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
 
     const query = NewsModel.find(filter).sort({ publishedAt: -1 });
 
-    if (effectiveLimit > 0) {
-      query.limit(effectiveLimit);
+    // Jika dipanggil dari Menu Kategori dengan Pagination
+    if (page && limit) {
+      const totalItems = await NewsModel.countDocuments(filter);
+      const news = await query.skip(skip).limit(limitNum).lean();
+      return res.json({
+        data: news,
+        pagination: {
+          totalItems,
+          totalPages: Math.ceil(totalItems / limitNum),
+          currentPage: pageNum,
+          limit: limitNum
+        }
+      });
     }
 
+    // Default fetch (misal untuk carousel)
+    if (limitNum > 0) {
+      query.limit(limitNum);
+    }
     const news = await query.lean();
-
-    if (useCache) {
-      newsCache = news;
-      newsCacheTime = now;
-    }
-
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=30, stale-while-revalidate=30",
-    );
     res.json(news);
   } catch (error) {
     console.error("❌ [NEWS] Gagal ambil data:", error.message);
