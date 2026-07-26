@@ -318,7 +318,7 @@ async function loadNews(category, page = 1) {
           <i class="fas fa-tag" style="color:#8b5cf6; margin-right:0.5rem;"></i>
           ${escapeHtml(category)}
         </h2>
-        <span class="news-count">${pagination.totalItems || data.length} berita</span>
+        <span class="news-count">${pagination.totalItems || data.length} Berita</span>
       </div>
       <div class="news-grid">
         ${data.map((news) => renderNewsCard(news)).join("")}
