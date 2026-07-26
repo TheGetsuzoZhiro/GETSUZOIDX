@@ -4596,3 +4596,19 @@ body::-webkit-scrollbar {
     gap: 0.3rem;
   }
 }
+
+/* ===== FIX DROPDOWN NEWS BORDER ===== */
+#newsParent {
+  border-radius: 12px !important;
+  transition: border-radius 0.2s;
+}
+
+#newsParent.open {
+  border-radius: 12px 12px 0 0 !important;
+}
+
+/* Pastikan sub menu News tidak memiliki margin top yang membuat celah */
+#newsSubMenu {
+  margin-top: 0 !important;
+  border-top: none !important;
+}
