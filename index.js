@@ -218,7 +218,7 @@ app.use(
       }
       return compression.filter(req, res);
     },
-  })
+  }),
 );
 
 app.use(express.json());
@@ -359,7 +359,7 @@ async function fetchAndSerializeSignals() {
     const allSignals = await SignalModel.find({}).lean();
     const running = [];
     const closed = [];
-    
+
     for (let i = 0; i < allSignals.length; i++) {
       if (allSignals[i].status === "RUNNING") {
         running.push(allSignals[i]);
@@ -392,7 +392,10 @@ app.get("/api/signals", async (req, res) => {
 
     res.setHeader("Content-Type", "application/json");
     res.setHeader("ETag", cachedEtag);
-    res.setHeader("Cache-Control", "public, max-age=15, stale-while-revalidate=15");
+    res.setHeader(
+      "Cache-Control",
+      "public, max-age=15, stale-while-revalidate=15",
+    );
     res.setHeader("X-Cache", "HIT-ULTRA");
 
     return res.send(cachedJsonString);
@@ -609,9 +612,8 @@ async function checkDatabaseForNewSignals() {
       .sort()
       .join(",");
 
-    // --- DETEKSI TECHNICAL WAITING_ENTRY BARU ---
     const technicalWaiting = allSignals.filter(
-      s => s.signalType === "TECHNICAL" && s.status === "WAITING_ENTRY"
+      (s) => s.signalType === "TECHNICAL" && s.status === "WAITING_ENTRY",
     );
     const currentTechnicalWaitingIds = technicalWaiting
       .map((s) => `${s.stockCode}-${s.signalDate}`)
@@ -621,24 +623,25 @@ async function checkDatabaseForNewSignals() {
     if (serverLastTechnicalWaitingIds !== null) {
       const prevWaitingArr = serverLastTechnicalWaitingIds.split(",");
       const currWaitingArr = currentTechnicalWaitingIds.split(",");
-      const newWaiting = currWaitingArr.filter(id => !prevWaitingArr.includes(id));
+      const newWaiting = currWaitingArr.filter(
+        (id) => !prevWaitingArr.includes(id),
+      );
 
       if (newWaiting.length > 0) {
-        const newSignals = technicalWaiting.filter(s =>
-          newWaiting.includes(`${s.stockCode}-${s.signalDate}`)
+        const newSignals = technicalWaiting.filter((s) =>
+          newWaiting.includes(`${s.stockCode}-${s.signalDate}`),
         );
         for (const s of newSignals) {
           const title = `NEW TECHNICAL WAITING: ${s.stockCode}`;
           const body = `Sinyal Technical ${s.stockCode} siap di Buy Area (${s.buyAreaLow}–${s.buyAreaHigh})`;
           await triggerInternalPush(title, body);
-          // Catat status WAITING_ENTRY di serverLastStatus agar RUNNING tidak duplikat
+
           const key = `${s.stockCode}-${s.signalDate}`;
           serverLastStatus.set(key, "WAITING_ENTRY");
         }
       }
     }
     serverLastTechnicalWaitingIds = currentTechnicalWaitingIds;
-    // --- AKHIR DETEKSI TECHNICAL WAITING_ENTRY ---
 
     if (serverLastRunningIds === null || serverLastClosedIds === null) {
       serverLastRunningIds = currentRunningIds;
@@ -655,7 +658,6 @@ async function checkDatabaseForNewSignals() {
       return;
     }
 
-    // --- DETEKSI RUNNING BARU (termasuk TECHNICAL) ---
     const prevRunningArr = serverLastRunningIds.split(",");
     const currentRunningArr = currentRunningIds.split(",");
     const newRunning = currentRunningArr.filter(
@@ -684,9 +686,11 @@ async function checkDatabaseForNewSignals() {
       for (const s of technicalSignals) {
         const key = `${s.stockCode}-${s.signalDate}`;
         const prevStatus = serverLastStatus.get(key);
-        // Jika sebelumnya WAITING_ENTRY, maka notifikasi WAITING sudah terkirim, skip RUNNING
+
         if (prevStatus === "WAITING_ENTRY") {
-          console.log(`[WATCHDOG] Skip RUNNING notif untuk ${s.stockCode} karena sudah WAITING_ENTRY`);
+          console.log(
+            `[WATCHDOG] Skip RUNNING notif untuk ${s.stockCode} karena sudah WAITING_ENTRY`,
+          );
           continue;
         }
         const title = `NEW TECHNICAL: ${s.stockCode}`;
@@ -719,7 +723,6 @@ async function checkDatabaseForNewSignals() {
         );
     }
 
-    // --- DETEKSI TP BARU ---
     const tpSignals = allSignals.filter((s) => s.status === "TP");
     for (const s of tpSignals) {
       const key = `${s.stockCode}-${s.signalDate}`;
@@ -734,7 +737,6 @@ async function checkDatabaseForNewSignals() {
       }
     }
 
-    // --- UPDATE STATE ---
     serverLastRunningIds = currentRunningIds;
     serverLastClosedIds = currentClosedIds;
     allSignals.forEach((s) => {
