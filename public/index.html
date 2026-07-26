@@ -709,15 +709,15 @@
         }
       }
       .nav-dropdown .nav-arrow {
-  margin-left: auto;
-  font-size: 0.6rem;
-  transition: transform 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-}
-.nav-dropdown .nav-arrow.open {
-  transform: rotate(180deg);
-}
+        margin-left: auto;
+        font-size: 0.6rem;
+        transition: transform 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+      }
+      .nav-dropdown .nav-arrow.open {
+        transform: rotate(180deg);
+      }
     </style>
 
     <script>
@@ -1026,6 +1026,105 @@
                   href="#technical-waiting"
                 >
                   <i class="fas fa-clock"></i> Waiting
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- ==================== DROPDOWN 3: NEWS ==================== -->
+          <div class="nav-dropdown">
+            <button class="nav-link" data-tab="news" id="newsParent">
+              <div class="nav-icon">
+                <i class="fas fa-newspaper"></i>
+              </div>
+              <span class="nav-text">News</span>
+              <span class="nav-arrow"><i class="fas fa-chevron-down"></i></span>
+            </button>
+            <ul class="nav-sub" id="newsSubMenu">
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-buyback"
+                  href="#news-buyback"
+                >
+                  <i class="fas fa-undo-alt"></i> Buy Back &amp; Backdoor
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-akuisisi"
+                  href="#news-akuisisi"
+                >
+                  <i class="fas fa-handshake"></i> Akuisisi &amp; Merger
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-private"
+                  href="#news-private"
+                >
+                  <i class="fas fa-user-plus"></i> Private Placement
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-rightissue"
+                  href="#news-rightissue"
+                >
+                  <i class="fas fa-arrow-right-to-bracket"></i> Right Issue
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-dividen"
+                  href="#news-dividen"
+                >
+                  <i class="fas fa-coins"></i> Dividen
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-labarugi"
+                  href="#news-labarugi"
+                >
+                  <i class="fas fa-chart-pie"></i> Laba Rugi
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-tender"
+                  href="#news-tender"
+                >
+                  <i class="fas fa-gavel"></i> Tender Offer
+                </a>
+              </li>
+              <li>
+                <a class="nav-sub-link" data-tab="news-net" href="#news-net">
+                  <i class="fas fa-arrow-trend-up"></i> Net Sell / Buy Asing
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-konglomerasi"
+                  href="#news-konglomerasi"
+                >
+                  <i class="fas fa-building"></i> Konglomerasi
+                </a>
+              </li>
+              <li>
+                <a
+                  class="nav-sub-link"
+                  data-tab="news-sentimen"
+                  href="#news-sentimen"
+                >
+                  <i class="fas fa-comment"></i> Sentimen Lainnya
                 </a>
               </li>
             </ul>
@@ -1356,6 +1455,16 @@
                 <div class="loader-ring"></div>
               </div>
               <p>Loading technical signals...</p>
+            </div>
+          </section>
+          <section id="news" class="view">
+            <div class="loading-state">
+              <div class="loader">
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+                <div class="loader-ring"></div>
+              </div>
+              <p>Memuat berita...</p>
             </div>
           </section>
         </div>
