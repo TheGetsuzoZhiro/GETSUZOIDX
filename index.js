@@ -11,6 +11,7 @@ const sentPushesCache = new Map();
 const infoCache = new Map();
 const lastPrices = new Map();
 const sseClients = [];
+let lastProcessedNewsIds = new Set();
 
 moment.tz.setDefault("Asia/Jakarta");
 
@@ -33,6 +34,7 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
+// ====== SCHEMAS ======
 const SignalSchema = new mongoose.Schema(
   {
     stockCode: String,
@@ -129,6 +131,7 @@ const TokenModel = mongoose.model(
   "stockbit_tokens",
 );
 
+// ====== HELPER FUNCTIONS ======
 async function getStockbitToken() {
   try {
     const doc = await TokenModel.findById("stockbit_token").lean();
@@ -221,6 +224,7 @@ async function isMarketOpen() {
   }
 }
 
+// ====== EXPRESS APP ======
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -242,6 +246,7 @@ app.use(
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// ====== SSE PRICE ======
 app.get("/api/sse/prices", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -304,6 +309,7 @@ app.post("/api/sse/price-update", (req, res) => {
   res.json({ success: true, clients: sseClients.length });
 });
 
+// ====== STOCK INFO ======
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
 
@@ -366,6 +372,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 });
 
+// ====== SIGNALS CACHE ======
 let cachedJsonString = null;
 let cachedEtag = null;
 let isRefreshingCache = false;
@@ -379,7 +386,7 @@ async function fetchAndSerializeSignals() {
     const closed = [];
 
     for (let i = 0; i < allSignals.length; i++) {
-      if (allSignals[i].status === "RUNNING") {
+      if (allSignals[i].status === "RUNNING" || allSignals[i].status === "TRAILING" || allSignals[i].status === "WAITING_ENTRY") {
         running.push(allSignals[i]);
       } else {
         closed.push(allSignals[i]);
@@ -422,54 +429,42 @@ app.get("/api/signals", async (req, res) => {
   }
 });
 
-let newsCache = null;
-let newsCacheTime = 0;
-const NEWS_CACHE_TTL = 30 * 1000;
-
+// ====== NEWS API ======
 app.get("/api/news", async (req, res) => {
   try {
-    const { stockCode, category, limit } = req.query;
+    const { stockCode, category, limit, page } = req.query;
     const filter = {};
     if (stockCode) filter.stockCodes = stockCode.toUpperCase();
     if (category) filter.category = category.toUpperCase();
 
-    let effectiveLimit = stockCode ? 1000 : 50;
-    if (limit) effectiveLimit = parseInt(limit);
-
-    const useCache = !stockCode && !category;
-    const now = Date.now();
-    if (useCache && newsCache && now - newsCacheTime < NEWS_CACHE_TTL) {
-      res.setHeader(
-        "Cache-Control",
-        "public, max-age=30, stale-while-revalidate=30",
-      );
-      return res.json(newsCache);
-    }
+    const perPage = parseInt(limit) || 10;
+    const currentPage = parseInt(page) || 1;
+    const skip = (currentPage - 1) * perPage;
 
     const query = NewsModel.find(filter).sort({ publishedAt: -1 });
 
-    if (effectiveLimit > 0) {
-      query.limit(effectiveLimit);
-    }
+    const total = await NewsModel.countDocuments(filter);
+    const totalPages = Math.ceil(total / perPage);
 
-    const news = await query.lean();
+    const news = await query.skip(skip).limit(perPage).lean();
 
-    if (useCache) {
-      newsCache = news;
-      newsCacheTime = now;
-    }
+    const result = {
+      news,
+      total,
+      page: currentPage,
+      totalPages,
+      perPage,
+    };
 
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=30, stale-while-revalidate=30",
-    );
-    res.json(news);
+    res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=30");
+    res.json(result);
   } catch (error) {
     console.error("❌ [NEWS] Gagal ambil data:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
+// ====== MARKET STATUS ======
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
   const now = moment().tz("Asia/Jakarta");
@@ -522,6 +517,7 @@ app.get("/api/market-status", async (req, res) => {
   });
 });
 
+// ====== SUBSCRIPTION ======
 app.post("/api/save-subscription", async (req, res) => {
   const subscription = req.body;
   if (!subscription || !subscription.endpoint) {
@@ -615,6 +611,7 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
 
+// ====== WATCHDOG SIGNALS ======
 let serverLastRunningIds = null;
 let serverLastClosedIds = null;
 const serverLastStatus = new Map();
@@ -816,3 +813,61 @@ async function checkDatabaseForNewSignals() {
 
 checkDatabaseForNewSignals();
 setInterval(checkDatabaseForNewSignals, 25000);
+
+// ====== WATCHDOG NEWS ======
+async function getActiveSignals() {
+  try {
+    const active = await SignalModel.find({
+      status: { $in: ["RUNNING", "TRAILING", "WAITING_ENTRY"] }
+    }).lean();
+    return active;
+  } catch (err) {
+    console.error("❌ Gagal get active signals:", err.message);
+    return [];
+  }
+}
+
+async function checkNewNews() {
+  try {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const news = await NewsModel.find({
+      publishedAt: { $gte: sevenDaysAgo }
+    }).sort({ publishedAt: -1 }).lean();
+
+    if (!news.length) return;
+
+    const activeSignals = await getActiveSignals();
+    const activeStockCodes = new Set(activeSignals.map(s => s.stockCode));
+
+    for (const item of news) {
+      const id = item._id.toString();
+      if (lastProcessedNewsIds.has(id)) continue;
+
+      const matchedStocks = (item.stockCodes || []).filter(code => activeStockCodes.has(code));
+      const hasActiveSignal = matchedStocks.length > 0;
+
+      let emoji = hasActiveSignal ? "🔥 " : "📰 ";
+      let title = `${emoji}Berita Baru: ${item.title}`;
+      let body = item.description || "";
+
+      if (hasActiveSignal) {
+        const stockList = matchedStocks.join(", ");
+        body = `⚠️ Sinyal aktif untuk ${stockList}! ${body}`;
+      }
+
+      await triggerInternalPush(title, body);
+      lastProcessedNewsIds.add(id);
+    }
+
+    if (lastProcessedNewsIds.size > 1000) {
+      const arr = Array.from(lastProcessedNewsIds);
+      lastProcessedNewsIds = new Set(arr.slice(-500));
+    }
+
+  } catch (err) {
+    console.error("❌ [NEWS WATCHDOG] Error:", err.message);
+  }
+}
+
+setInterval(checkNewNews, 60000);
+setTimeout(checkNewNews, 5000);
