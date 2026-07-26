@@ -71,7 +71,14 @@ const NOTIF_KEY = "notificationHistory";
 
 let _fetchingSignals = false;
 
-// ====== NOTIFICATIONS ======
+function isNewNews(publishedAt) {
+  if (!publishedAt) return false;
+  const pubDate = new Date(publishedAt);
+  const now = new Date();
+  const diffInHours = (now - pubDate) / (1000 * 60 * 60);
+  return diffInHours <= 48; // 48 Jam = 2 Hari
+}
+
 function loadNotifications() {
   try {
     const data = localStorage.getItem(NOTIF_KEY);
@@ -170,7 +177,7 @@ const CATEGORY_MAP = {
   sentimen: "SENTIMEN LAINYA",
 };
 
-async function loadNews(category) {
+async function loadNews(category, page = 1) {
   const container = document.getElementById("news");
   if (!container) return;
 
@@ -186,11 +193,14 @@ async function loadNews(category) {
   `;
 
   try {
-    const url = `/api/news?category=${encodeURIComponent(category)}&limit=50`;
+    const limit = 10;
+    const url = `/api/news?category=${encodeURIComponent(category)}&page=${page}&limit=${limit}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-    const data = await response.json();
+    const resData = await response.json();
+    const data = resData.data || resData;
+    const pagination = resData.pagination || { totalPages: 1, currentPage: 1 };
 
     if (!data || data.length === 0) {
       container.innerHTML = `
@@ -202,26 +212,52 @@ async function loadNews(category) {
       return;
     }
 
+    let paginationHtml = "";
+    if (pagination.totalPages > 1) {
+      paginationHtml = `<div class="pagination-container">`;
+      
+      paginationHtml += `
+        <button class="page-btn" ${page === 1 ? "disabled" : ""} onclick="loadNews('${category}', ${page - 1})">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+      `;
+
+      for (let i = 1; i <= pagination.totalPages; i++) {
+        paginationHtml += `
+          <button class="page-btn ${i === page ? "active" : ""}" onclick="loadNews('${category}', ${i})">
+            ${i}
+          </button>
+        `;
+      }
+
+      paginationHtml += `
+        <button class="page-btn" ${page === pagination.totalPages ? "disabled" : ""} onclick="loadNews('${category}', ${page + 1})">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      `;
+      
+      paginationHtml += `</div>`;
+    }
+
     container.innerHTML = `
       <div class="news-header">
         <h2 class="news-category-title">
           <i class="fas fa-tag" style="color:#8b5cf6; margin-right:0.5rem;"></i>
           ${escapeHtml(category)}
         </h2>
-        <span class="news-count">${data.length} berita</span>
+        <span class="news-count">${pagination.totalItems || data.length} berita</span>
       </div>
       <div class="news-grid">
-        ${data.map(news => renderNewsCard(news)).join('')}
+        ${data.map((news) => renderNewsCard(news)).join("")}
       </div>
+      ${paginationHtml}
     `;
-
   } catch (error) {
     console.error("Error loading news:", error);
     container.innerHTML = `
       <div class="news-error">
         <i class="fas fa-circle-exclamation"></i>
-        <p>Gagal memuat berita. Silakan coba lagi nanti.</p>
-        <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">${escapeHtml(error.message)}</p>
+        <p>Gagal memuat berita.</p>
       </div>
     `;
   }
@@ -232,28 +268,40 @@ function renderNewsCard(news) {
   const timeStr = published
     ? published.toLocaleDateString("id-ID", {
         day: "numeric",
-        month: "long",
+        month: "short",
         year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       })
     : "";
 
+  const isNew = isNewNews(news.publishedAt);
+  const newRibbonHtml = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
+
   const stockTags = (news.stockCodes || [])
-    .filter(code => code && code.trim())
-    .map(code => `<span class="news-stock-tag">${escapeHtml(code.trim())}</span>`)
+    .filter((code) => code && code.trim())
+    .map(
+      (code) =>
+        `<span class="news-stock-tag">${escapeHtml(code.trim())}</span>`
+    )
     .join("");
 
   const imageHtml = news.imageUrl
     ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="this.style.display='none'">`
     : `<div class="news-image-placeholder"><i class="fas fa-newspaper"></i></div>`;
 
+  const categoryBadgeHtml = news.category 
+    ? `<div class="news-category-badge"><i class="fas fa-tag"></i> ${escapeHtml(news.category)}</div>`
+    : "";
+
   return `
     <div class="news-card">
-      <div class="news-card-image">
+      <div class="news-card-image news-image-wrapper">
+        ${newRibbonHtml}
         ${imageHtml}
       </div>
       <div class="news-card-body">
+        ${categoryBadgeHtml}
         <h3 class="news-title">
           <a href="${escapeHtml(news.link)}" target="_blank" rel="noopener noreferrer">
             ${escapeHtml(news.title)}
@@ -270,6 +318,132 @@ function renderNewsCard(news) {
       </div>
     </div>
   `;
+}
+
+async function mountStockNewsCarousel(stockCode, targetContainerId) {
+  const container = document.getElementById(targetContainerId);
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="font-size:0.75rem; color:var(--text-secondary); text-align:center; padding:0.5rem;">
+      <i class="fas fa-spinner fa-spin"></i> Memuat berita ${escapeHtml(stockCode)}...
+    </div>
+  `;
+
+  try {
+    // Ambil maksimal 10 berita untuk saham ini (paling baru muncul lebih dulu)
+    const res = await fetch(`/api/news?stockCode=${encodeURIComponent(stockCode)}&limit=10`);
+    if (!res.ok) throw new Error("Gagal mengambil berita");
+    
+    const newsList = await res.json();
+    const data = Array.isArray(newsList) ? newsList : (newsList.data || []);
+
+    if (!data || data.length === 0) {
+      container.innerHTML = `
+        <div style="font-size:0.7rem; color:var(--text-secondary); opacity:0.6; padding:0.5rem 0.75rem;">
+          <i class="far fa-newspaper" style="margin-right:0.3rem;"></i> Belum ada berita terkait saham ${escapeHtml(stockCode)}.
+        </div>
+      `;
+      return;
+    }
+
+    let currentIndex = 0;
+
+    function renderSlide(index) {
+      const news = data[index];
+      const isNew = isNewNews(news.publishedAt);
+      const newRibbon = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
+      
+      const published = news.publishedAt ? new Date(news.publishedAt) : null;
+      const timeStr = published
+        ? published.toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "";
+
+      const categoryBadge = news.category 
+        ? `<span class="news-category-badge"><i class="fas fa-tag"></i> ${escapeHtml(news.category)}</span>`
+        : "";
+
+      const imgHtml = news.imageUrl
+        ? `<img src="${news.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px 6px 0 0;" onerror="this.style.display='none'">`
+        : "";
+
+      return `
+        <div class="detail-news-carousel-container">
+          <div class="detail-news-header">
+            <span class="detail-news-title-text">
+              <i class="fas fa-newspaper" style="color:#8b5cf6;"></i> Berita ${escapeHtml(stockCode)}
+            </span>
+            <div class="carousel-controls">
+              <button class="carousel-btn" id="carouselPrevBtn" ${index === 0 ? "disabled" : ""}>
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              <span class="carousel-counter">${index + 1} / ${data.length}</span>
+              <button class="carousel-btn" id="carouselNextBtn" ${index === data.length - 1 ? "disabled" : ""}>
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="carousel-slide-card news-image-wrapper">
+            ${newRibbon}
+            ${imgHtml}
+            <div style="padding:0.75rem;">
+              ${categoryBadge}
+              <h4 style="font-size:0.85rem; font-weight:700; margin:0.3rem 0; line-height:1.35;">
+                <a href="${escapeHtml(news.link)}" target="_blank" style="color:var(--text-primary); text-decoration:none;">
+                  ${escapeHtml(news.title)}
+                </a>
+              </h4>
+              ${news.description ? `<p style="font-size:0.7rem; color:var(--text-secondary); opacity:0.8; margin-bottom:0.5rem; line-clamp:2; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${escapeHtml(news.description)}</p>` : ""}
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.6rem; color:var(--text-secondary); opacity:0.6; margin-top:0.4rem;">
+                <span><i class="far fa-clock"></i> ${timeStr}</span>
+                <a href="${escapeHtml(news.link)}" target="_blank" style="color:#8b5cf6; font-weight:600; text-decoration:none;">
+                  Baca Selengkapnya <i class="fas fa-arrow-right"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateCarousel() {
+      container.innerHTML = renderSlide(currentIndex);
+      
+      const prevBtn = container.querySelector("#carouselPrevBtn");
+      const nextBtn = container.querySelector("#carouselNextBtn");
+
+      if (prevBtn) {
+        prevBtn.addEventListener("click", () => {
+          if (currentIndex > 0) {
+            currentIndex--;
+            updateCarousel();
+          }
+        });
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+          if (currentIndex < data.length - 1) {
+            currentIndex++;
+            updateCarousel();
+          }
+        });
+      }
+    }
+
+    updateCarousel();
+
+  } catch (err) {
+    console.warn("Gagal memuat carousel berita emiten:", err);
+    container.innerHTML = "";
+  }
 }
 
 // ====== END NEWS FUNCTIONS ======
@@ -1704,11 +1878,16 @@ function renderBsjpDetailContent(
             ${trailingDisplay}
           </div>
         </div>
+
+        <div id="bsjpNewsContainer" style="padding:0.5rem 0.75rem; border-top:1px solid rgba(255,255,255,0.06);"></div>
+
       </div>
     </div>
   `;
 
   container.innerHTML = html;
+
+  mountStockNewsCarousel(s.stockCode, "bsjpNewsContainer");
 
   if (bsjpRefreshInterval) {
     clearInterval(bsjpRefreshInterval);
@@ -1759,6 +1938,7 @@ function renderBsjpDetailContent(
       console.warn("Refresh BSJP detail error:", e);
     }
   }, 10000);
+
   if (!container._scrolled) {
     window.scrollTo({ top: 0, behavior: "smooth" });
     container._scrolled = true;
