@@ -4842,3 +4842,30 @@ body::-webkit-scrollbar {
   filter: grayscale(100%) brightness(2.5);
   opacity: 1;
 }
+
+.news-card-footer,
+.carousel-card-footer,
+.news-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+}
+
+.news-stock-tag,
+.stock-badge-container,
+.news-card-footer .stock-badge {
+  order: 1 !important;
+}
+
+.news-date,
+.news-time,
+.news-card-footer .news-date {
+  order: 2 !important;
+}
+
+.news-card-footer a,
+.read-more {
+  order: 3 !important;
+  margin-top: 4px !important;
+}
