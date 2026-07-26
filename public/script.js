@@ -2495,13 +2495,34 @@ function selectNewsCategory(category) {
   document.getElementById("news").classList.add("active");
   currentTab = "news";
 
-  const container = document.getElementById("news");
-  container.innerHTML = `
-    <div class="loading-state" style="text-align:center; padding:2rem;">
-      <p style="color:var(--text-secondary);">📰 Berita untuk kategori <strong>${pageTitle.innerText}</strong> akan segera hadir.</p>
-    </div>
-  `;
+  // Panggil loadNews dari news.js
+  if (typeof loadNews === 'function') {
+    // Mapping dari slug ke kategori asli
+    const categoryMap = {
+      'buyback': 'BUY BACK AND BACKDOOR',
+      'akuisisi': 'AKUISISI AND MERGER',
+      'private': 'PRIVATE PLACEMENT',
+      'rightissue': 'RIGHT ISSUE',
+      'dividen': 'DIVIDEN',
+      'labarugi': 'LABA RUGI',
+      'tender': 'TENDER OFFER',
+      'net': 'NET SELL AND NET BUY ASING',
+      'konglomerasi': 'KONGLOMERASI',
+      'sentimen': 'SENTIMEN LAINYA'
+    };
+    const realCategory = categoryMap[category] || category.toUpperCase();
+    loadNews(realCategory);
+  } else {
+    // Fallback jika news.js belum dimuat
+    const container = document.getElementById("news");
+    container.innerHTML = `
+      <div class="loading-state" style="text-align:center; padding:2rem;">
+        <p style="color:var(--text-secondary);">📰 Memuat berita untuk kategori <strong>${pageTitle.innerText}</strong>...</p>
+      </div>
+    `;
+  }
 
+  // Buka dropdown News di sidebar
   const parent = document.getElementById("newsParent");
   const sub = document.getElementById("newsSubMenu");
   if (parent && sub) {
@@ -2512,6 +2533,7 @@ function selectNewsCategory(category) {
     if (arrow) arrow.classList.add("open");
   }
 
+  // Tutup sidebar di mobile
   document.querySelector(".sidebar")?.classList.remove("open");
   document.querySelector(".overlay")?.classList.remove("active");
 }
