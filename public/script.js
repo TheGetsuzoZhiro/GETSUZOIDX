@@ -2463,6 +2463,57 @@ function closeAllDropdowns() {
     const arrow = techParent.querySelector(".nav-arrow");
     if (arrow) arrow.classList.remove("open");
   }
+
+  const newsSub = document.getElementById("newsSubMenu");
+  const newsParent = document.getElementById("newsParent");
+  if (newsSub) {
+    newsSub.classList.remove("open");
+    newsSub.style.display = "none";
+  }
+  if (newsParent) {
+    newsParent.classList.remove("open");
+    const arrow = newsParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.remove("open");
+  }
+}
+
+function selectNewsCategory(category) {
+  isDetailView = false;
+  const pageTitle = document.querySelector(".page-title");
+  const pageSubtitle = document.querySelector(".page-subtitle");
+  const titleKey = `news-${category}`;
+  if (titles[titleKey]) {
+    pageTitle.innerText = titles[titleKey].t;
+    pageSubtitle.innerText = titles[titleKey].s;
+  } else {
+    pageTitle.innerText = "Berita";
+    pageSubtitle.innerText = "Kategori berita";
+  }
+  window.location.hash = `#${titleKey}`;
+
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById("news").classList.add("active");
+  currentTab = "news";
+
+  const container = document.getElementById("news");
+  container.innerHTML = `
+    <div class="loading-state" style="text-align:center; padding:2rem;">
+      <p style="color:var(--text-secondary);">📰 Berita untuk kategori <strong>${pageTitle.innerText}</strong> akan segera hadir.</p>
+    </div>
+  `;
+
+  const parent = document.getElementById("newsParent");
+  const sub = document.getElementById("newsSubMenu");
+  if (parent && sub) {
+    parent.classList.add("open");
+    sub.classList.add("open");
+    sub.style.display = "block";
+    const arrow = parent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.add("open");
+  }
+
+  document.querySelector(".sidebar")?.classList.remove("open");
+  document.querySelector(".overlay")?.classList.remove("active");
 }
 
 async function showSignalList() {
@@ -4758,10 +4809,22 @@ function initTabs() {
       t: "Technical: Waiting",
       s: "Pending execution setups",
     },
+    // NEWS TITLES
+    "news": { t: "Berita", s: "Kategori berita" },
+    "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
+    "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
+    "news-private": { t: "Private Placement", s: "Berita private placement" },
+    "news-rightissue": { t: "Right Issue", s: "Berita right issue" },
+    "news-dividen": { t: "Dividen", s: "Berita dividen" },
+    "news-labarugi": { t: "Laba Rugi", s: "Berita laba rugi" },
+    "news-tender": { t: "Tender Offer", s: "Berita tender offer" },
+    "news-net": { t: "Net Sell / Buy Asing", s: "Berita net asing" },
+    "news-konglomerasi": { t: "Konglomerasi", s: "Berita konglomerasi" },
+    "news-sentimen": { t: "Sentimen Lainnya", s: "Berita sentimen" },
   };
 
   btns.forEach((btn) => {
-    if (btn.id === "signalsParent" || btn.id === "technicalParent") return;
+    if (btn.id === "signalsParent" || btn.id === "technicalParent" || btn.id === "newsParent") return;
 
     btn.addEventListener("click", function (e) {
       e.preventDefault();
@@ -4787,6 +4850,15 @@ function initTabs() {
             .querySelector('.nav-link[data-tab="technical-signals"]')
             ?.classList.add("active");
           this.classList.add("active");
+          document.querySelector(".sidebar")?.classList.remove("open");
+          document.querySelector(".overlay")?.classList.remove("active");
+          return;
+        } else if (tabId.startsWith("news-")) {
+          const category = tabId.replace("news-", "");
+          selectNewsCategory(category);
+          btns.forEach((b) => b.classList.remove("active"));
+          this.classList.add("active");
+          document.querySelector('.nav-link[data-tab="news"]')?.classList.add("active");
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
           return;
@@ -4827,6 +4899,15 @@ function initTabs() {
       if (tabId === "technical-signals") {
         technicalListRendered = false;
         fetchSignals(true);
+      }
+      if (tabId === "news") {
+        // beri placeholder
+        const container = document.getElementById("news");
+        container.innerHTML = `
+          <div class="loading-state" style="text-align:center; padding:2rem;">
+            <p style="color:var(--text-secondary);">📰 Pilih kategori berita dari menu.</p>
+          </div>
+        `;
       }
       if (tabId === "home") {
         fetchReports();
@@ -5105,6 +5186,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ============ DROPDOWN NEWS (SAMA PERSIS) ============
+  const newsParent = document.getElementById("newsParent");
+  const newsSubMenu = document.getElementById("newsSubMenu");
+  if (newsParent && newsSubMenu) {
+    // Pastikan dropdown tertutup di awal
+    newsSubMenu.classList.remove("open");
+    newsSubMenu.style.display = "none";
+    newsParent.classList.remove("open");
+    const arrow = newsParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.remove("open");
+
+    newsParent.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = newsSubMenu.classList.toggle("open");
+      newsSubMenu.style.display = isOpen ? "block" : "none";
+      this.classList.toggle("open");
+      const arrow = this.querySelector(".nav-arrow");
+      if (arrow) arrow.classList.toggle("open");
+    });
+  }
+
   initMobileMenu();
   initPullToRefresh();
   initNotifications();
@@ -5129,6 +5232,9 @@ document.addEventListener("DOMContentLoaded", () => {
       selectTechnicalFilter("running");
     } else if (hash === "#technical-waiting") {
       selectTechnicalFilter("waiting");
+    } else if (hash.startsWith("#news-")) {
+      const category = hash.replace("#news-", "");
+      selectNewsCategory(category);
     } else if (hash === "#home") {
       currentTab = "home";
       currentSignalFilter = "none";
@@ -5158,7 +5264,8 @@ document.addEventListener("DOMContentLoaded", () => {
     currentHash !== "#home" &&
     !currentHash.startsWith("#detail-") &&
     !currentHash.startsWith("#technical-") &&
-    !currentHash.startsWith("#signals-")
+    !currentHash.startsWith("#signals-") &&
+    !currentHash.startsWith("#news-")
   ) {
     window.location.hash = "home";
   }
