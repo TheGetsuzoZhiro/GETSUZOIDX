@@ -156,6 +156,9 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// ============================================================
+//  NEWS FUNCTIONS (with Pagination, Badge NEW, Carousel)
+// ============================================================
 const CATEGORY_MAP = {
   buyback: "BUY BACK AND BACKDOOR",
   akuisisi: "AKUISISI AND MERGER",
@@ -169,73 +172,18 @@ const CATEGORY_MAP = {
   sentimen: "SENTIMEN LAINYA",
 };
 
-async function loadNews(category) {
-  const container = document.getElementById("news");
-  if (!container) {
-    console.error("Element #news tidak ditemukan");
-    return;
-  }
+let currentNewsCategory = "";
+let currentNewsPage = 1;
 
-  // Tampilkan loading
-  container.innerHTML = `
-    <div class="loading-state">
-      <div class="loader">
-        <div class="loader-ring"></div>
-        <div class="loader-ring"></div>
-        <div class="loader-ring"></div>
-      </div>
-      <p>Memuat berita untuk <strong>${escapeHtml(category)}</strong>...</p>
-    </div>
-  `;
-
-  try {
-    const url = `/api/news?category=${encodeURIComponent(category)}&limit=50`;
-    console.log("🔍 Fetching news:", url); // Debug
-
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-
-    const data = await response.json();
-    console.log("📰 News data:", data); // Debug
-
-    if (!data || data.length === 0) {
-      container.innerHTML = `
-        <div class="news-empty">
-          <i class="fas fa-newspaper"></i>
-          <p>Belum ada berita untuk kategori <strong>${escapeHtml(category)}</strong></p>
-          <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">Coba refresh atau pilih kategori lain.</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = `
-      <div class="news-header">
-        <h2 class="news-category-title">
-          <i class="fas fa-tag" style="color:#8b5cf6; margin-right:0.5rem;"></i>
-          ${escapeHtml(category)}
-        </h2>
-        <span class="news-count">${data.length} berita</span>
-      </div>
-      <div class="news-grid">
-        ${data.map(news => renderNewsCard(news)).join('')}
-      </div>
-    `;
-
-  } catch (error) {
-    console.error("❌ Error loading news:", error);
-    container.innerHTML = `
-      <div class="news-error">
-        <i class="fas fa-circle-exclamation"></i>
-        <p>Gagal memuat berita. Silakan coba lagi nanti.</p>
-        <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">${escapeHtml(error.message)}</p>
-        <button onclick="loadNews('${escapeHtml(category)}')" style="margin-top:1rem; padding:0.5rem 1.5rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff; cursor:pointer;">Coba Lagi</button>
-      </div>
-    `;
-  }
+function isNewsNew(publishedAt) {
+  if (!publishedAt) return false;
+  const pub = new Date(publishedAt);
+  const now = new Date();
+  const diff = now - pub;
+  return diff < 2 * 24 * 60 * 60 * 1000; // 2 hari
 }
 
-function renderNewsCard(news) {
+function renderNewsCard(news, showBadge = true) {
   const published = news.publishedAt ? new Date(news.publishedAt) : null;
   const timeStr = published
     ? published.toLocaleDateString("id-ID", {
@@ -248,18 +196,25 @@ function renderNewsCard(news) {
     : "";
 
   const stockTags = (news.stockCodes || [])
-    .filter(code => code && code.trim())
-    .map(code => `<span class="news-stock-tag">${escapeHtml(code.trim())}</span>`)
+    .filter((code) => code && code.trim())
+    .map((code) => `<span class="news-stock-tag">${escapeHtml(code.trim())}</span>`)
     .join("");
 
   const imageHtml = news.imageUrl
     ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="this.style.display='none'">`
     : `<div class="news-image-placeholder"><i class="fas fa-newspaper"></i></div>`;
 
+  const isNew = isNewsNew(news.publishedAt);
+  const newBadgeHtml =
+    showBadge && isNew
+      ? `<div class="news-badge-new"><span>NEW</span></div>`
+      : "";
+
   return `
     <div class="news-card">
       <div class="news-card-image">
         ${imageHtml}
+        ${newBadgeHtml}
       </div>
       <div class="news-card-body">
         <h3 class="news-title">
@@ -280,8 +235,242 @@ function renderNewsCard(news) {
   `;
 }
 
+function renderPagination(totalPages, currentPage, category) {
+  if (totalPages <= 1) return "";
+  let html = '<div class="pagination">';
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="page-btn ${i === currentPage ? "active" : ""}" data-page="${i}" data-category="${category}">${i}</button>`;
+  }
+  html += "</div>";
+  return html;
+}
+
+async function loadNews(category, page = 1) {
+  const container = document.getElementById("news");
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="loading-state">
+      <div class="loader">
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+        <div class="loader-ring"></div>
+      </div>
+      <p>Memuat berita untuk <strong>${escapeHtml(category)}</strong>...</p>
+    </div>
+  `;
+
+  try {
+    const url = `/api/news?category=${encodeURIComponent(category)}&limit=10&page=${page}`;
+    console.log("🔍 Fetching news:", url);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    console.log("📰 News data:", data);
+
+    const { news, total, totalPages, page: currentPage } = data;
+
+    if (!news || news.length === 0) {
+      container.innerHTML = `
+        <div class="news-empty">
+          <i class="fas fa-newspaper"></i>
+          <p>Belum ada berita untuk kategori <strong>${escapeHtml(category)}</strong></p>
+          <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">Coba refresh atau pilih kategori lain.</p>
+        </div>
+      `;
+      return;
+    }
+
+    let html = `
+      <div class="news-header">
+        <h2 class="news-category-title">
+          <i class="fas fa-tag" style="color:#8b5cf6; margin-right:0.5rem;"></i>
+          ${escapeHtml(category)}
+        </h2>
+        <span class="news-count">${total} berita</span>
+      </div>
+      <div class="news-grid">
+        ${news.map((item) => renderNewsCard(item, true)).join("")}
+      </div>
+      ${renderPagination(totalPages, currentPage, category)}
+    `;
+
+    container.innerHTML = html;
+
+    // Event listener untuk pagination
+    container.querySelectorAll(".page-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const p = parseInt(this.dataset.page);
+        const cat = this.dataset.category || category;
+        currentNewsPage = p;
+        loadNews(cat, p);
+      });
+    });
+  } catch (error) {
+    console.error("❌ Error loading news:", error);
+    container.innerHTML = `
+      <div class="news-error">
+        <i class="fas fa-circle-exclamation"></i>
+        <p>Gagal memuat berita. Silakan coba lagi nanti.</p>
+        <p style="font-size:0.7rem; opacity:0.5; margin-top:0.5rem;">${escapeHtml(error.message)}</p>
+        <button onclick="loadNews('${escapeHtml(category)}', ${page})" style="margin-top:1rem; padding:0.5rem 1.5rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff; cursor:pointer;">Coba Lagi</button>
+      </div>
+    `;
+  }
+}
+
+// ====== CAROUSEL NEWS DI DETAIL SIGNAL ======
+function renderNewsCarousel(newsList, stockCode) {
+  if (!newsList || newsList.length === 0) return "";
+
+  // Tampilkan maksimal 10 berita
+  const list = newsList.slice(0, 10);
+
+  return `
+    <div class="carousel-wrapper" id="carousel-${stockCode}">
+      <div class="carousel-header">
+        <span class="carousel-title"><i class="fas fa-newspaper"></i> Berita Terkait ${stockCode}</span>
+        <div class="carousel-nav">
+          <button class="carousel-prev" data-stock="${stockCode}"><i class="fas fa-chevron-left"></i></button>
+          <span class="carousel-index">1 / ${list.length}</span>
+          <button class="carousel-next" data-stock="${stockCode}"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+      <div class="carousel-track" id="carousel-track-${stockCode}">
+        ${list.map((item, idx) => `
+          <div class="carousel-slide ${idx === 0 ? "active" : ""}" data-index="${idx}">
+            ${renderNewsCard(item, true)}
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function initCarousel(stockCode) {
+  const track = document.getElementById(`carousel-track-${stockCode}`);
+  if (!track) return;
+  const slides = track.querySelectorAll(".carousel-slide");
+  const total = slides.length;
+  if (total === 0) return;
+  let current = 0;
+
+  const updateCarousel = () => {
+    slides.forEach((slide, idx) => {
+      slide.classList.toggle("active", idx === current);
+    });
+    const indexSpan = document.querySelector(`#carousel-${stockCode} .carousel-index`);
+    if (indexSpan) indexSpan.textContent = `${current + 1} / ${total}`;
+  };
+
+  const prevBtn = document.querySelector(`#carousel-${stockCode} .carousel-prev`);
+  const nextBtn = document.querySelector(`#carousel-${stockCode} .carousel-next`);
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      current = (current - 1 + total) % total;
+      updateCarousel();
+    });
+  }
+  if (nextBtn) {
+    nextBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      current = (current + 1) % total;
+      updateCarousel();
+    });
+  }
+}
+
+async function fetchAndRenderRelatedNews(stockCode, container) {
+  if (!stockCode) return;
+  try {
+    const url = `/api/news?stockCode=${stockCode}&limit=10`;
+    const response = await fetch(url);
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.news && data.news.length > 0) {
+      // Cari elemen untuk disisipi (misalnya setelah analyst opinion)
+      const detailContainer = container.querySelector(".pro-detail-container") || container;
+      // Cek apakah sudah ada carousel untuk stock ini
+      if (detailContainer.querySelector(`#carousel-${stockCode}`)) return;
+      const carouselHtml = renderNewsCarousel(data.news, stockCode);
+      // Sisipkan sebelum footer atau di akhir
+      const footer = detailContainer.querySelector(".pro-detail-container > div:last-child");
+      if (footer) {
+        footer.insertAdjacentHTML("beforebegin", carouselHtml);
+      } else {
+        detailContainer.insertAdjacentHTML("beforeend", carouselHtml);
+      }
+      // Inisialisasi carousel
+      setTimeout(() => initCarousel(stockCode), 100);
+    }
+  } catch (e) {
+    console.warn("Gagal load news untuk detail", e);
+  }
+}
+
 // ====== END NEWS FUNCTIONS ======
 
+// ====== SELECT NEWS CATEGORY ======
+let _isUpdatingNewsHash = false;
+
+function selectNewsCategory(category) {
+  if (_isUpdatingNewsHash) return;
+  isDetailView = false;
+  const pageTitle = document.querySelector(".page-title");
+  const pageSubtitle = document.querySelector(".page-subtitle");
+  const titleKey = `news-${category}`;
+  const titles = {
+    "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
+    "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
+    "news-private": { t: "Private Placement", s: "Berita private placement" },
+    "news-rightissue": { t: "Right Issue", s: "Berita right issue" },
+    "news-dividen": { t: "Dividen", s: "Berita dividen" },
+    "news-labarugi": { t: "Laba Rugi", s: "Berita laba rugi" },
+    "news-tender": { t: "Tender Offer", s: "Berita tender offer" },
+    "news-net": { t: "Net Sell / Buy Asing", s: "Berita net asing" },
+    "news-konglomerasi": { t: "Konglomerasi", s: "Berita konglomerasi" },
+    "news-sentimen": { t: "Sentimen Lainnya", s: "Berita sentimen" },
+  };
+
+  if (titles[titleKey]) {
+    pageTitle.innerText = titles[titleKey].t;
+    pageSubtitle.innerText = titles[titleKey].s;
+  } else {
+    pageTitle.innerText = "Berita";
+    pageSubtitle.innerText = "Kategori berita";
+  }
+
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.getElementById("news").classList.add("active");
+  currentTab = "news";
+
+  _isUpdatingNewsHash = true;
+  window.location.hash = `#${titleKey}`;
+  _isUpdatingNewsHash = false;
+
+  const parent = document.getElementById("newsParent");
+  const sub = document.getElementById("newsSubMenu");
+  if (parent && sub) {
+    parent.classList.add("open");
+    sub.classList.add("open");
+    sub.style.display = "block";
+    const arrow = parent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.add("open");
+  }
+
+  const realCategory = CATEGORY_MAP[category] || category.toUpperCase();
+  currentNewsCategory = realCategory;
+  currentNewsPage = 1;
+  loadNews(realCategory, 1);
+
+  document.querySelector(".sidebar")?.classList.remove("open");
+  document.querySelector(".overlay")?.classList.remove("active");
+}
+
+// ====== BUILD TAG ITEMS ======
 function buildTagItems(s) {
   const items = [];
   const chart = (s.patternChart || "").toLowerCase();
@@ -331,10 +520,8 @@ function buildTagItems(s) {
     }
   }
 
-  const hasChartDirection =
-    chart.includes("uptrend") || chart.includes("downtrend");
-  const hasCandleDirection =
-    candle.includes("bullish") || candle.includes("bearish");
+  const hasChartDirection = chart.includes("uptrend") || chart.includes("downtrend");
+  const hasCandleDirection = candle.includes("bullish") || candle.includes("bearish");
 
   if (hasChartDirection) {
     if (chart.includes("uptrend")) {
@@ -1771,6 +1958,13 @@ function renderBsjpDetailContent(
     window.scrollTo({ top: 0, behavior: "smooth" });
     container._scrolled = true;
   }
+
+  // ====== TAMBAHKAN BERITA TERKAIT DI DETAIL BSJP ======
+  setTimeout(() => {
+    if (s.stockCode) {
+      fetchAndRenderRelatedNews(s.stockCode, container);
+    }
+  }, 500);
 }
 
 async function renderSignalDetailToContainer(signal, container, onBack) {
@@ -2168,6 +2362,13 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
       renderPatternVisual(s.patternChart, container);
     }, 50);
   });
+
+  // ====== TAMBAHKAN BERITA TERKAIT DI DETAIL SIGNAL ======
+  setTimeout(() => {
+    if (s.stockCode) {
+      fetchAndRenderRelatedNews(s.stockCode, container);
+    }
+  }, 600);
 }
 
 async function renderPerformanceSignalList(status) {
@@ -2579,7 +2780,6 @@ function closeAllDropdowns() {
   }
 }
 
-// ====== NEWS SELECTION ======
 let _isUpdatingNewsHash = false;
 
 function selectNewsCategory(category) {
@@ -2609,17 +2809,14 @@ function selectNewsCategory(category) {
     pageSubtitle.innerText = "Kategori berita";
   }
 
-  // Aktifkan view news
-  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
   document.getElementById("news").classList.add("active");
   currentTab = "news";
 
-  // Update hash tanpa looping
   _isUpdatingNewsHash = true;
   window.location.hash = `#${titleKey}`;
   _isUpdatingNewsHash = false;
 
-  // Buka dropdown News
   const parent = document.getElementById("newsParent");
   const sub = document.getElementById("newsSubMenu");
   if (parent && sub) {
@@ -2630,16 +2827,14 @@ function selectNewsCategory(category) {
     if (arrow) arrow.classList.add("open");
   }
 
-  // Muat berita
   const realCategory = CATEGORY_MAP[category] || category.toUpperCase();
-  console.log("📌 Loading category:", realCategory); // Debug
-  loadNews(realCategory);
+  currentNewsCategory = realCategory;
+  currentNewsPage = 1;
+  loadNews(realCategory, 1);
 
-  // Tutup sidebar mobile
   document.querySelector(".sidebar")?.classList.remove("open");
   document.querySelector(".overlay")?.classList.remove("active");
 }
-// ====== END NEWS SELECTION ======
 
 async function showSignalList() {
   isDetailView = false;
@@ -3926,6 +4121,13 @@ function renderTechnicalSignalDetail(s, container) {
   }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
+
+  // ====== TAMBAHKAN BERITA TERKAIT DI DETAIL TEKNIKAL ======
+  setTimeout(() => {
+    if (s.stockCode) {
+      fetchAndRenderRelatedNews(s.stockCode, container);
+    }
+  }, 600);
 }
 
 async function showSignalDetailByStock(stockCode, signalDate) {
@@ -4933,7 +5135,6 @@ function initTabs() {
       t: "Technical: Waiting",
       s: "Pending execution setups",
     },
-    // NEWS TITLES
     "news": { t: "Berita", s: "Kategori berita" },
     "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
     "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
@@ -5025,7 +5226,6 @@ function initTabs() {
         fetchSignals(true);
       }
       if (tabId === "news") {
-        // beri placeholder
         const container = document.getElementById("news");
         container.innerHTML = `
           <div class="loading-state" style="text-align:center; padding:2rem;">
