@@ -9,7 +9,7 @@ function connectPriceSSE() {
     sseConnection = null;
   }
 
-  sseConnection = new EventSource("/api/sse/prices");
+  sseConnection = new EventSource("/api/sse/prices");renderTechnicalSignalDetail
 
   sseConnection.onmessage = function (event) {
     try {
@@ -2092,8 +2092,6 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
     signalDesc = "Monitor";
   }
 
-  const signalVisual = `<div class="pro-card" style="margin-bottom:0.5rem; background:${signalBg}; border:1px solid ${signalBorder}33; transition:all 0.3s; padding:0.75rem 1rem;"><div style="display:flex; align-items:center; gap:1.25rem;"><div style="width:60px; height:60px; border-radius:50%; background:${signalBorder}15; border:2px solid ${signalBorder}; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:${signalBorder};">${signalIcon}</div><div style="flex:1;"><div style="font-size:0.6rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-secondary);">Signal Type</div><div style="font-family:'JetBrains Mono'; font-weight:700; font-size:1.5rem; color:${signalBorder}; line-height:1.2;">${signalLabelText}<span style="font-size:0.8rem; font-weight:400; color:var(--text-secondary); margin-left:0.5rem;">${signalLabel}</span></div></div><div style="font-size:0.6rem; background:${signalBorder}15; color:${signalBorder}; padding:4px 14px; border-radius:20px; border:1px solid ${signalBorder}25; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">${signalDesc}</div></div></div>`;
-
   const score = s.confidenceScore || 0;
   const hasDetails = s.confidenceDetails && s.confidenceDetails.length > 0;
   const isNoData = score === 0 && !hasDetails;
@@ -2209,8 +2207,6 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
   }
 
   const entry = s.entryPrice || 0;
-  const tp = s.tp1 || entry * 1.1;
-  const sl = s.sl || entry * 0.9;
   const pctTp =
     s.tp1 && s.entryPrice
       ? (((s.tp1 - s.entryPrice) / s.entryPrice) * 100).toFixed(2)
@@ -2291,29 +2287,29 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
     </div>
 
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
-  <div class="pro-grid-2">
-    <div class="col-right" style="width:100%;">
-      <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Teknikal
-      </div>
-      <div class="pro-indicator-list">
-        <!-- VOLUME -->
-        <div class="pro-ind-row">
-          <span class="pro-ind-label">Volume</span>
-          <div class="pro-ind-track">
-            <div class="pro-ind-fill" style="width: ${Math.min(s.volumePercent ?? 0, 200)}%; background: ${getVolumeColor(s.volumePercent)};"></div>
+      <div class="pro-grid-2">
+        <div class="col-right" style="width:100%;">
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Teknikal
           </div>
-          <span class="pro-ind-val">${s.volumePercent != null ? s.volumePercent + "%" : "N/A"}</span>
+          <div class="pro-indicator-list">
+            <!-- VOLUME -->
+            <div class="pro-ind-row">
+              <span class="pro-ind-label">Volume</span>
+              <div class="pro-ind-track">
+                <div class="pro-ind-fill" style="width: ${Math.min(s.volumePercent ?? 0, 200)}%; background: ${getVolumeColor(s.volumePercent)};"></div>
+              </div>
+              <span class="pro-ind-val">${s.volumePercent != null ? s.volumePercent + "%" : "N/A"}</span>
+            </div>
+            ${renderIndRow("EMA 20", fmtPrice(s.ema20), s.ema20, s.entryPrice)}
+            ${renderIndRow("EMA 50", fmtPrice(s.ema50), s.ema50, s.entryPrice)}
+            ${renderIndRow("VWAP", fmtPrice(s.vwap), s.vwap, s.entryPrice)}
+            ${s.adx != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ADX</span><div class="pro-ind-track"><div class="pro-ind-fill bg-warning" style="width:${Math.min(s.adx, 100)}%;"></div></div><span class="pro-ind-val">${s.adx}</span></div>` : ""}
+            ${s.atr != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ATR</span><div class="pro-ind-track"><div class="pro-ind-fill bg-neutral" style="width:${Math.min((s.atr / (s.entryPrice || 1)) * 100, 100)}%;"></div></div><span class="pro-ind-val">${fmtPrice(s.atr)}</span></div>` : ""}
+          </div>
         </div>
-        ${renderIndRow("EMA 20", fmtPrice(s.ema20), s.ema20, s.entryPrice)}
-        ${renderIndRow("EMA 50", fmtPrice(s.ema50), s.ema50, s.entryPrice)}
-        ${renderIndRow("VWAP", fmtPrice(s.vwap), s.vwap, s.entryPrice)}
-        ${s.adx != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ADX</span><div class="pro-ind-track"><div class="pro-ind-fill bg-warning" style="width:${Math.min(s.adx, 100)}%;"></div></div><span class="pro-ind-val">${s.adx}</span></div>` : ""}
-        ${s.atr != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ATR</span><div class="pro-ind-track"><div class="pro-ind-fill bg-neutral" style="width:${Math.min((s.atr / (s.entryPrice || 1)) * 100, 100)}%;"></div></div><span class="pro-ind-val">${fmtPrice(s.atr)}</span></div>` : ""}
       </div>
     </div>
-  </div>
-</div>
 
     <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
       <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
@@ -2326,9 +2322,26 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
       </div>
     </div>
 
-    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">${s.analystOpinion ? `<div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Analyst Opinion</div><div class="pro-text-box">${escapeHtml(s.analystOpinion)}</div>` : `<div style="display:flex; align-items:center; justify-content:center; color:var(--text-secondary); opacity:0.4; font-size:0.8rem;">Tidak ada opini analis</div>`}</div>${s.relatedNews && s.relatedNews.length ? `<div style="padding:0.5rem 0.75rem;"><div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Berita Terkait</div><ul class="pro-news-list">${s.relatedNews.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul></div>` : ""}</div></div>`;
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      ${s.analystOpinion ? `<div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Analyst Opinion</div><div class="pro-text-box">${escapeHtml(s.analystOpinion)}</div>` : `<div style="display:flex; align-items:center; justify-content:center; color:var(--text-secondary); opacity:0.4; font-size:0.8rem;">Tidak ada opini analis</div>`}
+    </div>
+
+    ${s.relatedNews && s.relatedNews.length ? `<div style="padding:0.5rem 0.75rem;"><div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Berita Terkait</div><ul class="pro-news-list">${s.relatedNews.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul></div>` : ""}
+
+    <!-- ======================================================= -->
+    <!-- [LANGKAH 1] WADAH DIV CAROUSEL BERITA DITARUH DI SINI   -->
+    <!-- ======================================================= -->
+    <div id="dailyNewsContainer" style="padding:0.5rem 0.75rem; border-top:1px solid rgba(255,255,255,0.06);"></div>
+
+  </div></div>`;
 
   container.innerHTML = html;
+
+  // =======================================================
+  // [LANGKAH 2] PANGGIL FUNGSI CAROUSEL
+  // =======================================================
+  mountStockNewsCarousel(s.stockCode, "dailyNewsContainer");
+
   const backBtn = container.querySelector("#dailyBackBtn");
   if (backBtn && onBack) backBtn.addEventListener("click", onBack);
 
@@ -3917,15 +3930,16 @@ function renderTechnicalSignalDetail(s, container) {
         <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit</span>
         ${isExpired ? `<span style="display:flex; align-items:center; gap:0.2rem; color:#71717a;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3a3a3a;"></span> Expired</span>` : ""}
       </div>
-      ${isExpired
-        ? `<div style="text-align:center; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(113,113,122,0.08); border-radius:6px; font-size:0.6rem; color:#71717a; border:1px dashed rgba(113,113,122,0.15);">
+      ${
+        isExpired
+          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.3rem 0.5rem; background:rgba(113,113,122,0.08); border-radius:6px; font-size:0.6rem; color:#71717a; border:1px dashed rgba(113,113,122,0.15);">
           <i class="fa-regular fa-clock" style="margin-right:0.3rem;"></i> Signal telah kedaluwarsa — Tidak ada alur aktif
         </div>`
-        : s.status === "TRAILING"
-          ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
+          : s.status === "TRAILING"
+            ? `<div style="text-align:center; margin-top:0.4rem; padding:0.35rem 0.5rem; background:rgba(245,158,11,0.08); border-radius:6px; font-size:0.6rem; color:#f59e0b; border:1px solid rgba(245,158,11,0.25);">
           <i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i> <strong>Trailing Stop 5% Aktif:</strong> Proteksi profit dinaikkan ke <strong>Rp${s.sl ? fmtPrice(s.sl) : "TP1"}</strong> (${slLabel})
         </div>`
-          : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
+            : `<div style="text-align:center; margin-top:0.4rem; font-size:0.55rem; color:var(--text-secondary); opacity:0.4;">
           <i class="fa-regular fa-circle-check" style="margin-right:0.2rem; color:#10b981;"></i> Alur strategi berjalan sesuai rencana
         </div>`
       }
@@ -4076,6 +4090,11 @@ function renderTechnicalSignalDetail(s, container) {
           ${strategyDetail}
         </div>
 
+        <!-- ======================================================= -->
+        <!-- [LANGKAH 1] WADAH DIV CAROUSEL BERITA DITARUH DI SINI   -->
+        <!-- ======================================================= -->
+        <div id="techNewsContainer" style="padding:0.5rem 0.75rem; border-top:1px solid rgba(255,255,255,0.06);"></div>
+
         <!-- FOOTER -->
         <div style="padding:0.5rem 0.75rem; text-align:center; font-size:0.55rem; color:var(--text-secondary); opacity:0.4; border-top:1px solid rgba(255,255,255,0.04);">
           <i class="fa-solid fa-microchip" style="margin-right:0.2rem;"></i> Technical Strategy
@@ -4085,6 +4104,11 @@ function renderTechnicalSignalDetail(s, container) {
   `;
 
   container.innerHTML = html;
+
+  // =======================================================
+  // [LANGKAH 2] PANGGIL FUNGSI CAROUSEL
+  // =======================================================
+  mountStockNewsCarousel(s.stockCode, "techNewsContainer");
 
   const backBtn = container.querySelector("#techBackBtn");
   if (backBtn) {
