@@ -4312,3 +4312,55 @@ body {
 #technicalParent.open {
   border-radius: 12px 12px 0 0 !important;
 }
+
+/* ============================================
+   HIDE SCROLLBAR - SIDEBAR & NAVIGATION
+   ============================================ */
+
+/* Untuk browser berbasis WebKit (Chrome, Edge, Safari) */
+.sidebar::-webkit-scrollbar,
+.navigation::-webkit-scrollbar,
+.nav-sub::-webkit-scrollbar,
+.content-wrapper::-webkit-scrollbar,
+.pro-detail-container::-webkit-scrollbar,
+.sig-list::-webkit-scrollbar,
+.notif-panel-body::-webkit-scrollbar,
+.technical-list::-webkit-scrollbar,
+.news-list::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  display: none !important;
+}
+
+/* Untuk Firefox */
+.sidebar,
+.navigation,
+.nav-sub,
+.content-wrapper,
+.pro-detail-container,
+.sig-list,
+.notif-panel-body,
+.technical-list,
+.news-list {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Pastikan scroll tetap berfungsi tapi tersembunyi */
+.sidebar {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Sembunyikan scrollbar di body utama jika diperlukan */
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+body::-webkit-scrollbar {
+  display: none;
+}
