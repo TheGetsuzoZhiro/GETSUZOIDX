@@ -5074,12 +5074,12 @@ body::-webkit-scrollbar {
 
   /* ===== ATUR JARAK AGAR TIDAK TERLALU DEKAT ===== */
   .content-wrapper {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 52px + 0.30rem) !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 52px + 1rem) !important;
   }
 
   /* Opsional: jika scroll-header masih terlalu mepet, tambahkan margin-top kecil */
   .scroll-header {
-    margin-top: 0.5rem !important;
+    margin-top: 0 !important;
   }
 }
 
