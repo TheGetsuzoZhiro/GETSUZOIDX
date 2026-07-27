@@ -799,6 +799,7 @@ async function triggerInternalPush(title, body, customPushKey = null, options = 
   }
 }
 
+// ================== FUNGSI UTAMA YANG DIMODIFIKASI ==================
 async function checkDatabaseForNewSignals() {
   if (isCheckingSignals) return;
   isCheckingSignals = true;
@@ -827,6 +828,10 @@ async function checkDatabaseForNewSignals() {
       const prevStatus = serverLastStatus.get(docId);
       const stockCode = s.stockCode ? s.stockCode.toUpperCase() : null;
 
+      // --- Tentukan tanggal sinyal (fallback ke createdAt / updatedAt) ---
+      const signalDateRaw = s.signalDate || s.createdAt || s.updatedAt || new Date();
+      const dateStr = moment(signalDateRaw).tz('Asia/Jakarta').format('YYYY-MM-DD');
+
       if (prevStatus === undefined) {
         serverLastStatus.set(docId, s.status);
 
@@ -834,20 +839,21 @@ async function checkDatabaseForNewSignals() {
         if (s.signalType === "TECHNICAL") {
           const title = `NEW TECHNICAL: ${s.stockCode}`;
           const body = `Sinyal Technical baru untuk ${s.stockCode}`;
-          const customPushKey = `TECH_NEW_${docId}`;
+          const customPushKey = `TECH_NEW_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
           await triggerInternalPush(title, body, customPushKey, { stockCode });
         } else if (s.signalType === "BSJP") {
           if (s.status === "RUNNING") {
             const title = `NEW BSJP: ${s.stockCode}`;
             const body = `Sinyal BSJP baru untuk ${s.stockCode}`;
-            const customPushKey = `BSJP_NEW_${docId}`;
+            const customPushKey = `BSJP_NEW_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
             await triggerInternalPush(title, body, customPushKey, { stockCode });
           }
         } else {
-          // SINYAL BIASA
+          // SINYAL BIASA (selain TECHNICAL & BSJP)
           if (s.status === "RUNNING") {
             const session = getSessionFromDate(s.signalDate);
             if (session === 1 || session === 2) {
+              // Notifikasi per sesi tetap menggunakan key berbasis tanggal (tidak berubah)
               const key = `SIGNAL_SESSION_${session}_${today}`;
               try {
                 await NotifLogModel.create({ key });
@@ -863,7 +869,7 @@ async function checkDatabaseForNewSignals() {
             } else {
               const title = `NEW SIGNALS LAINNYA`;
               const body = `Sinyal baru untuk ${s.stockCode}`;
-              const customPushKey = `REG_NEW_${docId}`;
+              const customPushKey = `REG_NEW_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
               await triggerInternalPush(title, body, customPushKey, { stockCode });
             }
           }
@@ -877,7 +883,7 @@ async function checkDatabaseForNewSignals() {
           const sign = ret >= 0 ? "+" : "";
           const title = `✅ TP: ${s.stockCode}`;
           const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
-          const customPushKey = `TP_DONE_${docId}`;
+          const customPushKey = `TP_DONE_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
           await triggerInternalPush(title, body, customPushKey, { stockCode });
         }
       }
@@ -888,6 +894,7 @@ async function checkDatabaseForNewSignals() {
     isCheckingSignals = false;
   }
 }
+// ================== AKHIR MODIFIKASI ==================
 
 async function checkDatabaseForNews() {
   if (isCheckingNews) return;
