@@ -81,6 +81,52 @@ let _techPriceMap = {};
 let _techInfoMap = {};
 let _newsDataCache = {};
 
+// ===== FUNGSI YANG HILANG =====
+function closeAllDropdowns() {
+  // Tutup dropdown Signals
+  const signalSub = document.getElementById("signalSubMenu");
+  const signalParent = document.getElementById("signalsParent");
+  if (signalSub) {
+    signalSub.classList.remove("open");
+    signalSub.style.display = "none";
+  }
+  if (signalParent) {
+    signalParent.classList.remove("open");
+    const arrow = signalParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.remove("open");
+  }
+
+  // Tutup dropdown Technical
+  const techSub = document.getElementById("technicalSubMenu");
+  const techParent = document.getElementById("technicalParent");
+  if (techSub) {
+    techSub.classList.remove("open");
+    techSub.style.display = "none";
+  }
+  if (techParent) {
+    techParent.classList.remove("open");
+    const arrow = techParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.remove("open");
+  }
+
+  // Tutup dropdown News
+  const newsSub = document.getElementById("newsSubMenu");
+  const newsParent = document.getElementById("newsParent");
+  if (newsSub) {
+    newsSub.classList.remove("open");
+    newsSub.style.display = "none";
+  }
+  if (newsParent) {
+    newsParent.classList.remove("open");
+    const arrow = newsParent.querySelector(".nav-arrow");
+    if (arrow) arrow.classList.remove("open");
+  }
+}
+
+// ===== VARIABEL GLOBAL YANG MUNGKIN HILANG =====
+let _isUpdatingNewsHash = false;
+let _currentNewsCategory = '';
+
 function isNewNews(publishedAt) {
   if (!publishedAt) return false;
   const pubDate = new Date(publishedAt);
