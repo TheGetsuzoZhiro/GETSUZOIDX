@@ -83,9 +83,16 @@ let _newsDataCache = {};
 let _isUpdatingNewsHash = false;
 let _currentNewsCategory = '';
 
-// ===== FUNGSI YANG HILANG / DIPERLUKAN =====
+function isNewNews(publishedAt) {
+  if (!publishedAt) return false;
+  const pubDate = new Date(publishedAt);
+  const now = new Date();
+  const diffInHours = (now - pubDate) / (1000 * 60 * 60);
+  return diffInHours <= 48;
+}
+
+// ===== FUNGSI YANG HILANG =====
 function closeAllDropdowns() {
-  // Tutup dropdown Signals
   const signalSub = document.getElementById("signalSubMenu");
   const signalParent = document.getElementById("signalsParent");
   if (signalSub) {
@@ -98,7 +105,6 @@ function closeAllDropdowns() {
     if (arrow) arrow.classList.remove("open");
   }
 
-  // Tutup dropdown Technical
   const techSub = document.getElementById("technicalSubMenu");
   const techParent = document.getElementById("technicalParent");
   if (techSub) {
@@ -111,7 +117,6 @@ function closeAllDropdowns() {
     if (arrow) arrow.classList.remove("open");
   }
 
-  // Tutup dropdown News
   const newsSub = document.getElementById("newsSubMenu");
   const newsParent = document.getElementById("newsParent");
   if (newsSub) {
@@ -123,26 +128,6 @@ function closeAllDropdowns() {
     const arrow = newsParent.querySelector(".nav-arrow");
     if (arrow) arrow.classList.remove("open");
   }
-}
-
-// ===== VARIABEL GLOBAL TAMBAHAN =====
-let _isUpdatingNewsHash = false;
-let _currentNewsCategory = '';
-let _dailySignalsData = [];
-let _signalListData = [];
-let _techListData = [];
-let _signalPriceMap = {};
-let _signalInfoMap = {};
-let _techPriceMap = {};
-let _techInfoMap = {};
-let _newsDataCache = {};
-
-function isNewNews(publishedAt) {
-  if (!publishedAt) return false;
-  const pubDate = new Date(publishedAt);
-  const now = new Date();
-  const diffInHours = (now - pubDate) / (1000 * 60 * 60);
-  return diffInHours <= 48;
 }
 
 function getCategoryIconHtml(category) {
