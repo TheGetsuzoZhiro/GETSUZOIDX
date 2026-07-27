@@ -728,15 +728,20 @@ function getSessionFromDate(signalDate) {
   return null;
 }
 
-async function triggerInternalPush(title, body, customPushKey = null) {
+// =============== PERBAIKAN PADA FUNGSI TRIGGER INTERNAL PUSH ===============
+async function triggerInternalPush(title, body, customPushKey = null, options = {}) {
+  const { skipInsert = false } = options;
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = customPushKey || `${title.toUpperCase().trim()}_${today}`;
 
-  try {
-    await NotifLogModel.create({ key: pushKey });
-  } catch (e) {
-    console.log(`[WATCHDOG] Blokir spam / duplikat (DB Lock): "${pushKey}"`);
-    return;
+  // Jika tidak skipInsert, coba insert ke database untuk cegah spam
+  if (!skipInsert) {
+    try {
+      await NotifLogModel.create({ key: pushKey });
+    } catch (e) {
+      console.log(`[WATCHDOG] Blokir spam / duplikat (DB Lock): "${pushKey}"`);
+      return;
+    }
   }
 
   const payload = JSON.stringify({ title, body });
@@ -772,6 +777,7 @@ async function checkDatabaseForNewSignals() {
     if (!result) return;
 
     const { allSignals } = result;
+    const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
 
     if (!isWatchdogInitialized) {
       allSignals.forEach((s) => {
@@ -792,10 +798,10 @@ async function checkDatabaseForNewSignals() {
       if (prevStatus === undefined) {
         serverLastStatus.set(docId, s.status);
 
+        // -------------------- SINYAL BARU (belum pernah terlihat) --------------------
         if (s.signalType === "TECHNICAL") {
           const title = `NEW TECHNICAL: ${s.stockCode}`;
           const body = `Sinyal Technical baru untuk ${s.stockCode}`;
-
           const customPushKey = `TECH_NEW_${docId}`;
           await triggerInternalPush(title, body, customPushKey);
         } else if (s.signalType === "BSJP") {
@@ -806,19 +812,35 @@ async function checkDatabaseForNewSignals() {
             await triggerInternalPush(title, body, customPushKey);
           }
         } else {
+          // SINYAL BIASA
           if (s.status === "RUNNING") {
             const session = getSessionFromDate(s.signalDate);
-            const title = session
-              ? `NEW SIGNALS SESI ${session}`
-              : `NEW SIGNALS LAINNYA`;
-            const body = `Sinyal baru untuk ${s.stockCode}`;
-            const customPushKey = `REG_NEW_${docId}`;
-            await triggerInternalPush(title, body, customPushKey);
+            if (session === 1 || session === 2) {
+              // Hanya 1x notifikasi per sesi per hari, tanpa menyebut nama saham
+              const key = `SIGNAL_SESSION_${session}_${today}`;
+              try {
+                await NotifLogModel.create({ key });
+                // Berhasil insert => notifikasi belum pernah dikirim hari ini
+                const title = `NEW SIGNALS SESI ${session}`;
+                const body = `Sinyal baru untuk sesi ${session}`;
+                await triggerInternalPush(title, body, key, { skipInsert: true });
+              } catch (e) {
+                // Key sudah ada, artinya notifikasi sesi ini sudah dikirim
+                console.log(`[WATCHDOG] Notifikasi sesi ${session} sudah dikirim hari ini.`);
+              }
+            } else {
+              // Sinyal biasa tanpa sesi (atau sesi tidak dikenali) tetap per saham
+              const title = `NEW SIGNALS LAINNYA`;
+              const body = `Sinyal baru untuk ${s.stockCode}`;
+              const customPushKey = `REG_NEW_${docId}`;
+              await triggerInternalPush(title, body, customPushKey);
+            }
           }
         }
       } else if (prevStatus !== s.status) {
         serverLastStatus.set(docId, s.status);
 
+        // -------------------- PERUBAHAN STATUS (contoh: TP) --------------------
         if (s.status === "TP" && prevStatus !== "TP") {
           const ret = s.returnPercent || 0;
           const sign = ret >= 0 ? "+" : "";
@@ -827,6 +849,7 @@ async function checkDatabaseForNewSignals() {
           const customPushKey = `TP_DONE_${docId}`;
           await triggerInternalPush(title, body, customPushKey);
         }
+        // Tambahkan kondisi perubahan status lain jika diperlukan
       }
     }
   } catch (err) {
