@@ -4947,3 +4947,87 @@ body::-webkit-scrollbar {
     flex-wrap: wrap !important;
   }
 }
+
+/* ===== STICKY HEADER ===== */
+.sticky-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: rgba(5, 5, 5, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  min-height: 52px;
+  box-sizing: border-box;
+  gap: 1rem;
+}
+
+.sticky-header .mobile-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sticky-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+/* ===== SCROLL HEADER (IKUT SCROLL) ===== */
+.scroll-header {
+  position: relative !important;
+  padding: 0.5rem 1rem;
+  background: transparent;
+}
+
+/* ===== ATURAN UNTUK MOBILE (≤1024px) ===== */
+@media (max-width: 1024px) {
+  .sticky-header {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .scroll-header {
+    padding: 0.5rem 0.75rem 0.75rem 0.75rem;
+  }
+
+  .scroll-header .page-header {
+    display: block !important;
+    text-align: left !important;
+  }
+
+  .scroll-header .page-title {
+    font-size: 1.25rem !important;
+  }
+
+  .scroll-header .page-subtitle {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* ===== DESKTOP: tampilkan scroll-header sebagai sticky ===== */
+@media (min-width: 1025px) {
+  .sticky-header {
+    display: none !important;
+  }
+
+  .scroll-header {
+    display: block !important;
+    position: sticky !important;
+    top: 0;
+    z-index: 100;
+    background: rgba(5, 5, 5, 0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 1.5rem 3rem;
+  }
+
+  .scroll-header .page-header {
+    display: block !important;
+  }
+}
