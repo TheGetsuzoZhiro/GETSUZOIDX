@@ -624,7 +624,7 @@ app.post("/api/save-subscription", async (req, res) => {
 });
 
 app.post("/api/send-push", async (req, res) => {
-  const { title, body } = req.body;
+  const { title, body, stockCode, icon, image } = req.body;
   if (!title || !body) {
     return res.status(400).json({ error: "Title and body required" });
   }
@@ -638,7 +638,22 @@ app.post("/api/send-push", async (req, res) => {
     return res.json({ success: true, message: "Sudah dikirim hari ini" });
   }
 
-  const payload = JSON.stringify({ title, body });
+  // Tentukan logo saham otomatis
+  let finalIcon = icon;
+  if (!finalIcon && stockCode) {
+    finalIcon = `https://assets.stockbit.com/logos/companies/${stockCode.toUpperCase()}.png`;
+  }
+  if (!finalIcon) {
+    finalIcon = "https://getsuzo-idx.onrender.com/icon-192.png";
+  }
+
+  const payload = JSON.stringify({
+    title,
+    body,
+    icon: finalIcon,
+    image: image || null,
+    data: { url: "/" },
+  });
   const pushOptions = { TTL: 86400, urgency: "high" };
 
   try {
@@ -728,9 +743,9 @@ function getSessionFromDate(signalDate) {
   return null;
 }
 
-// =============== PERBAIKAN PADA FUNGSI TRIGGER INTERNAL PUSH ===============
+// =============== FUNGSI TRIGGER INTERNAL PUSH (LOGI DENGAN DYNAMIC STOCK LOGO) ===============
 async function triggerInternalPush(title, body, customPushKey = null, options = {}) {
-  const { skipInsert = false } = options;
+  const { skipInsert = false, stockCode = null, icon = null, image = null, url = "/" } = options;
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = customPushKey || `${title.toUpperCase().trim()}_${today}`;
 
@@ -744,7 +759,23 @@ async function triggerInternalPush(title, body, customPushKey = null, options = 
     }
   }
 
-  const payload = JSON.stringify({ title, body });
+  // Tentukan logo emiten dari CDN Stockbit
+  let finalIcon = icon;
+  if (!finalIcon && stockCode) {
+    finalIcon = `https://assets.stockbit.com/logos/companies/${stockCode.toUpperCase()}.png`;
+  }
+  if (!finalIcon) {
+    finalIcon = "https://getsuzo-idx.onrender.com/icon-192.png";
+  }
+
+  const payload = JSON.stringify({
+    title,
+    body,
+    icon: finalIcon,
+    image: image || null,
+    data: { url },
+  });
+
   const pushOptions = { TTL: 86400, urgency: "high" };
   try {
     const subscriptions = await SubscriptionModel.find({}).lean();
@@ -762,7 +793,7 @@ async function triggerInternalPush(title, body, customPushKey = null, options = 
       }),
     );
     await Promise.all(promises);
-    console.log(`✅ [WATCHDOG] PUSH TERKIRIM: ${title}`);
+    console.log(`✅ [WATCHDOG] PUSH TERKIRIM (+Logo): ${title}`);
   } catch (err) {
     console.error("❌ [WATCHDOG] Gagal kirim push:", err.message);
   }
@@ -794,6 +825,7 @@ async function checkDatabaseForNewSignals() {
     for (const s of allSignals) {
       const docId = s._id.toString();
       const prevStatus = serverLastStatus.get(docId);
+      const stockCode = s.stockCode ? s.stockCode.toUpperCase() : null;
 
       if (prevStatus === undefined) {
         serverLastStatus.set(docId, s.status);
@@ -803,37 +835,36 @@ async function checkDatabaseForNewSignals() {
           const title = `NEW TECHNICAL: ${s.stockCode}`;
           const body = `Sinyal Technical baru untuk ${s.stockCode}`;
           const customPushKey = `TECH_NEW_${docId}`;
-          await triggerInternalPush(title, body, customPushKey);
+          await triggerInternalPush(title, body, customPushKey, { stockCode });
         } else if (s.signalType === "BSJP") {
           if (s.status === "RUNNING") {
             const title = `NEW BSJP: ${s.stockCode}`;
             const body = `Sinyal BSJP baru untuk ${s.stockCode}`;
             const customPushKey = `BSJP_NEW_${docId}`;
-            await triggerInternalPush(title, body, customPushKey);
+            await triggerInternalPush(title, body, customPushKey, { stockCode });
           }
         } else {
           // SINYAL BIASA
           if (s.status === "RUNNING") {
             const session = getSessionFromDate(s.signalDate);
             if (session === 1 || session === 2) {
-              // Hanya 1x notifikasi per sesi per hari, tanpa menyebut nama saham
               const key = `SIGNAL_SESSION_${session}_${today}`;
               try {
                 await NotifLogModel.create({ key });
-                // Berhasil insert => notifikasi belum pernah dikirim hari ini
                 const title = `NEW SIGNALS SESI ${session}`;
                 const body = `Sinyal baru untuk sesi ${session}`;
-                await triggerInternalPush(title, body, key, { skipInsert: true });
+                await triggerInternalPush(title, body, key, {
+                  skipInsert: true,
+                  stockCode,
+                });
               } catch (e) {
-                // Key sudah ada, artinya notifikasi sesi ini sudah dikirim
                 console.log(`[WATCHDOG] Notifikasi sesi ${session} sudah dikirim hari ini.`);
               }
             } else {
-              // Sinyal biasa tanpa sesi (atau sesi tidak dikenali) tetap per saham
               const title = `NEW SIGNALS LAINNYA`;
               const body = `Sinyal baru untuk ${s.stockCode}`;
               const customPushKey = `REG_NEW_${docId}`;
-              await triggerInternalPush(title, body, customPushKey);
+              await triggerInternalPush(title, body, customPushKey, { stockCode });
             }
           }
         }
@@ -847,9 +878,8 @@ async function checkDatabaseForNewSignals() {
           const title = `✅ TP: ${s.stockCode}`;
           const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
           const customPushKey = `TP_DONE_${docId}`;
-          await triggerInternalPush(title, body, customPushKey);
+          await triggerInternalPush(title, body, customPushKey, { stockCode });
         }
-        // Tambahkan kondisi perubahan status lain jika diperlukan
       }
     }
   } catch (err) {
@@ -867,7 +897,7 @@ async function checkDatabaseForNews() {
     await fetchAndSerializeNews();
 
     const recentNews = await NewsModel.find({})
-      .select("link category stockCodes title description publishedAt")
+      .select("link category stockCodes title description imageUrl publishedAt")
       .sort({ publishedAt: -1 })
       .limit(100)
       .lean();
@@ -928,8 +958,13 @@ async function checkDatabaseForNews() {
           body = body.substring(0, 197) + "...";
         }
 
+        const primaryStockCode = newsStocks.length > 0 ? newsStocks[0] : null;
+
         const customPushKey = `NEWS_PUSH_${news.link}`;
-        await triggerInternalPush(title, body, customPushKey);
+        await triggerInternalPush(title, body, customPushKey, {
+          stockCode: primaryStockCode,
+          image: news.imageUrl || null,
+        });
       }
 
       cleanupCacheSet(serverLastNewsLinks, 1000);
