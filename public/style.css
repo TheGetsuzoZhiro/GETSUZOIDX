@@ -5072,18 +5072,16 @@ body::-webkit-scrollbar {
 @media (max-width: 1024px) {
   /* … aturan yang sudah ada … */
 
-  /* ===== PERBAIKAN JARAK ===== */
-  /* 1. Kurangi padding-top konten utama */
+  /* ===== ATUR JARAK AGAR TIDAK TERLALU DEKAT ===== */
   .content-wrapper {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 52px + 0.25rem) !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 52px + 1rem) !important;
   }
 
-  /* 2. Hapus margin/padding berlebih pada scroll-header */
+  /* Opsional: jika scroll-header masih terlalu mepet, tambahkan margin-top kecil */
   .scroll-header {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    margin-top: 0 !important;
+    margin-top: 0.25rem !important;
   }
+}
 
   /* 3. Pastikan page-header tidak punya margin atas */
   .scroll-header .page-header {
