@@ -33,7 +33,6 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
-// Schema NotifLog untuk kunci anti-duplikat permanen di DB (Otomatis hapus setelah 7 hari)
 const NotifLogSchema = new mongoose.Schema(
   {
     key: { type: String, required: true, unique: true },
@@ -632,7 +631,6 @@ app.post("/api/send-push", async (req, res) => {
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = `${title.toUpperCase().trim()}_${today}`;
 
-  // Kunci berbasis Database untuk cegah duplikasi
   try {
     await NotifLogModel.create({ key: pushKey });
   } catch (e) {
@@ -649,7 +647,6 @@ app.post("/api/send-push", async (req, res) => {
       return res.json({ success: true, message: "Tidak ada subscriber" });
     }
 
-    // Deduplikasi Subscription
     const uniqueSubs = Array.from(
       new Map(subscriptions.map((s) => [s.endpoint, s])).values(),
     );
@@ -735,7 +732,6 @@ async function triggerInternalPush(title, body, customPushKey = null) {
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = customPushKey || `${title.toUpperCase().trim()}_${today}`;
 
-  // DB Lock: Jika kunci push sudah pernah tersimpan, batalkan pemrosesan
   try {
     await NotifLogModel.create({ key: pushKey });
   } catch (e) {
@@ -749,7 +745,6 @@ async function triggerInternalPush(title, body, customPushKey = null) {
     const subscriptions = await SubscriptionModel.find({}).lean();
     if (subscriptions.length === 0) return;
 
-    // Deduplikasi subscriber berdasarkan endpoint unik
     const uniqueSubs = Array.from(
       new Map(subscriptions.map((s) => [s.endpoint, s])).values(),
     );
@@ -768,7 +763,6 @@ async function triggerInternalPush(title, body, customPushKey = null) {
   }
 }
 
-// Logika watchdog sinyal terpadu (Sinyal Baru & Take Profit)
 async function checkDatabaseForNewSignals() {
   if (isCheckingSignals) return;
   isCheckingSignals = true;
@@ -779,7 +773,6 @@ async function checkDatabaseForNewSignals() {
 
     const { allSignals } = result;
 
-    // Inisialisasi awal saat server dinyalakan
     if (!isWatchdogInitialized) {
       allSignals.forEach((s) => {
         const key = `${s._id.toString()}`;
@@ -792,19 +785,17 @@ async function checkDatabaseForNewSignals() {
       return;
     }
 
-    // Deteksi sinyal baru & perubahan status ke TP
     for (const s of allSignals) {
       const docId = s._id.toString();
       const prevStatus = serverLastStatus.get(docId);
 
-      // KASUS 1: SINYAL PERTAMA KALI MASUK DATABASE
       if (prevStatus === undefined) {
         serverLastStatus.set(docId, s.status);
 
         if (s.signalType === "TECHNICAL") {
           const title = `NEW TECHNICAL: ${s.stockCode}`;
           const body = `Sinyal Technical baru untuk ${s.stockCode}`;
-          // ID Dokumen dijadikan kunci unik mutlak
+
           const customPushKey = `TECH_NEW_${docId}`;
           await triggerInternalPush(title, body, customPushKey);
         } else if (s.signalType === "BSJP") {
@@ -825,9 +816,7 @@ async function checkDatabaseForNewSignals() {
             await triggerInternalPush(title, body, customPushKey);
           }
         }
-      }
-      // KASUS 2: PERUBAHAN STATUS SINYAL KE TAKE PROFIT (TP)
-      else if (prevStatus !== s.status) {
+      } else if (prevStatus !== s.status) {
         serverLastStatus.set(docId, s.status);
 
         if (s.status === "TP" && prevStatus !== "TP") {
@@ -874,7 +863,7 @@ async function checkDatabaseForNews() {
 
     if (newNewsItems.length > 0) {
       const activeSignals = await SignalModel.find({
-        status: { $in: ["RUNNING", "WAITING_ENTRY"] },
+        status: { $in: ["RUNNING", "WAITING_ENTRY", "TRAILING"] },
         $or: [
           { closeDate: { $exists: false } },
           { closeDate: null },
@@ -904,28 +893,16 @@ async function checkDatabaseForNews() {
         );
         const hasActiveSignalMatch = matchedActiveStocks.length > 0;
 
-        const stockStr = newsStocks.length > 0 ? newsStocks.join(", ") : "";
+        const category = news.category || "BERITA";
+        const stockStr =
+          newsStocks.length > 0 ? newsStocks.join(", ") : "GENERAL";
 
-        let title = "";
-        let body = "";
+        let title = `${category}: ${stockStr}`;
+        title = hasActiveSignalMatch ? `🔥 ${title}` : `📰 ${title}`;
 
-        if (news.title && news.description) {
-          const shortDesc =
-            news.description.length > 120
-              ? news.description.substring(0, 117) + "..."
-              : news.description;
-          body = `${news.title}\n${shortDesc}`;
-        } else {
-          body = news.title || news.description || "Ada berita pasar baru.";
-        }
-
-        if (hasActiveSignalMatch) {
-          const activeStr = matchedActiveStocks.join(", ");
-          title = `🔥 BERITA ACTIVE (${activeStr})`;
-        } else if (stockStr) {
-          title = `📰 BERITA: ${stockStr}`;
-        } else {
-          title = `📰 BERITA TERKINI`;
+        let body = news.description || "Ada berita pasar baru.";
+        if (body.length > 200) {
+          body = body.substring(0, 197) + "...";
         }
 
         const customPushKey = `NEWS_PUSH_${news.link}`;
