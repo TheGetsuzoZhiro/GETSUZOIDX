@@ -915,7 +915,6 @@
           </div>
         </div>
 
-        <!-- ================= SIDEBAR NAVIGATION UPDATE ================= -->
         <nav class="navigation">
           <button class="nav-link active" data-tab="home">
             <div class="nav-icon">
@@ -1136,9 +1135,6 @@
           </div>
         </nav>
 
-        <!-- ================= CONTENT AREA UPDATE ================= -->
-        <!-- Cari tag <section id="signals" class="view">...</section>, lalu paste kode di bawah ini tepat di bawahnya -->
-
         <div class="sidebar-bottom">
           <a
             href="https://instagram.com/raditx7"
@@ -1172,6 +1168,33 @@
       </aside>
 
       <main class="content-area">
+        <!-- ========================================================= -->
+        <!-- STICKY ACTION BAR (HANYA TAMPAK DI MOBILE)                  -->
+        <!-- ========================================================= -->
+        <div class="sticky-action-bar" id="stickyActionBar">
+          <div class="header-actions">
+            <div class="market-status" id="marketStatus">
+              <span class="dot"></span>
+              <span class="market-text">Market Closed</span>
+            </div>
+            <button class="notification-btn" id="enablePushBtn">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span class="notif-badge"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- TOP BAR UTAMA (IKUT SCROLL)                                 -->
+        <!-- ========================================================= -->
         <header class="top-bar">
           <div class="mobile-header-left">
             <button class="menu-toggle" id="menuToggle">
@@ -1191,24 +1214,7 @@
             <p class="page-subtitle">Real-time monitoring & analysis</p>
           </div>
 
-          <div class="header-actions">
-            <div class="market-status" id="marketStatus">
-              <span class="dot"></span>
-              <span class="market-text">Market Closed</span>
-            </div>
-            <button class="notification-btn" id="enablePushBtn">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-              <span class="notif-badge"></span>
-            </button>
-          </div>
+          <!-- .header-actions di sini sudah DIHAPUS (dipindah ke sticky-action-bar) -->
         </header>
 
         <div class="content-wrapper" id="pullToRefresh">
