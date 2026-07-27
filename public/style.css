@@ -4871,11 +4871,13 @@ body::-webkit-scrollbar {
 }
 
 /* ======================================================= */
-/* WEB TRADER MODERN SMART SEARCH BAR STYLES               */
+/* ULTRA-LUXURY WHITE GLASSMOPHIC SMART SEARCH BAR         */
 /* ======================================================= */
+
 .trader-search-container {
-  margin: 0.5rem 0 0.75rem 0;
+  margin: 0.75rem 0 1rem 0;
   width: 100%;
+  position: relative;
 }
 
 .trader-search-box {
@@ -4883,90 +4885,146 @@ body::-webkit-scrollbar {
   display: flex;
   align-items: center;
   width: 100%;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg, 
+    rgba(255, 255, 255, 0.05) 0%, 
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  /* Inner highlight khas kaca mewa (etched glass look) */
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Hover State pada Box */
+.trader-search-box:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: linear-gradient(
+    135deg, 
+    rgba(255, 255, 255, 0.08) 0%, 
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  box-shadow: 
+    0 10px 36px 0 rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Focus State pada Box */
+.trader-search-box:focus-within {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 
+    0 0 20px rgba(255, 255, 255, 0.12),
+    0 12px 40px 0 rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Icon Search */
 .trader-search-box .search-icon {
   position: absolute;
-  left: 0.85rem;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
+  left: 1rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
   pointer-events: none;
-  transition: color 0.25s ease;
+  transition: all 0.3s ease;
   z-index: 2;
 }
 
+.trader-search-box:focus-within .search-icon {
+  color: #ffffff;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+  transform: scale(1.08);
+}
+
+/* Input Text Field */
 .trader-search-input {
   width: 100%;
-  padding: 0.55rem 2.2rem 0.55rem 2.3rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
-  color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  padding: 0.7rem 2.4rem 0.7rem 2.6rem;
+  background: transparent;
+  border: none;
   outline: none;
-  backdrop-filter: blur(8px);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #ffffff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  border-radius: 12px;
 }
 
 .trader-search-input::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.35);
   font-family: 'Space Grotesk', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.2px;
 }
 
-.trader-search-input:focus {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: #8b5cf6;
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
-}
-
-.trader-search-box:focus-within .search-icon {
-  color: #8b5cf6;
-}
-
+/* Clear Button (X) */
 .search-clear-btn {
   position: absolute;
-  right: 0.6rem;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
+  right: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.7rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
   cursor: pointer;
   opacity: 0;
   visibility: hidden;
-  padding: 0.25rem;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 2;
 }
 
 .search-clear-btn.visible {
-  opacity: 0.8;
+  opacity: 1;
   visibility: visible;
 }
 
 .search-clear-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
-  opacity: 1;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
 }
 
+/* Empty State / No Result State (Mewah & Minimalis) */
 .search-no-result {
   text-align: center;
-  padding: 2.5rem 1rem;
-  color: var(--text-secondary);
-  opacity: 0.7;
+  padding: 3rem 1.5rem;
+  margin: 0.5rem 0;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.8rem;
+  font-family: 'Space Grotesk', sans-serif;
+  letter-spacing: 0.3px;
   width: 100%;
+  backdrop-filter: blur(8px);
 }
 
 .search-no-result i {
-  font-size: 1.8rem;
+  font-size: 2rem;
   display: block;
-  margin-bottom: 0.5rem;
-  color: #8b5cf6;
+  margin-bottom: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
+}
+
+.search-no-result strong {
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.3);
 }
