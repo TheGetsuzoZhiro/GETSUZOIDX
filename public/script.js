@@ -5816,17 +5816,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  const searchBtn = document.getElementById('searchToggleBtn');
-  const searchContainer = document.getElementById('mobileSearchContainer');
+  const searchBtn = document.getElementById("searchToggleBtn");
+  const searchBar = document.getElementById("mobileSearchBar");
+  const searchClose = document.getElementById("mobileSearchClose");
+  const searchInput = document.getElementById("mobileSearchInput");
 
-  searchBtn.addEventListener('click', () => {
-    searchContainer.classList.toggle('active');
-    
-    // Jika terbuka, otomatis fokus ke input teks
-    if (searchContainer.classList.contains('active')) {
-      searchContainer.querySelector('input').focus();
-    }
-  });
+  if (searchBtn && searchBar) {
+    searchBtn.addEventListener("click", function () {
+      searchBar.classList.toggle("active");
+      if (searchBar.classList.contains("active")) {
+        searchInput.focus();
+      }
+    });
+
+    searchClose.addEventListener("click", function () {
+      searchBar.classList.remove("active");
+    });
+  }
 
   initMobileMenu();
   initPullToRefresh();
