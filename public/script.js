@@ -3619,21 +3619,28 @@ async function showTechnicalSignalList() {
   const container = document.getElementById("technical-signals");
   if (!container) return;
 
-  if (!document.getElementById("techSearchInput")) {
+  // 1. Inisialisasi struktur dasar (Search Bar + List Content Container) JIKA BELUM ADA
+  if (!container.querySelector("#techSearchInput")) {
     container.innerHTML = `
-      <div class="trader-search-container" style="padding: 0 0.25rem;">
+      <div class="trader-search-container">
         <div class="trader-search-box">
           <i class="fas fa-search search-icon"></i>
           <input type="text" id="techSearchInput" class="trader-search-input" placeholder="Cari sinyal teknikal (kode, nama, setup)..." value="${escapeHtml(_technicalSearchQuery)}" oninput="handleTechSearch(this)">
-          <button class="search-clear-btn ${_technicalSearchQuery ? "visible" : ""}" id="techSearchClear" onclick="clearTechSearch()"><i class="fas fa-times"></i></button>
+          <button class="search-clear-btn ${_technicalSearchQuery ? 'visible' : ''}" id="techSearchClear" onclick="clearTechSearch()"><i class="fas fa-times"></i></button>
         </div>
       </div>
       <div id="techListContent"></div>
     `;
   }
 
+  // 2. Render isi daftarnya
+  await renderTechnicalListOnly();
+}
+
+async function renderTechnicalListOnly() {
+  const container = document.getElementById("technical-signals");
   const listContainer = document.getElementById("techListContent");
-  if (!listContainer) return;
+  if (!container || !listContainer) return;
 
   const allSignals = [..._allRunning, ..._allClosed];
   let techSignals = allSignals.filter((s) => s.signalType === "TECHNICAL");
@@ -3648,11 +3655,11 @@ async function showTechnicalSignalList() {
 
   if (currentTechnicalFilter === "today") {
     techSignals = techSignals.filter(
-      (s) => s.signalDate && s.signalDate.startsWith(today),
+      (s) => s.signalDate && s.signalDate.startsWith(today)
     );
   } else if (currentTechnicalFilter === "running") {
     techSignals = techSignals.filter(
-      (s) => s.status === "RUNNING" || s.status === "TRAILING",
+      (s) => s.status === "RUNNING" || s.status === "TRAILING"
     );
   } else if (currentTechnicalFilter === "waiting") {
     techSignals = techSignals.filter((s) => s.status === "WAITING_ENTRY");
@@ -3664,8 +3671,8 @@ async function showTechnicalSignalList() {
       Promise.all(symbols.map((sym) => fetchStockPrice(sym).catch(() => null))),
       Promise.all(
         symbols.map((sym) =>
-          fetchStockInfo(sym).catch(() => ({ longName: sym })),
-        ),
+          fetchStockInfo(sym).catch(() => ({ longName: sym }))
+        )
       ),
     ]);
 
@@ -3766,7 +3773,7 @@ async function showTechnicalSignalList() {
         const stock = this.dataset.stock;
         const date = this.dataset.date;
         const matchSig = allSignals.find(
-          (s) => s.stockCode === stock && s.signalDate === date,
+          (s) => s.stockCode === stock && s.signalDate === date
         );
         if (matchSig) {
           isDetailView = true;
