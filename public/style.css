@@ -5001,34 +5001,47 @@ body::-webkit-scrollbar {
 
 
 @media (min-width: 1025px) {
-  
-  .detail-news-carousel-container .carousel-slide-card {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: stretch !important;
-    min-height: 200px !important;
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 8px !important;
-    overflow: hidden !important;
-  }
+.detail-news-carousel-container .carousel-slide-card {
+  display: flex !important;
+  flex-direction: column !important; 
+  max-width: 420px !important;       
+  width: 100% !important;
+  margin: 0 auto !important;         
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
 
-  
-  .detail-news-carousel-container .carousel-slide-card img {
-    width: 320px !important; 
-    height: 100% !important;
-    min-height: 200px !important;
-    object-fit: cover !important;
-    border-radius: 8px 0 0 8px !important;
-    flex-shrink: 0 !important;
-  }
 
-  
-  .detail-news-carousel-container .carousel-slide-card > div:last-child {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    padding: 1.25rem 1.5rem !important;
-  }
+.detail-news-carousel-container .carousel-slide-card .news-card-image,
+.detail-news-carousel-container .carousel-slide-card > div:first-child {
+  width: 100% !important;
+  height: 180px !important;          
+  position: relative !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+}
+
+
+.detail-news-carousel-container .carousel-slide-card img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;      
+  border-radius: 0 !important;
+}
+
+
+.detail-news-carousel-container .carousel-slide-card .news-card-body,
+.detail-news-carousel-container .carousel-slide-card > div:last-child {
+  padding: 1.25rem 1.25rem 1.5rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  justify-content: flex-start !important;
+  box-sizing: border-box !important;
+}
 }
