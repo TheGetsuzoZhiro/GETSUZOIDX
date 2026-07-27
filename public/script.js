@@ -9,8 +9,7 @@ function connectPriceSSE() {
     sseConnection = null;
   }
 
-  sseConnection = new EventSource("/api/sse/prices");
-  renderTechnicalSignalDetail;
+  sseConnection = new EventSource("/api/sse/prices");renderTechnicalSignalDetail
 
   sseConnection.onmessage = function (event) {
     try {
@@ -72,124 +71,12 @@ const NOTIF_KEY = "notificationHistory";
 
 let _fetchingSignals = false;
 
-let _perfSearchQuery = "";
-let _signalsSearchQuery = "";
-let _technicalSearchQuery = "";
-let _newsSearchQuery = "";
-
-function handlePerfSearch(input) {
-  _perfSearchQuery = input.value.trim().toLowerCase();
-  const clearBtn = document.getElementById("perfSearchClear");
-  if (clearBtn)
-    clearBtn.classList.toggle("visible", _perfSearchQuery.length > 0);
-  const activeBtn = document.querySelector(".perf-filter-btn.active");
-  const status = activeBtn ? activeBtn.dataset.status : "TP";
-  renderPerformanceSignalList(status);
-}
-
-function clearPerfSearch() {
-  _perfSearchQuery = "";
-  const input = document.getElementById("perfSearchInput");
-  if (input) input.value = "";
-  const clearBtn = document.getElementById("perfSearchClear");
-  if (clearBtn) clearBtn.classList.remove("visible");
-  const activeBtn = document.querySelector(".perf-filter-btn.active");
-  const status = activeBtn ? activeBtn.dataset.status : "TP";
-  renderPerformanceSignalList(status);
-}
-
-function handleSignalSearch(input) {
-  _signalsSearchQuery = input.value.trim().toLowerCase();
-  const clearBtn = document.getElementById("signalSearchClear");
-  if (clearBtn)
-    clearBtn.classList.toggle("visible", _signalsSearchQuery.length > 0);
-  showSignalList();
-}
-
-function clearSignalSearch() {
-  _signalsSearchQuery = "";
-  const input = document.getElementById("signalSearchInput");
-  if (input) input.value = "";
-  const clearBtn = document.getElementById("signalSearchClear");
-  if (clearBtn) clearBtn.classList.remove("visible");
-  showSignalList();
-}
-
-function handleTechSearch(input) {
-  _technicalSearchQuery = input.value.trim().toLowerCase();
-  const clearBtn = document.getElementById("techSearchClear");
-  if (clearBtn)
-    clearBtn.classList.toggle("visible", _technicalSearchQuery.length > 0);
-
-  renderTechnicalListOnly();
-}
-
-function clearTechSearch() {
-  _technicalSearchQuery = "";
-  const input = document.getElementById("techSearchInput");
-  if (input) input.value = "";
-  const clearBtn = document.getElementById("techSearchClear");
-  if (clearBtn) clearBtn.classList.remove("visible");
-
-  renderTechnicalListOnly();
-}
-
-function handleNewsSearch(input, category) {
-  _newsSearchQuery = input.value.trim().toLowerCase();
-  const clearBtn = document.getElementById("newsSearchClear");
-  if (clearBtn)
-    clearBtn.classList.toggle("visible", _newsSearchQuery.length > 0);
-  filterAndRenderNews(category);
-}
-
-function clearNewsSearch(category) {
-  _newsSearchQuery = "";
-  const input = document.getElementById("newsCategorySearch");
-  if (input) input.value = "";
-  const clearBtn = document.getElementById("newsSearchClear");
-  if (clearBtn) clearBtn.classList.remove("visible");
-  filterAndRenderNews(category);
-}
-
-function filterAndRenderNews(category) {
-  const grid = document.querySelector(".news-grid");
-  if (!grid || !window._currentCategoryNewsData) return;
-
-  let filtered = window._currentCategoryNewsData;
-  if (_newsSearchQuery) {
-    filtered = filtered.filter((n) => {
-      const title = (n.title || "").toLowerCase();
-      const desc = (n.description || "").toLowerCase();
-      const stocks = (n.stockCodes || []).join(" ").toLowerCase();
-      return (
-        title.includes(_newsSearchQuery) ||
-        desc.includes(_newsSearchQuery) ||
-        stocks.includes(_newsSearchQuery)
-      );
-    });
-  }
-
-  const countBadge = document.getElementById("newsCountBadge");
-  if (countBadge) countBadge.textContent = `${filtered.length} Berita`;
-
-  if (filtered.length === 0) {
-    grid.innerHTML = `
-      <div class="search-no-result" style="grid-column: 1 / -1;">
-        <i class="fas fa-newspaper"></i>
-        Tidak ada berita <strong>${escapeHtml(category)}</strong> yang cocok dengan "<strong>${escapeHtml(_newsSearchQuery)}</strong>"
-      </div>
-    `;
-  } else {
-    grid.innerHTML = filtered.map((news) => renderNewsCard(news)).join("");
-  }
-}
-
 function isNewNews(publishedAt) {
   if (!publishedAt) return false;
   const pubDate = new Date(publishedAt);
   const now = new Date();
   const diffInHours = (now - pubDate) / (1000 * 60 * 60);
-  return diffInHours <= 48;
+  return diffInHours <= 48; // 48 Jam = 2 Hari
 }
 
 function getCategoryIconHtml(category) {
@@ -197,50 +84,48 @@ function getCategoryIconHtml(category) {
 
   const c = category.trim().toUpperCase();
 
-  if (
-    c.includes("BUY BACK") ||
-    c.includes("BUYBACK") ||
-    c.includes("BACKDOOR")
-  ) {
+  // 1. Buy Back & Backdoor
+  if (c.includes("BUY BACK") || c.includes("BUYBACK") || c.includes("BACKDOOR")) {
     return `<i class="fas fa-rotate-left" style="color:#3b82f6; font-size:0.65rem;"></i>`;
   }
-
+  // 2. Akuisisi & Merger
   if (c.includes("AKUISISI") || c.includes("MERGER")) {
     return `<i class="fas fa-handshake" style="color:#ec4899; font-size:0.65rem;"></i>`;
   }
-
+  // 3. Private Placement
   if (c.includes("PRIVATE") || c.includes("PLACEMENT")) {
     return `<i class="fas fa-user-plus" style="color:#6366f1; font-size:0.65rem;"></i>`;
   }
-
+  // 4. Right Issue (KHUSUS PAKAI SVG STOCKBIT)
   if (c.includes("RIGHT") || c.includes("RIGHTS")) {
     return `<img src="https://assets.stockbit.com/images/corp_action_event_icon.svg" class="cat-icon-img" alt="Right Issue">`;
   }
-
+  // 5. Dividen
   if (c.includes("DIVIDEN") || c.includes("DIVIDEND")) {
     return `<i class="fas fa-coins" style="color:#f59e0b; font-size:0.65rem;"></i>`;
   }
-
+  // 6. Laba Rugi
   if (c.includes("LABA") || c.includes("RUGI") || c.includes("FINANCIAL")) {
     return `<i class="fas fa-chart-pie" style="color:#10b981; font-size:0.65rem;"></i>`;
   }
-
+  // 7. Tender Offer
   if (c.includes("TENDER") || c.includes("OFFER")) {
     return `<i class="fas fa-gavel" style="color:#eab308; font-size:0.65rem;"></i>`;
   }
-
+  // 8. Net Sell / Buy Asing
   if (c.includes("ASING") || c.includes("NET SELL") || c.includes("NET BUY")) {
     return `<i class="fas fa-chart-line" style="color:#06b6d4; font-size:0.65rem;"></i>`;
   }
-
+  // 9. Konglomerasi
   if (c.includes("KONGLOMERASI") || c.includes("GROUP")) {
     return `<i class="fas fa-building" style="color:#8b5cf6; font-size:0.65rem;"></i>`;
   }
-
+  // 10. Sentimen Lainnya
   if (c.includes("SENTIMEN") || c.includes("LAINNYA")) {
     return `<i class="fas fa-comment-dots" style="color:#9ca3af; font-size:0.65rem;"></i>`;
   }
 
+  // Default untuk kategori di luar daftar di atas
   return `<i class="fas fa-tag" style="font-size:0.6rem; color:#a78bfa;"></i>`;
 }
 
@@ -353,6 +238,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// ====== NEWS FUNCTIONS ======
 const CATEGORY_MAP = {
   buyback: "BUY BACK AND BACKDOOR",
   akuisisi: "AKUISISI AND MERGER",
@@ -391,8 +277,6 @@ async function loadNews(category, page = 1) {
     const data = resData.data || resData;
     const pagination = resData.pagination || { totalPages: 1, currentPage: 1 };
 
-    window._currentCategoryNewsData = data || [];
-
     if (!data || data.length === 0) {
       container.innerHTML = `
         <div class="news-empty">
@@ -414,7 +298,7 @@ async function loadNews(category, page = 1) {
 
       for (let i = 1; i <= pagination.totalPages; i++) {
         paginationHtml += `
-          <button class="page-btn ${i === page ? "active" : ""} onclick="loadNews('${category}', ${i})">
+          <button class="page-btn ${i === page ? "active" : ""}" onclick="loadNews('${category}', ${i})">
             ${i}
           </button>
         `;
@@ -429,34 +313,18 @@ async function loadNews(category, page = 1) {
     }
 
     container.innerHTML = `
-      <div class="news-header" style="display:flex; flex-direction:column; gap:0.75rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-          <h2 class="news-category-title">
-            <i class="fas fa-tag" style="color:#8b5cf6; margin-right:0.5rem;"></i>
-            ${escapeHtml(category)}
-          </h2>
-          <span class="news-count" id="newsCountBadge">${pagination.totalItems || data.length} Berita</span>
-        </div>
-        
-        <!-- SEARCH BAR KHUSUS KATEGORI BERITA INI -->
-        <div class="trader-search-container">
-          <div class="trader-search-box">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="newsCategorySearch" class="trader-search-input" placeholder="Cari di berita ${escapeHtml(category)} (judul, emiten)..." value="${escapeHtml(_newsSearchQuery)}" oninput="handleNewsSearch(this, '${escapeHtml(category)}')">
-            <button class="search-clear-btn ${_newsSearchQuery ? "visible" : ""}" id="newsSearchClear" onclick="clearNewsSearch('${escapeHtml(category)}')"><i class="fas fa-times"></i></button>
-          </div>
-        </div>
+      <div class="news-header">
+        <h2 class="news-category-title">
+          <i class="fas fa-tag" style="color:#8b5cf6; margin-right:0.5rem;"></i>
+          ${escapeHtml(category)}
+        </h2>
+        <span class="news-count">${pagination.totalItems || data.length} Berita</span>
       </div>
-
       <div class="news-grid">
         ${data.map((news) => renderNewsCard(news)).join("")}
       </div>
       ${paginationHtml}
     `;
-
-    if (_newsSearchQuery) {
-      filterAndRenderNews(category);
-    }
   } catch (error) {
     console.error("Error loading news:", error);
     container.innerHTML = `
@@ -489,7 +357,7 @@ function renderNewsCard(news) {
     ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="this.style.display='none'">`
     : `<div class="news-image-placeholder"><i class="fas fa-newspaper"></i></div>`;
 
-  const categoryBadgeHtml = news.category
+  const categoryBadgeHtml = news.category 
     ? `<div class="news-category-badge">
          ${getCategoryIconHtml(news.category)}
          <span>${escapeHtml(news.category)}</span>
@@ -533,13 +401,11 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
   `;
 
   try {
-    const res = await fetch(
-      `/api/news?stockCode=${encodeURIComponent(stockCode)}&limit=10`,
-    );
+    const res = await fetch(`/api/news?stockCode=${encodeURIComponent(stockCode)}&limit=10`);
     if (!res.ok) throw new Error("Gagal mengambil berita");
-
+    
     const newsList = await res.json();
-    const data = Array.isArray(newsList) ? newsList : newsList.data || [];
+    const data = Array.isArray(newsList) ? newsList : (newsList.data || []);
 
     if (!data || data.length === 0) {
       container.innerHTML = `
@@ -556,7 +422,7 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
       const news = data[index];
       const isNew = isNewNews(news.publishedAt);
       const newRibbon = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
-
+      
       const published = news.publishedAt ? new Date(news.publishedAt) : null;
       const timeStr = published
         ? published.toLocaleDateString("id-ID", {
@@ -568,7 +434,7 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
           })
         : "";
 
-      const categoryBadge = news.category
+      const categoryBadge = news.category 
         ? `<div class="news-category-badge">
              ${getCategoryIconHtml(news.category)}
              <span>${escapeHtml(news.category)}</span>
@@ -621,7 +487,7 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
 
     function updateCarousel() {
       container.innerHTML = renderSlide(currentIndex);
-
+      
       const prevBtn = container.querySelector("#carouselPrevBtn");
       const nextBtn = container.querySelector("#carouselNextBtn");
 
@@ -645,11 +511,14 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
     }
 
     updateCarousel();
+
   } catch (err) {
     console.warn("Gagal memuat carousel berita emiten:", err);
     container.innerHTML = "";
   }
 }
+
+// ====== END NEWS FUNCTIONS ======
 
 function buildTagItems(s) {
   const items = [];
@@ -1297,16 +1166,6 @@ async function renderDaily() {
                 <i class="fa-solid fa-table-cells-large" style="font-size:0.6rem;"></i> All
               </button>
             </div>
-
-            <!-- SEARCH BAR KHUSUS DAFTAR SAHAM PERFORMANCE -->
-            <div class="trader-search-container" style="padding: 0 0.25rem; margin-bottom: 0.75rem;">
-              <div class="trader-search-box">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="perfSearchInput" class="trader-search-input" placeholder="Cari kode/nama saham di performance..." value="${escapeHtml(_perfSearchQuery)}" oninput="handlePerfSearch(this)">
-                <button class="search-clear-btn ${_perfSearchQuery ? "visible" : ""}" id="perfSearchClear" onclick="clearPerfSearch()"><i class="fas fa-times"></i></button>
-              </div>
-            </div>
-
             <div id="signalListContainer"></div>
           </div>
         </div>
@@ -1655,10 +1514,8 @@ function renderStrategyFlowForSignal(s) {
   if (entry > 0 && tp > 0) {
     tpPercent = ((tp - entry) / entry) * 100;
   }
-  const slLabel =
-    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tpLabel =
-    tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
+  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tpLabel = tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
 
   const step1Active = true;
   let step1State = "default";
@@ -1737,14 +1594,13 @@ function renderStrategyFlowForSignal(s) {
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
         <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Strategy Flow</span>
-        ${
-          s.status === "RUNNING"
-            ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-            : s.status === "TRAILING"
-              ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-              : s.status === "WAITING_ENTRY"
-                ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
-                : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+        ${s.status === "RUNNING"
+          ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+          : s.status === "TRAILING"
+            ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+            : s.status === "WAITING_ENTRY"
+              ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
+              : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
         }
       </div>
       
@@ -2074,12 +1930,11 @@ function renderBsjpDetailContent(
             <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
               <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
               <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">BSJP Strategy Flow</span>
-              ${
-                s.status === "RUNNING"
-                  ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-                  : s.status === "TRAILING"
-                    ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-                    : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+              ${s.status === "RUNNING"
+                ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+                : s.status === "TRAILING"
+                  ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+                  : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
               }
             </div>
             ${strategyVisual}
@@ -2554,6 +2409,9 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
 
   container.innerHTML = html;
 
+  // =======================================================
+  // [LANGKAH 2] PANGGIL FUNGSI CAROUSEL
+  // =======================================================
   mountStockNewsCarousel(s.stockCode, "dailyNewsContainer");
 
   const backBtn = container.querySelector("#dailyBackBtn");
@@ -2621,6 +2479,16 @@ async function renderPerformanceSignalList(status) {
       filteredByStatus = filteredByDate;
     }
 
+    const totalCountEl = document.getElementById("signalTotalCount");
+    if (totalCountEl) {
+      totalCountEl.textContent = filteredByStatus.length;
+    }
+
+    if (!filteredByStatus.length) {
+      container.innerHTML = `<div style="text-align:center;color:var(--text-secondary);padding:1rem;opacity:0.5;"><i class="fa-regular fa-circle" style="margin-right:0.3rem;"></i> Tidak ada sinyal dengan status ${status} pada periode ini</div>`;
+      return;
+    }
+
     const symbols = [...new Set(filteredByStatus.map((s) => s.stockCode))];
     const [priceResults, infoResults] = await Promise.all([
       Promise.all(symbols.map((sym) => fetchStockPrice(sym))),
@@ -2633,35 +2501,6 @@ async function renderPerformanceSignalList(status) {
       priceMap[sym] = priceResults[idx];
       infoMap[sym] = infoResults[idx];
     });
-
-    if (_perfSearchQuery) {
-      filteredByStatus = filteredByStatus.filter((s) => {
-        const code = (s.stockCode || "").toLowerCase();
-        const info = infoMap[s.stockCode] || {};
-        const name = (info.longName || "").toLowerCase();
-        return (
-          code.includes(_perfSearchQuery) || name.includes(_perfSearchQuery)
-        );
-      });
-    }
-
-    const totalCountEl = document.getElementById("signalTotalCount");
-    if (totalCountEl) {
-      totalCountEl.textContent = filteredByStatus.length;
-    }
-
-    if (!filteredByStatus.length) {
-      if (_perfSearchQuery) {
-        container.innerHTML = `
-          <div class="search-no-result">
-            <i class="fas fa-search"></i>
-            Tidak ada saham yang cocok dengan "<strong>${escapeHtml(_perfSearchQuery)}</strong>"
-          </div>`;
-      } else {
-        container.innerHTML = `<div style="text-align:center;color:var(--text-secondary);padding:1rem;opacity:0.5;"><i class="fa-regular fa-circle" style="margin-right:0.3rem;"></i> Tidak ada sinyal dengan status ${status} pada periode ini</div>`;
-      }
-      return;
-    }
 
     let html = `<div class="sig-list">`;
     html += renderSignalRows(filteredByStatus, priceMap, infoMap);
@@ -2997,26 +2836,18 @@ function closeAllDropdowns() {
   }
 }
 
+// ====== NEWS SELECTION ======
 let _isUpdatingNewsHash = false;
 
 function selectNewsCategory(category) {
   if (_isUpdatingNewsHash) return;
-
-  _newsSearchQuery = "";
-
   isDetailView = false;
   const pageTitle = document.querySelector(".page-title");
   const pageSubtitle = document.querySelector(".page-subtitle");
   const titleKey = `news-${category}`;
   const titles = {
-    "news-buyback": {
-      t: "Buy Back & Backdoor",
-      s: "Berita buy back dan backdoor",
-    },
-    "news-akuisisi": {
-      t: "Akuisisi & Merger",
-      s: "Berita akuisisi dan merger",
-    },
+    "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
+    "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
     "news-private": { t: "Private Placement", s: "Berita private placement" },
     "news-rightissue": { t: "Right Issue", s: "Berita right issue" },
     "news-dividen": { t: "Dividen", s: "Berita dividen" },
@@ -3028,24 +2859,22 @@ function selectNewsCategory(category) {
   };
 
   if (titles[titleKey]) {
-    if (pageTitle) pageTitle.innerText = titles[titleKey].t;
-    if (pageSubtitle) pageSubtitle.innerText = titles[titleKey].s;
+    pageTitle.innerText = titles[titleKey].t;
+    pageSubtitle.innerText = titles[titleKey].s;
   } else {
-    if (pageTitle) pageTitle.innerText = "Berita";
-    if (pageSubtitle) pageSubtitle.innerText = "Kategori berita";
+    pageTitle.innerText = "Berita";
+    pageSubtitle.innerText = "Kategori berita";
   }
 
-  document
-    .querySelectorAll(".view")
-    .forEach((v) => v.classList.remove("active"));
-  const newsView = document.getElementById("news");
-  if (newsView) newsView.classList.add("active");
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.getElementById("news").classList.add("active");
   currentTab = "news";
 
   _isUpdatingNewsHash = true;
   window.location.hash = `#${titleKey}`;
   _isUpdatingNewsHash = false;
 
+  // Buka dropdown News
   const parent = document.getElementById("newsParent");
   const sub = document.getElementById("newsSubMenu");
   if (parent && sub) {
@@ -3056,21 +2885,16 @@ function selectNewsCategory(category) {
     if (arrow) arrow.classList.add("open");
   }
 
-  const searchInput = document.getElementById("newsCategorySearch");
-  if (searchInput) searchInput.value = "";
-
-  const clearBtn = document.getElementById("newsSearchClear");
-  if (clearBtn) clearBtn.classList.remove("visible");
-
-  const realCategory =
-    typeof CATEGORY_MAP !== "undefined" && CATEGORY_MAP[category]
-      ? CATEGORY_MAP[category]
-      : category.toUpperCase();
+  // Muat berita
+  const realCategory = CATEGORY_MAP[category] || category.toUpperCase();
   loadNews(realCategory);
 
   document.querySelector(".sidebar")?.classList.remove("open");
   document.querySelector(".overlay")?.classList.remove("active");
 }
+
+// ====== END NEWS SELECTION ======
+
 async function showSignalList() {
   isDetailView = false;
   currentDetailIndex = null;
@@ -3083,28 +2907,12 @@ async function showSignalList() {
     return;
   }
 
-  if (!document.getElementById("signalSearchInput")) {
-    container.innerHTML = `
-      <div class="trader-search-container" style="padding: 0 0.25rem;">
-        <div class="trader-search-box">
-          <i class="fas fa-search search-icon"></i>
-          <input type="text" id="signalSearchInput" class="trader-search-input" placeholder="Cari emiten / nama saham di sinyal..." value="${escapeHtml(_signalsSearchQuery)}" oninput="handleSignalSearch(this)">
-          <button class="search-clear-btn ${_signalsSearchQuery ? "visible" : ""}" id="signalSearchClear" onclick="clearSignalSearch()"><i class="fas fa-times"></i></button>
-        </div>
-      </div>
-      <div id="signalsListContent"></div>
-    `;
-  }
-
-  const listContent = document.getElementById("signalsListContent");
-  if (!listContent) return;
-
   const allSignals = getSortedSignals().filter(
     (s) => s.signalType !== "TECHNICAL",
   );
 
   if (!allSignals.length) {
-    listContent.innerHTML = `<div class="loading-state"><p>Belum ada sinyal.</p></div>`;
+    container.innerHTML = `<div class="loading-state"><p>Belum ada sinyal.</p></div>`;
     signalListRendered = false;
     return;
   }
@@ -3125,6 +2933,18 @@ async function showSignalList() {
     filteredSignals = allSignals;
   }
 
+  if (!filteredSignals.length) {
+    const msg =
+      filterType === "today"
+        ? "Tidak ada sinyal hari ini."
+        : filterType === "running"
+          ? "Tidak ada posisi running."
+          : "Tidak ada sinyal.";
+    container.innerHTML = `<div class="loading-state"><p>${msg}</p></div>`;
+    signalListRendered = false;
+    return;
+  }
+
   const symbols = [...new Set(filteredSignals.map((s) => s.stockCode))];
   const [priceResults, infoResults] = await Promise.all([
     Promise.all(symbols.map((sym) => fetchStockPrice(sym).catch(() => null))),
@@ -3140,34 +2960,6 @@ async function showSignalList() {
     priceMap[sym] = priceResults[idx];
     infoMap[sym] = infoResults[idx];
   });
-
-  if (_signalsSearchQuery) {
-    filteredSignals = filteredSignals.filter((s) => {
-      const code = (s.stockCode || "").toLowerCase();
-      const info = infoMap[s.stockCode] || {};
-      const name = (info.longName || "").toLowerCase();
-      const type = (s.signalType || "").toLowerCase();
-      return (
-        code.includes(_signalsSearchQuery) ||
-        name.includes(_signalsSearchQuery) ||
-        type.includes(_signalsSearchQuery)
-      );
-    });
-  }
-
-  if (!filteredSignals.length) {
-    const msg = _signalsSearchQuery
-      ? `Tidak ada emiten ditemukan untuk "${escapeHtml(_signalsSearchQuery)}"`
-      : filterType === "today"
-        ? "Tidak ada sinyal hari ini."
-        : filterType === "running"
-          ? "Tidak ada posisi running."
-          : "Tidak ada sinyal.";
-
-    listContent.innerHTML = `<div class="search-no-result"><i class="fas fa-search"></i>${msg}</div>`;
-    signalListRendered = false;
-    return;
-  }
 
   let totalGainPct = 0;
   let totalRunningCount = 0;
@@ -3243,14 +3035,17 @@ async function showSignalList() {
       html += `<div class="session-header">SESI 1</div>`;
       html += `<div class="sig-list">${renderSignalRows(session1, priceMap, infoMap)}</div>`;
     }
+
     if (session2.length) {
       html += `<div class="session-header">SESI 2</div>`;
       html += `<div class="sig-list">${renderSignalRows(session2, priceMap, infoMap)}</div>`;
     }
+
     if (bsjpToday.length) {
       html += `<div class="session-header" style="color:var(--text-primary);">BSJP</div>`;
       html += `<div class="sig-list">${renderSignalRows(bsjpToday, priceMap, infoMap)}</div>`;
     }
+
     if (other.length) {
       html += `<div class="session-header">LAINNYA</div>`;
       html += `<div class="sig-list">${renderSignalRows(other, priceMap, infoMap)}</div>`;
@@ -3258,30 +3053,52 @@ async function showSignalList() {
   } else if (filterType === "running") {
     const runningBiasa = filteredSignals.filter((s) => s.signalType !== "BSJP");
     const runningBsjp = filteredSignals.filter((s) => s.signalType === "BSJP");
+    const allRunning = [...runningBiasa, ...runningBsjp];
 
-    html += `
-      <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
-        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-          ALL RUNNING
-          <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${filteredSignals.length})</span>
-        </span>
-        <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
-          GAIN: <span style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
-        </span>
-      </div>
-      <div class="sig-list">${renderSignalRows(runningBiasa, priceMap, infoMap)}</div>
-    `;
+    let totalGain = 0,
+      totalCount = 0;
+    allRunning.forEach((s) => {
+      if (s.entryPrice && priceMap[s.stockCode]) {
+        const gain =
+          ((priceMap[s.stockCode] - s.entryPrice) / s.entryPrice) * 100;
+        if (gain !== 0) {
+          totalGain += gain;
+          totalCount++;
+        }
+      }
+    });
+    const avgTotalGain = totalCount > 0 ? totalGain / totalCount : 0;
+    const totalGainStr =
+      totalCount > 0
+        ? (avgTotalGain >= 0 ? "+" : "") + avgTotalGain.toFixed(2) + "%"
+        : "—";
+    const totalGainColor = avgTotalGain >= 0 ? "#10b981" : "#ef4444";
 
-    if (runningBsjp.length) {
+    if (allRunning.length) {
       html += `
-        <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem; color:var(--text-primary);">
-          <span style="font-weight:600; font-size:0.9rem;">
-            BSJP
-            <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${runningBsjp.length})</span>
+        <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
+          <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+            ALL RUNNING
+            <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${allRunning.length})</span>
+          </span>
+          <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
+            GAIN: <span style="font-weight:600; color:${totalGainColor};">${totalGainStr}</span>
           </span>
         </div>
-        <div class="sig-list">${renderSignalRows(runningBsjp, priceMap, infoMap)}</div>
+        <div class="sig-list">${renderSignalRows(runningBiasa, priceMap, infoMap)}</div>
       `;
+
+      if (runningBsjp.length) {
+        html += `
+          <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem; color:var(--text-primary);">
+            <span style="font-weight:600; font-size:0.9rem;">
+              BSJP
+              <span style="font-weight:400; color:var(--text-secondary); opacity:0.6;">(${runningBsjp.length})</span>
+            </span>
+          </div>
+          <div class="sig-list">${renderSignalRows(runningBsjp, priceMap, infoMap)}</div>
+        `;
+      }
     }
   } else {
     html += `
@@ -3298,10 +3115,10 @@ async function showSignalList() {
     `;
   }
 
-  listContent.innerHTML = html;
+  container.innerHTML = html;
   signalListRendered = true;
 
-  listContent.querySelectorAll(".sig-list-row").forEach((row) => {
+  container.querySelectorAll(".sig-list-row").forEach((row) => {
     row.addEventListener("click", function (e) {
       const stock = this.dataset.stock;
       const date = this.dataset.date;
@@ -3619,34 +3436,11 @@ async function showTechnicalSignalList() {
   const container = document.getElementById("technical-signals");
   if (!container) return;
 
-  // 1. Inisialisasi struktur dasar (Search Bar + List Content Container) JIKA BELUM ADA
-  if (!container.querySelector("#techSearchInput")) {
-    container.innerHTML = `
-      <div class="trader-search-container">
-        <div class="trader-search-box">
-          <i class="fas fa-search search-icon"></i>
-          <input type="text" id="techSearchInput" class="trader-search-input" placeholder="Cari sinyal teknikal (kode, nama, setup)..." value="${escapeHtml(_technicalSearchQuery)}" oninput="handleTechSearch(this)">
-          <button class="search-clear-btn ${_technicalSearchQuery ? 'visible' : ''}" id="techSearchClear" onclick="clearTechSearch()"><i class="fas fa-times"></i></button>
-        </div>
-      </div>
-      <div id="techListContent"></div>
-    `;
-  }
-
-  // 2. Render isi daftarnya
-  await renderTechnicalListOnly();
-}
-
-async function renderTechnicalListOnly() {
-  const container = document.getElementById("technical-signals");
-  const listContainer = document.getElementById("techListContent");
-  if (!container || !listContainer) return;
-
   const allSignals = [..._allRunning, ..._allClosed];
   let techSignals = allSignals.filter((s) => s.signalType === "TECHNICAL");
 
   if (!techSignals.length) {
-    listContainer.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal teknikal.</p></div>`;
+    container.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal teknikal.</p></div>`;
     technicalListRendered = false;
     return;
   }
@@ -3655,14 +3449,26 @@ async function renderTechnicalListOnly() {
 
   if (currentTechnicalFilter === "today") {
     techSignals = techSignals.filter(
-      (s) => s.signalDate && s.signalDate.startsWith(today)
+      (s) => s.signalDate && s.signalDate.startsWith(today),
     );
   } else if (currentTechnicalFilter === "running") {
     techSignals = techSignals.filter(
-      (s) => s.status === "RUNNING" || s.status === "TRAILING"
+      (s) => s.status === "RUNNING" || s.status === "TRAILING",
     );
   } else if (currentTechnicalFilter === "waiting") {
     techSignals = techSignals.filter((s) => s.status === "WAITING_ENTRY");
+  }
+
+  if (!techSignals.length) {
+    const msg =
+      currentTechnicalFilter === "today"
+        ? "Tidak ada sinyal teknikal hari ini."
+        : currentTechnicalFilter === "running"
+          ? "Tidak ada posisi teknikal running."
+          : "Tidak ada sinyal teknikal waiting.";
+    container.innerHTML = `<div class="loading-state"><p>${msg}</p></div>`;
+    technicalListRendered = false;
+    return;
   }
 
   try {
@@ -3671,8 +3477,8 @@ async function renderTechnicalListOnly() {
       Promise.all(symbols.map((sym) => fetchStockPrice(sym).catch(() => null))),
       Promise.all(
         symbols.map((sym) =>
-          fetchStockInfo(sym).catch(() => ({ longName: sym }))
-        )
+          fetchStockInfo(sym).catch(() => ({ longName: sym })),
+        ),
       ),
     ]);
 
@@ -3682,34 +3488,6 @@ async function renderTechnicalListOnly() {
       priceMap[sym] = priceResults[idx];
       infoMap[sym] = infoResults[idx];
     });
-
-    if (_technicalSearchQuery) {
-      techSignals = techSignals.filter((s) => {
-        const code = (s.stockCode || "").toLowerCase();
-        const info = infoMap[s.stockCode] || {};
-        const name = (info.longName || "").toLowerCase();
-        const setup = (s.buyType || "").toLowerCase();
-        return (
-          code.includes(_technicalSearchQuery) ||
-          name.includes(_technicalSearchQuery) ||
-          setup.includes(_technicalSearchQuery)
-        );
-      });
-    }
-
-    if (!techSignals.length) {
-      const msg = _technicalSearchQuery
-        ? `Tidak ada sinyal teknikal ditemukan untuk "<strong>${escapeHtml(_technicalSearchQuery)}</strong>"`
-        : currentTechnicalFilter === "today"
-          ? "Tidak ada sinyal teknikal hari ini."
-          : currentTechnicalFilter === "running"
-            ? "Tidak ada posisi teknikal running."
-            : "Tidak ada sinyal teknikal waiting.";
-
-      listContainer.innerHTML = `<div class="search-no-result"><i class="fas fa-search"></i>${msg}</div>`;
-      technicalListRendered = false;
-      return;
-    }
 
     let totalGainPct = 0;
     let totalRunningCount = 0;
@@ -3765,15 +3543,15 @@ async function renderTechnicalListOnly() {
       </div>
     `;
 
-    listContainer.innerHTML = html;
+    container.innerHTML = html;
     technicalListRendered = true;
 
-    listContainer.querySelectorAll(".sig-list-row").forEach((row) => {
+    container.querySelectorAll(".sig-list-row").forEach((row) => {
       row.addEventListener("click", function () {
         const stock = this.dataset.stock;
         const date = this.dataset.date;
         const matchSig = allSignals.find(
-          (s) => s.stockCode === stock && s.signalDate === date
+          (s) => s.stockCode === stock && s.signalDate === date,
         );
         if (matchSig) {
           isDetailView = true;
@@ -3785,7 +3563,7 @@ async function renderTechnicalListOnly() {
     container._techPriceMap = priceMap;
   } catch (err) {
     console.error("Gagal memuat daftar teknikal:", err);
-    listContainer.innerHTML = `<div style="color:#ef4444; padding:1.5rem; text-align:center;">Gagal memuat sinyal teknikal. Silakan coba lagi.</div>`;
+    container.innerHTML = `<div style="color:#ef4444; padding:1.5rem; text-align:center;">Gagal memuat sinyal teknikal. Silakan coba lagi.</div>`;
   }
 }
 
@@ -4399,6 +4177,9 @@ function renderTechnicalSignalDetail(s, container) {
 
   container.innerHTML = html;
 
+  // =======================================================
+  // [LANGKAH 2] PANGGIL FUNGSI CAROUSEL
+  // =======================================================
   mountStockNewsCarousel(s.stockCode, "techNewsContainer");
 
   const backBtn = container.querySelector("#techBackBtn");
@@ -5332,6 +5113,8 @@ function updateSignalChart(data) {
   });
 }
 
+// ==================== FUNGSI sendNotification TELAH DIHAPUS ====================
+
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
@@ -5407,16 +5190,10 @@ function initTabs() {
       t: "Technical: Waiting",
       s: "Pending execution setups",
     },
-
-    news: { t: "Berita", s: "Kategori berita" },
-    "news-buyback": {
-      t: "Buy Back & Backdoor",
-      s: "Berita buy back dan backdoor",
-    },
-    "news-akuisisi": {
-      t: "Akuisisi & Merger",
-      s: "Berita akuisisi dan merger",
-    },
+    // NEWS TITLES
+    "news": { t: "Berita", s: "Kategori berita" },
+    "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
+    "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
     "news-private": { t: "Private Placement", s: "Berita private placement" },
     "news-rightissue": { t: "Right Issue", s: "Berita right issue" },
     "news-dividen": { t: "Dividen", s: "Berita dividen" },
@@ -5428,12 +5205,7 @@ function initTabs() {
   };
 
   btns.forEach((btn) => {
-    if (
-      btn.id === "signalsParent" ||
-      btn.id === "technicalParent" ||
-      btn.id === "newsParent"
-    )
-      return;
+    if (btn.id === "signalsParent" || btn.id === "technicalParent" || btn.id === "newsParent") return;
 
     btn.addEventListener("click", function (e) {
       e.preventDefault();
@@ -5467,9 +5239,7 @@ function initTabs() {
           selectNewsCategory(category);
           btns.forEach((b) => b.classList.remove("active"));
           this.classList.add("active");
-          document
-            .querySelector('.nav-link[data-tab="news"]')
-            ?.classList.add("active");
+          document.querySelector('.nav-link[data-tab="news"]')?.classList.add("active");
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
           return;
@@ -5512,6 +5282,7 @@ function initTabs() {
         fetchSignals(true);
       }
       if (tabId === "news") {
+        // beri placeholder
         const container = document.getElementById("news");
         container.innerHTML = `
           <div class="loading-state" style="text-align:center; padding:2rem;">
@@ -5796,9 +5567,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ============ DROPDOWN NEWS ============
   const newsParent = document.getElementById("newsParent");
   const newsSubMenu = document.getElementById("newsSubMenu");
   if (newsParent && newsSubMenu) {
+    // Pastikan default tertutup
     newsSubMenu.classList.remove("open");
     newsSubMenu.style.display = "none";
     newsParent.classList.remove("open");
@@ -5813,24 +5586,6 @@ document.addEventListener("DOMContentLoaded", () => {
       this.classList.toggle("open");
       const arrow = this.querySelector(".nav-arrow");
       if (arrow) arrow.classList.toggle("open");
-    });
-  }
-
-  const searchBtn = document.getElementById("searchToggleBtn");
-  const searchBar = document.getElementById("mobileSearchBar");
-  const searchClose = document.getElementById("mobileSearchClose");
-  const searchInput = document.getElementById("mobileSearchInput");
-
-  if (searchBtn && searchBar) {
-    searchBtn.addEventListener("click", function () {
-      searchBar.classList.toggle("active");
-      if (searchBar.classList.contains("active")) {
-        searchInput.focus();
-      }
-    });
-
-    searchClose.addEventListener("click", function () {
-      searchBar.classList.remove("active");
     });
   }
 
