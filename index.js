@@ -33,6 +33,16 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
+// Schema NotifLog untuk kunci anti-duplikat permanen di DB (Otomatis hapus setelah 7 hari)
+const NotifLogSchema = new mongoose.Schema(
+  {
+    key: { type: String, required: true, unique: true },
+    createdAt: { type: Date, default: Date.now, expires: "7d" },
+  },
+  { versionKey: false },
+);
+const NotifLogModel = mongoose.model("NotifLog", NotifLogSchema, "notif_logs");
+
 const SignalSchema = new mongoose.Schema(
   {
     stockCode: String,
@@ -74,6 +84,17 @@ const SignalSchema = new mongoose.Schema(
     holdingDays: Number,
     currentHigh: Number,
     currentLow: Number,
+
+    buyType: String,
+    buyAreaLow: Number,
+    buyAreaHigh: Number,
+    stopLossPercent: Number,
+    target1Low: Number,
+    target1High: Number,
+    target2Low: Number,
+    target2High: Number,
+    tp2: Number,
+    notifiedBuyArea: Boolean,
   },
   { versionKey: false },
 );
@@ -610,11 +631,14 @@ app.post("/api/send-push", async (req, res) => {
   }
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = `${title.toUpperCase().trim()}_${today}`;
-  if (sentPushesCache.has(pushKey)) {
-    console.log(`[SPAM] Blokir duplikat: "${title}"`);
+
+  // Kunci berbasis Database untuk cegah duplikasi
+  try {
+    await NotifLogModel.create({ key: pushKey });
+  } catch (e) {
+    console.log(`[SPAM] Blokir duplikat (DB Lock): "${title}"`);
     return res.json({ success: true, message: "Sudah dikirim hari ini" });
   }
-  sentPushesCache.set(pushKey, true);
 
   const payload = JSON.stringify({ title, body });
   const pushOptions = { TTL: 86400, urgency: "high" };
@@ -622,10 +646,15 @@ app.post("/api/send-push", async (req, res) => {
   try {
     const subscriptions = await SubscriptionModel.find({}).lean();
     if (subscriptions.length === 0) {
-      sentPushesCache.delete(pushKey);
       return res.json({ success: true, message: "Tidak ada subscriber" });
     }
-    const promises = subscriptions.map((sub) =>
+
+    // Deduplikasi Subscription
+    const uniqueSubs = Array.from(
+      new Map(subscriptions.map((s) => [s.endpoint, s])).values(),
+    );
+
+    const promises = uniqueSubs.map((sub) =>
       webpush.sendNotification(sub, payload, pushOptions).catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
           await SubscriptionModel.deleteOne({ endpoint: sub.endpoint });
@@ -633,9 +662,8 @@ app.post("/api/send-push", async (req, res) => {
       }),
     );
     await Promise.all(promises);
-    res.json({ success: true, sent: subscriptions.length });
+    res.json({ success: true, sent: uniqueSubs.length });
   } catch (error) {
-    sentPushesCache.delete(pushKey);
     res.status(500).json({ error: error.message });
   }
 });
@@ -677,13 +705,10 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
 
-let serverLastRunningIds = null;
-let serverLastClosedIds = null;
 const serverLastStatus = new Map();
-let serverLastTechnicalWaitingIds = null;
+let isWatchdogInitialized = false;
 
 let serverLastNewsLinks = null;
-
 let isCheckingSignals = false;
 let isCheckingNews = false;
 
@@ -710,22 +735,26 @@ async function triggerInternalPush(title, body, customPushKey = null) {
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = customPushKey || `${title.toUpperCase().trim()}_${today}`;
 
-  if (sentPushesCache.has(pushKey)) {
-    console.log(`[WATCHDOG] Blokir spam / duplikat: "${pushKey}"`);
+  // DB Lock: Jika kunci push sudah pernah tersimpan, batalkan pemrosesan
+  try {
+    await NotifLogModel.create({ key: pushKey });
+  } catch (e) {
+    console.log(`[WATCHDOG] Blokir spam / duplikat (DB Lock): "${pushKey}"`);
     return;
   }
-  sentPushesCache.set(pushKey, true);
 
   const payload = JSON.stringify({ title, body });
   const pushOptions = { TTL: 86400, urgency: "high" };
   try {
     const subscriptions = await SubscriptionModel.find({}).lean();
-    if (subscriptions.length === 0) {
-      sentPushesCache.delete(pushKey);
-      return;
-    }
+    if (subscriptions.length === 0) return;
 
-    const promises = subscriptions.map((sub) =>
+    // Deduplikasi subscriber berdasarkan endpoint unik
+    const uniqueSubs = Array.from(
+      new Map(subscriptions.map((s) => [s.endpoint, s])).values(),
+    );
+
+    const promises = uniqueSubs.map((sub) =>
       webpush.sendNotification(sub, payload, pushOptions).catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
           await SubscriptionModel.deleteOne({ endpoint: sub.endpoint });
@@ -735,11 +764,11 @@ async function triggerInternalPush(title, body, customPushKey = null) {
     await Promise.all(promises);
     console.log(`✅ [WATCHDOG] PUSH TERKIRIM: ${title}`);
   } catch (err) {
-    sentPushesCache.delete(pushKey);
     console.error("❌ [WATCHDOG] Gagal kirim push:", err.message);
   }
 }
 
+// Logika watchdog sinyal terpadu (Sinyal Baru & Take Profit)
 async function checkDatabaseForNewSignals() {
   if (isCheckingSignals) return;
   isCheckingSignals = true;
@@ -748,148 +777,69 @@ async function checkDatabaseForNewSignals() {
     const result = await fetchAndSerializeSignals();
     if (!result) return;
 
-    const { allSignals, running, closed } = result;
+    const { allSignals } = result;
 
-    const currentRunningIds = running
-      .map((s) => `${s.stockCode}-${s.signalDate}`)
-      .sort()
-      .join(",");
-    const currentClosedIds = closed
-      .map((s) => `${s.stockCode}-${s.signalDate}`)
-      .sort()
-      .join(",");
-
-    const technicalWaiting = allSignals.filter(
-      (s) => s.signalType === "TECHNICAL" && s.status === "WAITING_ENTRY",
-    );
-    const currentTechnicalWaitingIds = technicalWaiting
-      .map((s) => `${s.stockCode}-${s.signalDate}`)
-      .sort()
-      .join(",");
-
-    if (serverLastTechnicalWaitingIds !== null) {
-      const prevWaitingArr = serverLastTechnicalWaitingIds.split(",");
-      const currWaitingArr = currentTechnicalWaitingIds.split(",");
-      const newWaiting = currWaitingArr.filter(
-        (id) => !prevWaitingArr.includes(id),
-      );
-
-      if (newWaiting.length > 0) {
-        const newSignals = technicalWaiting.filter((s) =>
-          newWaiting.includes(`${s.stockCode}-${s.signalDate}`),
-        );
-        for (const s of newSignals) {
-          const title = `NEW TECHNICAL WAITING: ${s.stockCode}`;
-          const body = `Sinyal Technical ${s.stockCode} siap di Buy Area (${s.buyAreaLow}–${s.buyAreaHigh})`;
-          await triggerInternalPush(title, body);
-          const key = `${s.stockCode}-${s.signalDate}`;
-          serverLastStatus.set(key, "WAITING_ENTRY");
-        }
-      }
-    }
-    serverLastTechnicalWaitingIds = currentTechnicalWaitingIds;
-
-    if (serverLastRunningIds === null || serverLastClosedIds === null) {
-      serverLastRunningIds = currentRunningIds;
-      serverLastClosedIds = currentClosedIds;
+    // Inisialisasi awal saat server dinyalakan
+    if (!isWatchdogInitialized) {
       allSignals.forEach((s) => {
-        const key = `${s.stockCode}-${s.signalDate}`;
-        if (!serverLastStatus.has(key)) {
-          serverLastStatus.set(key, s.status);
-        }
+        const key = `${s._id.toString()}`;
+        serverLastStatus.set(key, s.status);
       });
+      isWatchdogInitialized = true;
       console.log(
         "🔄 [WATCHDOG SINYAL] Server siap. Memantau sinyal saham 24/7...",
       );
       return;
     }
 
-    const prevRunningArr = serverLastRunningIds.split(",");
-    const currentRunningArr = currentRunningIds.split(",");
-    const newRunning = currentRunningArr.filter(
-      (id) => !prevRunningArr.includes(id),
-    );
+    // Deteksi sinyal baru & perubahan status ke TP
+    for (const s of allSignals) {
+      const docId = s._id.toString();
+      const prevStatus = serverLastStatus.get(docId);
 
-    if (newRunning.length > 0) {
-      const newSignals = running.filter((s) =>
-        newRunning.includes(`${s.stockCode}-${s.signalDate}`),
-      );
+      // KASUS 1: SINYAL PERTAMA KALI MASUK DATABASE
+      if (prevStatus === undefined) {
+        serverLastStatus.set(docId, s.status);
 
-      const bsjpSignals = newSignals.filter((s) => s.signalType === "BSJP");
-      const technicalSignals = newSignals.filter(
-        (s) => s.signalType === "TECHNICAL",
-      );
-      const regularSignals = newSignals.filter(
-        (s) => s.signalType !== "BSJP" && s.signalType !== "TECHNICAL",
-      );
-
-      for (const s of bsjpSignals) {
-        const title = `NEW BSJP: ${s.stockCode}`;
-        const body = `Sinyal BSJP baru untuk ${s.stockCode}`;
-        await triggerInternalPush(title, body);
-      }
-
-      for (const s of technicalSignals) {
-        const key = `${s.stockCode}-${s.signalDate}`;
-        const prevStatus = serverLastStatus.get(key);
-        if (prevStatus === "WAITING_ENTRY") {
-          console.log(
-            `[WATCHDOG] Skip RUNNING notif untuk ${s.stockCode} karena sudah WAITING_ENTRY`,
-          );
-          continue;
+        if (s.signalType === "TECHNICAL") {
+          const title = `NEW TECHNICAL: ${s.stockCode}`;
+          const body = `Sinyal Technical baru untuk ${s.stockCode}`;
+          // ID Dokumen dijadikan kunci unik mutlak
+          const customPushKey = `TECH_NEW_${docId}`;
+          await triggerInternalPush(title, body, customPushKey);
+        } else if (s.signalType === "BSJP") {
+          if (s.status === "RUNNING") {
+            const title = `NEW BSJP: ${s.stockCode}`;
+            const body = `Sinyal BSJP baru untuk ${s.stockCode}`;
+            const customPushKey = `BSJP_NEW_${docId}`;
+            await triggerInternalPush(title, body, customPushKey);
+          }
+        } else {
+          if (s.status === "RUNNING") {
+            const session = getSessionFromDate(s.signalDate);
+            const title = session
+              ? `NEW SIGNALS SESI ${session}`
+              : `NEW SIGNALS LAINNYA`;
+            const body = `Sinyal baru untuk ${s.stockCode}`;
+            const customPushKey = `REG_NEW_${docId}`;
+            await triggerInternalPush(title, body, customPushKey);
+          }
         }
-        const title = `NEW TECHNICAL: ${s.stockCode}`;
-        const body = `Sinyal Technical baru untuk ${s.stockCode}`;
-        await triggerInternalPush(title, body);
       }
+      // KASUS 2: PERUBAHAN STATUS SINYAL KE TAKE PROFIT (TP)
+      else if (prevStatus !== s.status) {
+        serverLastStatus.set(docId, s.status);
 
-      const groups = { session1: [], session2: [], other: [] };
-      regularSignals.forEach((s) => {
-        const session = getSessionFromDate(s.signalDate);
-        if (session === 1) groups.session1.push(s);
-        else if (session === 2) groups.session2.push(s);
-        else groups.other.push(s);
-      });
-
-      if (groups.session1.length)
-        triggerInternalPush(
-          "NEW SIGNALS SESI 1",
-          `${groups.session1.length} sinyal saham baru untuk SESI 1.`,
-        );
-      if (groups.session2.length)
-        triggerInternalPush(
-          "NEW SIGNALS SESI 2",
-          `${groups.session2.length} sinyal saham baru untuk SESI 2.`,
-        );
-      if (groups.other.length)
-        triggerInternalPush(
-          "NEW SIGNALS LAINNYA",
-          `${groups.other.length} sinyal saham baru.`,
-        );
-    }
-
-    const tpSignals = allSignals.filter((s) => s.status === "TP");
-    for (const s of tpSignals) {
-      const key = `${s.stockCode}-${s.signalDate}`;
-      const prevStatus = serverLastStatus.get(key);
-      if (prevStatus !== "TP") {
-        const ret = s.returnPercent || 0;
-        const sign = ret >= 0 ? "+" : "";
-        const title = `✅ TP: ${s.stockCode}`;
-        const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
-        await triggerInternalPush(title, body);
-        serverLastStatus.set(key, "TP");
+        if (s.status === "TP" && prevStatus !== "TP") {
+          const ret = s.returnPercent || 0;
+          const sign = ret >= 0 ? "+" : "";
+          const title = `✅ TP: ${s.stockCode}`;
+          const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
+          const customPushKey = `TP_DONE_${docId}`;
+          await triggerInternalPush(title, body, customPushKey);
+        }
       }
     }
-
-    serverLastRunningIds = currentRunningIds;
-    serverLastClosedIds = currentClosedIds;
-    allSignals.forEach((s) => {
-      const key = `${s.stockCode}-${s.signalDate}`;
-      if (!serverLastStatus.has(key)) {
-        serverLastStatus.set(key, s.status);
-      }
-    });
   } catch (err) {
     console.error("❌ [WATCHDOG SINYAL] Gagal polling database:", err.message);
   } finally {
@@ -997,4 +947,4 @@ checkDatabaseForNews();
 setInterval(() => {
   checkDatabaseForNewSignals();
   checkDatabaseForNews();
-}, 20000);
+}, 10000);
