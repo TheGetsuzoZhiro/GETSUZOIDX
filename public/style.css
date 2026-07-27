@@ -5009,51 +5009,73 @@ body::-webkit-scrollbar {
   }
 }
 
-/* Styling tombol icon search di navbar */
+/* Styling Tombol Icon Search di Header Actions */
 .search-toggle-btn {
   background: transparent;
   border: none;
   color: #ffffff;
-  cursor: pointer;
+  font-size: 1rem;
   padding: 8px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 0.2s ease;
+}
+.search-toggle-btn:hover {
+  opacity: 0.8;
 }
 
-/* Container Search Bar yang muncul-sembunyi di Mobile */
-.mobile-search-container {
-  display: none; /* Tersembunyi secara default */
+/* Container Search Bar yang Slide Down saat diklik */
+.mobile-search-bar {
+  display: none;
   width: 100%;
+  background: #030303;
   padding: 10px 16px;
-  background-color: #0d0d0d;
-  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
 }
 
-/* Class active saat icon search diklik */
-.mobile-search-container.active {
+.mobile-search-bar.active {
   display: block;
 }
 
-/* Input style */
-.search-input-wrapper {
+.mobile-search-inner {
   position: relative;
   display: flex;
   align-items: center;
-}
-
-.search-input-wrapper input {
   width: 100%;
-  background: #18181b;
-  border: 1px solid #27272a;
-  border-radius: 8px;
-  padding: 10px 12px 10px 36px;
-  color: #fff;
-  font-size: 0.875rem;
 }
 
-.search-input-wrapper .search-icon {
+.mobile-search-icon {
   position: absolute;
-  left: 12px;
-  color: #71717a;
+  left: 14px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+}
+
+.mobile-search-inner input {
+  width: 100%;
+  background: #0f0f0f;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 38px 10px 38px;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-family: "Space Grotesk", sans-serif;
+  outline: none;
+}
+
+.mobile-search-inner input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.mobile-search-close {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 6px;
+  cursor: pointer;
 }
