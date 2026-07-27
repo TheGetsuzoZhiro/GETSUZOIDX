@@ -1168,10 +1168,21 @@
       </aside>
 
       <main class="content-area">
-        <!-- ========================================================= -->
-        <!-- STICKY ACTION BAR (HANYA TAMPAK DI MOBILE)                  -->
-        <!-- ========================================================= -->
-        <div class="sticky-action-bar" id="stickyActionBar">
+        <!-- ===== STICKY HEADER (TETAP DI ATAS) ===== -->
+        <div class="sticky-header" id="stickyHeader">
+          <div class="mobile-header-left">
+            <button class="menu-toggle" id="menuToggle">
+              <span></span><span></span><span></span>
+            </button>
+            <div class="mobile-brand">
+              <img
+                src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
+                alt="Getsuzo"
+              />
+              <span>GETSUZO IDX</span>
+            </div>
+          </div>
+
           <div class="header-actions">
             <div class="market-status" id="marketStatus">
               <span class="dot"></span>
@@ -1192,29 +1203,12 @@
           </div>
         </div>
 
-        <!-- ========================================================= -->
-        <!-- TOP BAR UTAMA (IKUT SCROLL)                                 -->
-        <!-- ========================================================= -->
-        <header class="top-bar">
-          <div class="mobile-header-left">
-            <button class="menu-toggle" id="menuToggle">
-              <span></span><span></span><span></span>
-            </button>
-            <div class="mobile-brand">
-              <img
-                src="https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png"
-                alt="Getsuzo"
-              />
-              <span>GETSUZO IDX</span>
-            </div>
-          </div>
-
-          <div class="page-header desktop-only">
+        <!-- ===== SCROLL HEADER (IKUT SCROLL) ===== -->
+        <header class="scroll-header">
+          <div class="page-header">
             <h1 class="page-title">Dashboard Overview</h1>
             <p class="page-subtitle">Real-time monitoring & analysis</p>
           </div>
-
-          <!-- .header-actions di sini sudah DIHAPUS (dipindah ke sticky-action-bar) -->
         </header>
 
         <div class="content-wrapper" id="pullToRefresh">
