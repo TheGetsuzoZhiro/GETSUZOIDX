@@ -4870,3 +4870,127 @@ body::-webkit-scrollbar {
   margin-top: 4px !important;
 }
 
+/* ======================================================= */
+/* PRO TRADING TERMINAL SEARCH BAR (CLEAN SLATE GREY)      */
+/* ======================================================= */
+
+.trader-search-container {
+  margin: 0.5rem 0 0.75rem 0;
+  width: 100%;
+}
+
+.trader-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-radius: 6px;
+  background-color: #1e222d; /* Solid Charcoal Grey */
+  border: 1px solid #2a2e39; /* Muted Border Grey */
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Hover State */
+.trader-search-box:hover {
+  background-color: #242835;
+  border-color: #363a45;
+}
+
+/* Focus State saat mengetik */
+.trader-search-box:focus-within {
+  background-color: #1e222d;
+  border-color: #6a6d78; /* Neutral Slate Grey Focus */
+  box-shadow: 0 0 0 1px #6a6d78;
+}
+
+/* Icon Search */
+.trader-search-box .search-icon {
+  position: absolute;
+  left: 0.85rem;
+  color: #787b86;
+  font-size: 0.8rem;
+  pointer-events: none;
+  transition: color 0.2s ease;
+  z-index: 2;
+}
+
+.trader-search-box:focus-within .search-icon {
+  color: #d1d4dc;
+}
+
+/* Input Text Field */
+.trader-search-input {
+  width: 100%;
+  padding: 0.55rem 2.2rem 0.55rem 2.3rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #d1d4dc; /* Cool Grey Text */
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+.trader-search-input::placeholder {
+  color: #5d606b; /* Muted Grey Placeholder */
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 400;
+}
+
+/* Clear Button (X) */
+.search-clear-btn {
+  position: absolute;
+  right: 0.6rem;
+  background: #2a2e39;
+  border: 1px solid #363a45;
+  color: #787b86;
+  font-size: 0.65rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.search-clear-btn.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.search-clear-btn:hover {
+  color: #ffffff;
+  background: #363a45;
+  border-color: #4a4e5a;
+}
+
+/* Empty State / No Result State */
+.search-no-result {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin-top: 0.5rem;
+  background: #1e222d;
+  border: 1px solid #2a2e39;
+  border-radius: 6px;
+  color: #787b86;
+  font-size: 0.78rem;
+  font-family: 'Space Grotesk', sans-serif;
+  width: 100%;
+}
+
+.search-no-result i {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #5d606b;
+}
+
+.search-no-result strong {
+  color: #d1d4dc;
+}
