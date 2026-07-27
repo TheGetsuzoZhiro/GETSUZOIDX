@@ -5079,7 +5079,7 @@ body::-webkit-scrollbar {
 
   /* Opsional: jika scroll-header masih terlalu mepet, tambahkan margin-top kecil */
   .scroll-header {
-    margin-top: 0 !important; padding-top: 0 !important;
+    margin-top: 0.5 !important; padding-top: 0 !important;
   }
 }
 
