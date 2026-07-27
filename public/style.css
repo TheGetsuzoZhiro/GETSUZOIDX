@@ -4871,12 +4871,14 @@ body::-webkit-scrollbar {
 }
 
 @media (max-width: 1024px) {
-  /* ===== TATA LETAK NAVBAR & JUDUL ===== */
-  .top-navbar, header { 
+  /* ===== 1. TATA LETAK DASAR ===== */
+  .top-navbar,
+  header {
     display: flex !important;
     flex-wrap: wrap !important;
   }
 
+  /* ===== 2. JUDUL DI MOBILE (turun ke bawah) ===== */
   .page-header {
     display: block !important;
     flex-basis: 100% !important;
@@ -4886,80 +4888,44 @@ body::-webkit-scrollbar {
     text-align: left !important;
   }
 
-  /* ===== STICKY HEADER (ATAS) ===== */
+  /* ===== 3. STICKY HEADER (safe area) ===== */
   .sticky-header {
-    display: flex !important;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.5rem 0.75rem;
-    background: rgba(5, 5, 5, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--glass-border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    min-height: 52px;
-    box-sizing: border-box;
-    gap: 1rem;
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px)) !important;
+    padding-left: calc(1rem + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(1rem + env(safe-area-inset-right, 0px)) !important;
+    min-height: calc(52px + env(safe-area-inset-top, 0px)) !important;
+    box-sizing: border-box !important;
   }
 
-  .sticky-header .mobile-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .sticky-header .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-left: auto;
-  }
-
-  /* Sembunyikan header-actions di dalam top-bar (lama) */
-  .top-bar .header-actions {
-    display: none !important;
-  }
-
-  /* Buat top-bar ikut scroll (relative) */
-  .top-bar {
-    position: relative !important;
-    padding: 0.5rem 0.75rem !important;
-  }
-
-  /* ===== SCROLL HEADER (IKUT SCROLL) ===== */
+  /* ===== 4. SCROLL HEADER (hilangkan margin/padding berlebih) ===== */
   .scroll-header {
-    position: relative !important;
-    padding: 0.5rem 0.75rem 0.75rem 0.75rem;
-    background: transparent;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin-top: 0 !important;
   }
-
   .scroll-header .page-header {
-    display: block !important;
-    text-align: left !important;
     margin-top: 0 !important;
     padding-top: 0 !important;
   }
-
-  .scroll-header .page-title {
-    font-size: 1.25rem !important;
+  .page-title,
+  .page-subtitle {
     margin-top: 0 !important;
   }
 
-  .scroll-header .page-subtitle {
-    font-size: 0.75rem !important;
-    margin-top: 0 !important;
-  }
-
-  /* ===== PADDING KONTEN UTAMA (JARAK DENGAN STICKY HEADER) ===== */
+  /* ===== 5. KONTEN UTAMA (beri ruang agar tidak tertutup) ===== */
   .content-wrapper {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 52px + 0.5rem) !important;
-    /* Ubah 0.5rem sesuai keinginan: 0.25rem (dekat), 0.5rem (sedang), 0.75rem (lega) */
+    padding-top: calc(
+      env(safe-area-inset-top, 0px) + 60px + 0.75rem
+    ) !important;
   }
 
-  /* ===== SISANYA: pastikan elemen lain tidak menambah jarak ===== */
-  .hero-banner {
-    margin-top: 0 !important;
+  /* ===== 6. TOP-BAR (ikut scroll, sembunyikan header-actions) ===== */
+  .top-bar {
+    position: relative !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  .top-bar .header-actions {
+    display: none !important;
   }
 }
