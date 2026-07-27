@@ -7,13 +7,15 @@ const webpush = require("web-push");
 const mongoose = require("mongoose");
 const compression = require("compression");
 
-const sentPushesCache = new Map();
+// ======================== GLOBAL ============================
+const sentPushesCache = new Map();      // key → true (anti-duplikat in-memory)
 const infoCache = new Map();
 const lastPrices = new Map();
 const sseClients = [];
 
 moment.tz.setDefault("Asia/Jakarta");
 
+// ======================== VAPID =============================
 const vapidPublicKey =
   "BCGyIOUseFBON2YXTAk-rcvncZ65jkbKqb2ShjOuvZhP08HLvaJJis5Bsx8ybuVVcZbXZow5GRrl9ykSiV0Y3B0";
 const vapidPrivateKey = "7PHNRENDWCkDl7JwoVYayqJDBkvSbzwZ2vxz1Cx7bSI";
@@ -23,6 +25,7 @@ webpush.setVapidDetails(
   vapidPrivateKey,
 );
 
+// ======================== MONGOOSE ==========================
 const MONGO_URI =
   "mongodb+srv://zhironihboss_db_user:tzPCYPLUNw0fWrTz@cluster0.bfs8tiy.mongodb.net/getsuzo_db?retryWrites=true&w=majority&appName=Cluster0";
 
@@ -33,15 +36,7 @@ mongoose
   )
   .catch((err) => console.error("❌ Gagal koneksi ke MongoDB:", err.message));
 
-const NotifLogSchema = new mongoose.Schema(
-  {
-    key: { type: String, required: true, unique: true },
-    createdAt: { type: Date, default: Date.now, expires: "7d" },
-  },
-  { versionKey: false },
-);
-const NotifLogModel = mongoose.model("NotifLog", NotifLogSchema, "notif_logs");
-
+// ======================== SCHEMA & MODEL ====================
 const SignalSchema = new mongoose.Schema(
   {
     stockCode: String,
@@ -151,6 +146,7 @@ const TokenModel = mongoose.model(
   "stockbit_tokens",
 );
 
+// ======================== FUNGSI TOKEN & LIBUR ==============
 async function getStockbitToken() {
   try {
     const doc = await TokenModel.findById("stockbit_token").lean();
@@ -243,6 +239,7 @@ async function isMarketOpen() {
   }
 }
 
+// ======================== EXPRESS APP =======================
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -264,6 +261,7 @@ app.use(
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
+// --- SSE Prices ---
 app.get("/api/sse/prices", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -326,6 +324,7 @@ app.post("/api/sse/price-update", (req, res) => {
   res.json({ success: true, clients: sseClients.length });
 });
 
+// --- Stock Info ---
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
 
@@ -388,6 +387,7 @@ app.get("/api/stock-info/:symbol", async (req, res) => {
   }
 });
 
+// --- Cache Signals ---
 let cachedSignalsJsonString = null;
 let cachedSignalsEtag = null;
 let isRefreshingSignalsCache = false;
@@ -444,6 +444,7 @@ app.get("/api/signals", async (req, res) => {
   }
 });
 
+// --- Cache News ---
 let cachedNewsJsonString = null;
 let cachedNewsEtag = null;
 let isRefreshingNewsCache = false;
@@ -552,6 +553,7 @@ app.get("/api/news", async (req, res) => {
   }
 });
 
+// --- Market Status ---
 app.get("/api/market-status", async (req, res) => {
   const open = await isMarketOpen();
   const now = moment().tz("Asia/Jakarta");
@@ -604,6 +606,7 @@ app.get("/api/market-status", async (req, res) => {
   });
 });
 
+// --- Subscription ---
 app.post("/api/save-subscription", async (req, res) => {
   const subscription = req.body;
   if (!subscription || !subscription.endpoint) {
@@ -623,6 +626,7 @@ app.post("/api/save-subscription", async (req, res) => {
   }
 });
 
+// --- Send Push (Manual) dengan anti-duplikat ---
 app.post("/api/send-push", async (req, res) => {
   const { title, body, stockCode, icon, image } = req.body;
   if (!title || !body) {
@@ -630,15 +634,12 @@ app.post("/api/send-push", async (req, res) => {
   }
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = `${title.toUpperCase().trim()}_${today}`;
-
-  try {
-    await NotifLogModel.create({ key: pushKey });
-  } catch (e) {
-    console.log(`[SPAM] Blokir duplikat (DB Lock): "${title}"`);
+  if (sentPushesCache.has(pushKey)) {
+    console.log(`[SPAM] Blokir duplikat manual: "${title}"`);
     return res.json({ success: true, message: "Sudah dikirim hari ini" });
   }
+  sentPushesCache.set(pushKey, true);
 
-  // Tentukan logo saham otomatis
   let finalIcon = icon;
   if (!finalIcon && stockCode) {
     finalIcon = `https://assets.stockbit.com/logos/companies/${stockCode.toUpperCase()}.png`;
@@ -659,13 +660,12 @@ app.post("/api/send-push", async (req, res) => {
   try {
     const subscriptions = await SubscriptionModel.find({}).lean();
     if (subscriptions.length === 0) {
+      sentPushesCache.delete(pushKey);
       return res.json({ success: true, message: "Tidak ada subscriber" });
     }
-
     const uniqueSubs = Array.from(
       new Map(subscriptions.map((s) => [s.endpoint, s])).values(),
     );
-
     const promises = uniqueSubs.map((sub) =>
       webpush.sendNotification(sub, payload, pushOptions).catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
@@ -676,10 +676,12 @@ app.post("/api/send-push", async (req, res) => {
     await Promise.all(promises);
     res.json({ success: true, sent: uniqueSubs.length });
   } catch (error) {
+    sentPushesCache.delete(pushKey);
     res.status(500).json({ error: error.message });
   }
 });
 
+// --- Helper getPublicIP ---
 async function getPublicIP() {
   const sources = [
     "https://api.ipify.org?format=text",
@@ -717,10 +719,17 @@ app.listen(PORT, "0.0.0.0", async () => {
   console.log(`\n✅ Read-Only Server running on Port: ${PORT}`);
 });
 
-const serverLastStatus = new Map();
-let isWatchdogInitialized = false;
+// ================================================================
+// ======================== WATCHDOG ==============================
+// ================================================================
 
-let serverLastNewsLinks = null;
+// --- State watchdog ---
+const serverLastStatus = new Map();        // key: stockCode-signalDate → status terakhir yang diketahui
+let serverLastRunningIds = null;           
+let serverLastClosedIds = null;            
+let serverLastTechnicalWaitingIds = null;  
+let serverLastNewsLinks = null;            
+let isWatchdogInitialized = false;
 let isCheckingSignals = false;
 let isCheckingNews = false;
 
@@ -743,23 +752,27 @@ function getSessionFromDate(signalDate) {
   return null;
 }
 
-// =============== FUNGSI TRIGGER INTERNAL PUSH (LOGI DENGAN DYNAMIC STOCK LOGO) ===============
-async function triggerInternalPush(title, body, customPushKey = null, options = {}) {
-  const { skipInsert = false, stockCode = null, icon = null, image = null, url = "/" } = options;
+// --- Fungsi trigger push dengan anti-duplikat (cache in-memory) ---
+async function triggerInternalPush(title, body, options = {}) {
+  const { stockCode = null, icon = null, image = null, url = "/", cacheKeyOverride = null } = options;
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-  const pushKey = customPushKey || `${title.toUpperCase().trim()}_${today}`;
 
-  // Jika tidak skipInsert, coba insert ke database untuk cegah spam
-  if (!skipInsert) {
-    try {
-      await NotifLogModel.create({ key: pushKey });
-    } catch (e) {
-      console.log(`[WATCHDOG] Blokir spam / duplikat (DB Lock): "${pushKey}"`);
-      return;
+  let cacheKey = cacheKeyOverride;
+  if (!cacheKey) {
+    cacheKey = title.toUpperCase().trim();
+    if (stockCode) {
+      cacheKey += `_${stockCode.toUpperCase()}`;
     }
+    cacheKey += `_${today}`;
   }
 
-  // Tentukan logo emiten dari CDN Stockbit
+  // Cek cache
+  if (sentPushesCache.has(cacheKey)) {
+    console.log(`[WATCHDOG] Blokir duplikat (cache): "${cacheKey}"`);
+    return;
+  }
+
+  // Logo
   let finalIcon = icon;
   if (!finalIcon && stockCode) {
     finalIcon = `https://assets.stockbit.com/logos/companies/${stockCode.toUpperCase()}.png`;
@@ -775,11 +788,13 @@ async function triggerInternalPush(title, body, customPushKey = null, options = 
     image: image || null,
     data: { url },
   });
-
   const pushOptions = { TTL: 86400, urgency: "high" };
+
   try {
     const subscriptions = await SubscriptionModel.find({}).lean();
-    if (subscriptions.length === 0) return;
+    if (subscriptions.length === 0) {
+      return;
+    }
 
     const uniqueSubs = Array.from(
       new Map(subscriptions.map((s) => [s.endpoint, s])).values(),
@@ -793,13 +808,15 @@ async function triggerInternalPush(title, body, customPushKey = null, options = 
       }),
     );
     await Promise.all(promises);
-    console.log(`✅ [WATCHDOG] PUSH TERKIRIM (+Logo): ${title}`);
+    sentPushesCache.set(cacheKey, true);
+    console.log(`✅ [WATCHDOG] PUSH TERKIRIM: ${title} (${cacheKey})`);
   } catch (err) {
     console.error("❌ [WATCHDOG] Gagal kirim push:", err.message);
+    sentPushesCache.delete(cacheKey);
   }
 }
 
-// ================== FUNGSI UTAMA YANG DIMODIFIKASI ==================
+// --- Deteksi sinyal baru ---
 async function checkDatabaseForNewSignals() {
   if (isCheckingSignals) return;
   isCheckingSignals = true;
@@ -808,94 +825,170 @@ async function checkDatabaseForNewSignals() {
     const result = await fetchAndSerializeSignals();
     if (!result) return;
 
-    const { allSignals } = result;
-    const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
+    const { allSignals, running, closed } = result;
+    const getSignalId = (s) => `${s.stockCode}-${s.signalDate}`;
 
+    const currentRunningIds = running.map(getSignalId).sort().join(",");
+    const currentClosedIds = closed.map(getSignalId).sort().join(",");
+
+    // --- TECHNICAL WAITING_ENTRY ---
+    const technicalWaiting = allSignals.filter(
+      s => s.signalType === "TECHNICAL" && s.status === "WAITING_ENTRY"
+    );
+    const currentTechnicalWaitingIds = technicalWaiting.map(getSignalId).sort().join(",");
+
+    // Inisialisasi pertama (setelah restart)
     if (!isWatchdogInitialized) {
+      serverLastRunningIds = currentRunningIds;
+      serverLastClosedIds = currentClosedIds;
+      serverLastTechnicalWaitingIds = currentTechnicalWaitingIds;
       allSignals.forEach((s) => {
-        const key = `${s._id.toString()}`;
-        serverLastStatus.set(key, s.status);
+        const id = getSignalId(s);
+        if (!serverLastStatus.has(id)) {
+          serverLastStatus.set(id, s.status);
+        }
       });
       isWatchdogInitialized = true;
-      console.log(
-        "🔄 [WATCHDOG SINYAL] Server siap. Memantau sinyal saham 24/7...",
-      );
+      console.log("🔄 [WATCHDOG] Server siap. Memantau sinyal saham 24/7...");
       return;
     }
 
-    for (const s of allSignals) {
-      const docId = s._id.toString();
-      const prevStatus = serverLastStatus.get(docId);
-      const stockCode = s.stockCode ? s.stockCode.toUpperCase() : null;
+    // 1. Deteksi WAITING_ENTRY baru (TECHNICAL)
+    if (serverLastTechnicalWaitingIds !== null) {
+      const prevWaitingArr = serverLastTechnicalWaitingIds.split(",");
+      const currWaitingArr = currentTechnicalWaitingIds.split(",");
+      const newWaiting = currWaitingArr.filter(id => !prevWaitingArr.includes(id));
 
-      // --- Tentukan tanggal sinyal (fallback ke createdAt / updatedAt) ---
-      const signalDateRaw = s.signalDate || s.createdAt || s.updatedAt || new Date();
-      const dateStr = moment(signalDateRaw).tz('Asia/Jakarta').format('YYYY-MM-DD');
-
-      if (prevStatus === undefined) {
-        serverLastStatus.set(docId, s.status);
-
-        // -------------------- SINYAL BARU (belum pernah terlihat) --------------------
-        if (s.signalType === "TECHNICAL") {
-          const title = `NEW TECHNICAL: ${s.stockCode}`;
-          const body = `Sinyal Technical baru untuk ${s.stockCode}`;
-          const customPushKey = `TECH_NEW_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
-          await triggerInternalPush(title, body, customPushKey, { stockCode });
-        } else if (s.signalType === "BSJP") {
-          if (s.status === "RUNNING") {
-            const title = `NEW BSJP: ${s.stockCode}`;
-            const body = `Sinyal BSJP baru untuk ${s.stockCode}`;
-            const customPushKey = `BSJP_NEW_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
-            await triggerInternalPush(title, body, customPushKey, { stockCode });
-          }
-        } else {
-          // SINYAL BIASA (selain TECHNICAL & BSJP)
-          if (s.status === "RUNNING") {
-            const session = getSessionFromDate(s.signalDate);
-            if (session === 1 || session === 2) {
-              // Notifikasi per sesi tetap menggunakan key berbasis tanggal (tidak berubah)
-              const key = `SIGNAL_SESSION_${session}_${today}`;
-              try {
-                await NotifLogModel.create({ key });
-                const title = `NEW SIGNALS SESI ${session}`;
-                const body = `Sinyal baru untuk sesi ${session}`;
-                await triggerInternalPush(title, body, key, {
-                  skipInsert: true,
-                  stockCode,
-                });
-              } catch (e) {
-                console.log(`[WATCHDOG] Notifikasi sesi ${session} sudah dikirim hari ini.`);
-              }
-            } else {
-              const title = `NEW SIGNALS LAINNYA`;
-              const body = `Sinyal baru untuk ${s.stockCode}`;
-              const customPushKey = `REG_NEW_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
-              await triggerInternalPush(title, body, customPushKey, { stockCode });
-            }
-          }
-        }
-      } else if (prevStatus !== s.status) {
-        serverLastStatus.set(docId, s.status);
-
-        // -------------------- PERUBAHAN STATUS (contoh: TP) --------------------
-        if (s.status === "TP" && prevStatus !== "TP") {
-          const ret = s.returnPercent || 0;
-          const sign = ret >= 0 ? "+" : "";
-          const title = `✅ TP: ${s.stockCode}`;
-          const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
-          const customPushKey = `TP_DONE_${stockCode}_${dateStr}`; // <-- kunci berbasis saham + tanggal
-          await triggerInternalPush(title, body, customPushKey, { stockCode });
+      if (newWaiting.length > 0) {
+        const newWaitingSignals = technicalWaiting.filter(s =>
+          newWaiting.includes(getSignalId(s))
+        );
+        for (const s of newWaitingSignals) {
+          const stockCode = s.stockCode;
+          const dateStr = moment(s.signalDate).format('YYYY-MM-DD');
+          const title = `NEW TECHNICAL WAITING: ${stockCode}`;
+          const body = `Sinyal Technical ${stockCode} siap di Buy Area (${s.buyAreaLow}–${s.buyAreaHigh})`;
+          const cacheKey = `TECHNICAL_${stockCode}_${dateStr}_WAITING_ENTRY`;
+          await triggerInternalPush(title, body, { stockCode, cacheKeyOverride: cacheKey });
+          const id = getSignalId(s);
+          serverLastStatus.set(id, "WAITING_ENTRY");
         }
       }
     }
+    serverLastTechnicalWaitingIds = currentTechnicalWaitingIds;
+
+    // 2. Deteksi RUNNING baru (semua tipe)
+    const prevRunningArr = serverLastRunningIds.split(",");
+    const currentRunningArr = currentRunningIds.split(",");
+    const newRunning = currentRunningArr.filter(id => !prevRunningArr.includes(id));
+
+    if (newRunning.length > 0) {
+      const newRunningSignals = running.filter(s =>
+        newRunning.includes(getSignalId(s))
+      );
+
+      const bsjpSignals = newRunningSignals.filter(s => s.signalType === "BSJP");
+      const technicalSignals = newRunningSignals.filter(s => s.signalType === "TECHNICAL");
+      const regularSignals = newRunningSignals.filter(
+        s => s.signalType !== "BSJP" && s.signalType !== "TECHNICAL"
+      );
+
+      // --- BSJP ---
+      for (const s of bsjpSignals) {
+        const stockCode = s.stockCode;
+        const dateStr = moment(s.signalDate).format('YYYY-MM-DD');
+        const title = `NEW BSJP: ${stockCode}`;
+        const body = `Sinyal BSJP baru untuk ${stockCode}`;
+        const cacheKey = `BSJP_${stockCode}_${dateStr}_RUNNING`;
+        await triggerInternalPush(title, body, { stockCode, cacheKeyOverride: cacheKey });
+        serverLastStatus.set(getSignalId(s), s.status);
+      }
+
+      // --- TECHNICAL (RUNNING) ---
+      for (const s of technicalSignals) {
+        const id = getSignalId(s);
+        const prevStatus = serverLastStatus.get(id);
+        // Jika sebelumnya sudah WAITING_ENTRY, skip RUNNING
+        if (prevStatus === "WAITING_ENTRY") {
+          console.log(`[WATCHDOG] Skip RUNNING notif untuk ${s.stockCode} karena sudah WAITING_ENTRY`);
+          serverLastStatus.set(id, s.status);
+          continue;
+        }
+        // Jika belum pernah WAITING_ENTRY, kirim RUNNING
+        const stockCode = s.stockCode;
+        const dateStr = moment(s.signalDate).format('YYYY-MM-DD');
+        const title = `NEW TECHNICAL: ${stockCode}`;
+        const body = `Sinyal Technical baru untuk ${stockCode}`;
+        const cacheKey = `TECHNICAL_${stockCode}_${dateStr}_RUNNING`;
+        await triggerInternalPush(title, body, { stockCode, cacheKeyOverride: cacheKey });
+        serverLastStatus.set(id, s.status);
+      }
+
+      // --- Reguler (kelompokkan per sesi) ---
+      const groups = { session1: [], session2: [], other: [] };
+      regularSignals.forEach((s) => {
+        const session = getSessionFromDate(s.signalDate);
+        if (session === 1) groups.session1.push(s);
+        else if (session === 2) groups.session2.push(s);
+        else groups.other.push(s);
+      });
+
+      if (groups.session1.length) {
+        const title = "NEW SIGNALS SESI 1";
+        const body = `${groups.session1.length} sinyal saham baru untuk SESI 1.`;
+        const cacheKey = `SESSION_1_${moment().tz('Asia/Jakarta').format('YYYY-MM-DD')}`;
+        await triggerInternalPush(title, body, { stockCode: null, cacheKeyOverride: cacheKey });
+      }
+      if (groups.session2.length) {
+        const title = "NEW SIGNALS SESI 2";
+        const body = `${groups.session2.length} sinyal saham baru untuk SESI 2.`;
+        const cacheKey = `SESSION_2_${moment().tz('Asia/Jakarta').format('YYYY-MM-DD')}`;
+        await triggerInternalPush(title, body, { stockCode: null, cacheKeyOverride: cacheKey });
+      }
+      if (groups.other.length) {
+        const title = "NEW SIGNALS LAINNYA";
+        const body = `${groups.other.length} sinyal saham baru.`;
+        const cacheKey = `OTHER_${moment().tz('Asia/Jakarta').format('YYYY-MM-DD')}`;
+        await triggerInternalPush(title, body, { stockCode: null, cacheKeyOverride: cacheKey });
+      }
+    }
+
+    // 3. Deteksi TP (perubahan status menjadi TP)
+    const tpSignals = allSignals.filter(s => s.status === "TP");
+    for (const s of tpSignals) {
+      const id = getSignalId(s);
+      const prevStatus = serverLastStatus.get(id);
+      if (prevStatus !== "TP") {
+        const stockCode = s.stockCode;
+        const dateStr = moment(s.signalDate).format('YYYY-MM-DD');
+        const ret = s.returnPercent || 0;
+        const sign = ret >= 0 ? "+" : "";
+        const title = `✅ TP: ${stockCode}`;
+        const body = `${stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
+        const cacheKey = `TP_${stockCode}_${dateStr}`;
+        await triggerInternalPush(title, body, { stockCode, cacheKeyOverride: cacheKey });
+        serverLastStatus.set(id, "TP");
+      }
+    }
+
+    // Update state
+    serverLastRunningIds = currentRunningIds;
+    serverLastClosedIds = currentClosedIds;
+    allSignals.forEach((s) => {
+      const id = getSignalId(s);
+      if (!serverLastStatus.has(id)) {
+        serverLastStatus.set(id, s.status);
+      }
+    });
+
   } catch (err) {
-    console.error("❌ [WATCHDOG SINYAL] Gagal polling database:", err.message);
+    console.error("❌ [WATCHDOG] Gagal polling database:", err.message);
   } finally {
     isCheckingSignals = false;
   }
 }
-// ================== AKHIR MODIFIKASI ==================
 
+// --- Deteksi berita baru ---
 async function checkDatabaseForNews() {
   if (isCheckingNews) return;
   isCheckingNews = true;
@@ -967,10 +1060,11 @@ async function checkDatabaseForNews() {
 
         const primaryStockCode = newsStocks.length > 0 ? newsStocks[0] : null;
 
-        const customPushKey = `NEWS_PUSH_${news.link}`;
-        await triggerInternalPush(title, body, customPushKey, {
+        const cacheKey = `NEWS_${news.link}`;
+        await triggerInternalPush(title, body, {
           stockCode: primaryStockCode,
           image: news.imageUrl || null,
+          cacheKeyOverride: cacheKey
         });
       }
 
@@ -983,10 +1077,13 @@ async function checkDatabaseForNews() {
   }
 }
 
+// ======================== JALANKAN WATCHDOG ===================
 checkDatabaseForNewSignals();
 checkDatabaseForNews();
 
 setInterval(() => {
   checkDatabaseForNewSignals();
   checkDatabaseForNews();
-}, 10000);
+}, 15000);
+
+console.log("✅ Watchdog dengan anti-duplikat per sinyal unik siap.");
