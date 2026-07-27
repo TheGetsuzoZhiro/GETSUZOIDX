@@ -4871,7 +4871,7 @@ body::-webkit-scrollbar {
 }
 
 @media (max-width: 1024px) {
-  /* ===== TATA LETAK NAVBAR & JUDUL ===== */
+  
   .top-navbar, header { 
     display: flex !important;
     flex-wrap: wrap !important;
@@ -4890,7 +4890,7 @@ body::-webkit-scrollbar {
     display: flex !important;
     align-items: center;
     justify-content: space-between;
-    /* Menambahkan jarak safe-area di bagian atas */
+    
     padding: calc(env(safe-area-inset-top, 0px) + 0.5rem) 0.75rem 0.5rem 0.75rem !important;
     background: rgba(5, 5, 5, 0.95);
     backdrop-filter: blur(12px);
@@ -4917,18 +4917,18 @@ body::-webkit-scrollbar {
     margin-left: auto;
   }
 
-  /* Sembunyikan header-actions di dalam top-bar (lama) */
+  
   .top-bar .header-actions {
     display: none !important;
   }
 
-  /* Buat top-bar ikut scroll (relative) */
+  
   .top-bar {
     position: relative !important;
     padding: 0.5rem 0.75rem !important;
   }
 
-  /* ===== SCROLL HEADER (IKUT SCROLL) ===== */
+  
   .scroll-header {
     position: relative !important;
     padding: 0.5rem 0.75rem 0.75rem 0.75rem;
@@ -4952,30 +4952,30 @@ body::-webkit-scrollbar {
     margin-top: 0 !important;
   }
 
-  /* ===== PADDING KONTEN UTAMA (JARAK DENGAN STICKY HEADER) ===== */
+  
   .content-wrapper {
     padding-top: calc(env(safe-area-inset-top, 0px) + 52px + 0.5rem) !important;
-    /* Ubah 0.5rem sesuai keinginan: 0.25rem (dekat), 0.5rem (sedang), 0.75rem (lega) */
+    
   }
 
-  /* ===== SISANYA: pastikan elemen lain tidak menambah jarak ===== */
+  
   .hero-banner {
     margin-top: 0 !important;
   }
 }
 
-/* ===== KHUSUS DESKTOP (TIDAK MENGANGGU TAMPILAN MOBILE) ===== */
+
 @media (min-width: 1025px) {
-  /* Pastikan area pembungkus konten utama menjadi acuan posisi */
+  
   .content-wrapper, main, .main-content {
     position: relative;
   }
 
-  /* Ubah sticky-header agar mengambang di pojok kanan atas */
+  
   .sticky-header {
     position: absolute !important;
-    top: 24px; /* Sesuaikan nilai ini agar pas sejajar dengan teks "Sinyal Hari Ini" */
-    right: 30px; /* Jarak dari tepi kanan */
+    top: 24px; 
+    right: 30px; 
     background: transparent !important;
     border: none !important;
     backdrop-filter: none !important;
@@ -4986,15 +4986,49 @@ body::-webkit-scrollbar {
     z-index: 10;
   }
 
-  /* Sembunyikan elemen kiri mobile jika ada */
+  
   .sticky-header .mobile-header-left {
     display: none !important;
   }
 
-  /* Pastikan market status dan tombol notifikasi berjajar kesamping */
+  
   .sticky-header .header-actions {
     display: flex !important;
     align-items: center;
     gap: 0.75rem;
+  }
+}
+
+
+@media (min-width: 1025px) {
+  
+  .detail-news-carousel-container .carousel-slide-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    min-height: 200px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+  }
+
+  
+  .detail-news-carousel-container .carousel-slide-card img {
+    width: 320px !important; 
+    height: 100% !important;
+    min-height: 200px !important;
+    object-fit: cover !important;
+    border-radius: 8px 0 0 8px !important;
+    flex-shrink: 0 !important;
+  }
+
+  
+  .detail-news-carousel-container .carousel-slide-card > div:last-child {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 1.25rem 1.5rem !important;
   }
 }
