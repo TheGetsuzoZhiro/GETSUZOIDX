@@ -5008,3 +5008,52 @@ body::-webkit-scrollbar {
     text-align: left !important;  /* Bikin rata kiri */
   }
 }
+
+/* Styling tombol icon search di navbar */
+.search-toggle-btn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Container Search Bar yang muncul-sembunyi di Mobile */
+.mobile-search-container {
+  display: none; /* Tersembunyi secara default */
+  width: 100%;
+  padding: 10px 16px;
+  background-color: #0d0d0d;
+  transition: all 0.3s ease;
+}
+
+/* Class active saat icon search diklik */
+.mobile-search-container.active {
+  display: block;
+}
+
+/* Input style */
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper input {
+  width: 100%;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 10px 12px 10px 36px;
+  color: #fff;
+  font-size: 0.875rem;
+}
+
+.search-input-wrapper .search-icon {
+  position: absolute;
+  left: 12px;
+  color: #71717a;
+}
