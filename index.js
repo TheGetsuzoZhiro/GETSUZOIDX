@@ -963,7 +963,7 @@ async function checkDatabaseForNewSignals() {
         const dateStr = moment(s.signalDate).format('YYYY-MM-DD');
         const ret = s.returnPercent || 0;
         const sign = ret >= 0 ? "+" : "";
-        const title = `✅ TP: ${stockCode}`;
+        const title = `✅ asu: ${stockCode}`;
         const body = `${stockCode} Take Profit ${sign}${ret.toFixed(2)}%`;
         const cacheKey = `TP_${stockCode}_${dateStr}`;
         await triggerInternalPush(title, body, { stockCode, cacheKeyOverride: cacheKey });
