@@ -5113,15 +5113,7 @@ function updateSignalChart(data) {
   });
 }
 
-function sendNotification(title, body) {
-  if (!("Notification" in window)) return;
-  if (Notification.permission === "granted") {
-    new Notification(title, {
-      body,
-      icon: "https://raw.githubusercontent.com/TheGetsuzoZhiro/image/refs/heads/main/43D434F0-C01C-4A9E-8A5C-93B650B5981C.png",
-    });
-  }
-}
+// ==================== FUNGSI sendNotification TELAH DIHAPUS ====================
 
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
