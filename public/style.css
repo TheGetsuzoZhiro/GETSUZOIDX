@@ -4887,3 +4887,63 @@ body::-webkit-scrollbar {
     text-align: left !important;  /* Bikin rata kiri */
   }
 }
+
+/* ========== STICKY ACTION BAR UNTUK MOBILE ========== */
+.sticky-action-bar {
+  display: none; /* default: hidden di desktop */
+}
+
+@media (max-width: 1024px) {
+  /* Tampilkan sticky action bar di mobile */
+  .sticky-action-bar {
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: rgba(5, 5, 5, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--glass-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    gap: 0.5rem;
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+
+  /* Buat top-bar ikut scroll (tidak sticky) */
+  .top-bar {
+    position: relative !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* Sembunyikan header-actions yang asli (di dalam top-bar) */
+  .top-bar .header-actions {
+    display: none !important;
+  }
+
+  /* Pastikan .header-actions di dalam sticky-action bar tetap flex */
+  .sticky-action-bar .header-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Aturan yang sudah Anda punya sebelumnya untuk page-header */
+  .page-header {
+    display: block !important;
+    flex-basis: 100% !important;
+    order: 3 !important;
+    margin-top: 10px !important;
+    padding: 0 10px !important;
+    text-align: left !important;
+  }
+
+  .top-navbar,
+  header {
+    display: flex !important;
+    flex-wrap: wrap !important;
+  }
+}
