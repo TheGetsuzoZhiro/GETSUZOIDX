@@ -4993,74 +4993,24 @@ body::-webkit-scrollbar {
 
 
 /* ======================================================= */
-/* FIX HEADER MOBILE: JUDUL DI KIRI, ACTION BUTTONS DI KANAN */
+/* CLEAN & SIMPLE MOBILE HEADER FIX                        */
 /* ======================================================= */
 
 @media (max-width: 768px) {
-  /* Container utama header tetap horisontal (Flex Row) */
-  .page-header,
-  .top-bar,
-  .header-title-container,
-  .main-header {
-    display: flex !important;
-    flex-direction: row !important;
-    justify-content: space-between !important;
-    align-items: flex-start !important;
-    width: 100% !important;
-    margin-bottom: 1rem !important;
-    gap: 0.5rem !important;
-  }
-
-  /* Area Teks (Judul + Subtitle) di Kiri */
-  .header-left,
-  .header-title-wrapper {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    min-width: 0 !important;
-  }
-
+  /* Pastikan judul halaman berdiri sendiri di bawah navbar */
   .page-title {
-    font-size: 1.15rem !important;
+    display: block !important;
+    font-size: 1.25rem !important;
     font-weight: 700 !important;
     color: #ffffff !important;
-    margin: 0 0 0.2rem 0 !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    margin: 0.75rem 0 0.2rem 0 !important;
   }
 
+  /* Subtitle muncul rapi di bawah judul */
   .page-subtitle {
-    font-size: 0.7rem !important;
+    display: block !important;
+    font-size: 0.75rem !important;
     color: #71717a !important;
-    margin: 0 !important;
-    line-height: 1.2 !important;
-  }
-
-  /* Area Tombol Lonceng & Titik Merah Sejajar di Kanan Atas */
-  .header-right,
-  .header-actions,
-  .top-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 0.4rem !important;
-    flex-shrink: 0 !important;
-    margin-top: 0.1rem !important;
-  }
-
-  /* Ukuran tombol icon & indikator agar presisi di mobile */
-  #marketStatus,
-  #notifBtn,
-  .notif-btn,
-  .icon-btn {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 36px !important;
-    height: 36px !important;
-    padding: 0 !important;
-    border-radius: 8px !important;
+    margin-bottom: 1rem !important;
   }
 }
