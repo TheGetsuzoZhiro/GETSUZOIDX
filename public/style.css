@@ -4869,3 +4869,119 @@ body::-webkit-scrollbar {
   order: 3 !important;
   margin-top: 4px !important;
 }
+
+/* ===== SEARCH BAR SUPER MODERN ===== */
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 0.25rem 0.1rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding-bottom: 0.75rem;
+}
+
+.search-wrapper .search-icon {
+  color: var(--text-secondary);
+  opacity: 0.3;
+  font-size: 0.9rem;
+  transition: opacity 0.3s;
+}
+
+.search-wrapper:focus-within .search-icon {
+  opacity: 0.8;
+  color: #8b5cf6;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 200px;
+  background: transparent !important; /* biar transparan dan menyatu */
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0.5rem 0.5rem 0.5rem 0.2rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: "Space Grotesk", sans-serif;
+  outline: none;
+  background-image: none !important; /* hapus icon bawaan, kita pakai icon terpisah */
+  letter-spacing: 0.3px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.06) !important;
+  transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.3;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+
+.search-input:focus {
+  border-bottom-color: #8b5cf6 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Search Clear Button yang lebih elegan */
+.search-clear {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  transition: all 0.25s ease;
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 500;
+}
+
+.search-clear.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.search-clear:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+/* Counter hasil pencarian */
+.search-result-count {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  font-family: "JetBrains Mono", monospace;
+  padding-left: 0.3rem;
+  white-space: nowrap;
+  transition: opacity 0.3s;
+}
+
+.search-result-count.active {
+  opacity: 0.9;
+  color: #8b5cf6;
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .search-wrapper {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .search-input {
+    font-size: 0.85rem;
+    min-width: 100%;
+    padding: 0.4rem 0.2rem;
+  }
+  .search-result-count {
+    font-size: 0.6rem;
+  }
+}
