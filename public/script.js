@@ -130,6 +130,32 @@ function closeAllDropdowns() {
   }
 }
 
+function getSortedSignals() {
+  const allSignals = [
+    ..._allRunning.map((s) => ({ ...s, _type: "running" })),
+    ..._allClosed.map((s) => ({ ...s, _type: "closed" })),
+  ];
+  const priority = {
+    "STRONG BUY": 1,
+    BUY: 2,
+    WATCHLIST: 3,
+    SELL: 4,
+    "STRONG SELL": 5,
+    BSJP: 6,
+  };
+  allSignals.sort((a, b) => {
+    const pa = priority[a.signalType] || 99;
+    const pb = priority[b.signalType] || 99;
+    if (pa !== pb) return pa - pb;
+    if (b.confidenceScore !== a.confidenceScore)
+      return (b.confidenceScore || 0) - (a.confidenceScore || 0);
+    if (a.signalDate && b.signalDate)
+      return b.signalDate.localeCompare(a.signalDate);
+    return (a.stockCode || "").localeCompare(b.stockCode || "");
+  });
+  return allSignals;
+}
+
 function getCategoryIconHtml(category) {
   if (!category) return `<i class="fas fa-tag" style="font-size:0.6rem;"></i>`;
 
