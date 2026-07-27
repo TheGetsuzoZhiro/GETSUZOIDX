@@ -5816,6 +5816,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  const searchBtn = document.getElementById('searchToggleBtn');
+  const searchContainer = document.getElementById('mobileSearchContainer');
+
+  searchBtn.addEventListener('click', () => {
+    searchContainer.classList.toggle('active');
+    
+    // Jika terbuka, otomatis fokus ke input teks
+    if (searchContainer.classList.contains('active')) {
+      searchContainer.querySelector('input').focus();
+    }
+  });
+
   initMobileMenu();
   initPullToRefresh();
   initNotifications();
