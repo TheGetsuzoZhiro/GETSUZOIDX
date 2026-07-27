@@ -120,7 +120,8 @@ function handleTechSearch(input) {
   const clearBtn = document.getElementById("techSearchClear");
   if (clearBtn)
     clearBtn.classList.toggle("visible", _technicalSearchQuery.length > 0);
-  showTechnicalSignalList();
+
+  renderTechnicalListOnly();
 }
 
 function clearTechSearch() {
@@ -129,7 +130,8 @@ function clearTechSearch() {
   if (input) input.value = "";
   const clearBtn = document.getElementById("techSearchClear");
   if (clearBtn) clearBtn.classList.remove("visible");
-  showTechnicalSignalList();
+
+  renderTechnicalListOnly();
 }
 
 function handleNewsSearch(input, category) {
@@ -3617,11 +3619,27 @@ async function showTechnicalSignalList() {
   const container = document.getElementById("technical-signals");
   if (!container) return;
 
+  if (!document.getElementById("techSearchInput")) {
+    container.innerHTML = `
+      <div class="trader-search-container" style="padding: 0 0.25rem;">
+        <div class="trader-search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input type="text" id="techSearchInput" class="trader-search-input" placeholder="Cari sinyal teknikal (kode, nama, setup)..." value="${escapeHtml(_technicalSearchQuery)}" oninput="handleTechSearch(this)">
+          <button class="search-clear-btn ${_technicalSearchQuery ? "visible" : ""}" id="techSearchClear" onclick="clearTechSearch()"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div id="techListContent"></div>
+    `;
+  }
+
+  const listContainer = document.getElementById("techListContent");
+  if (!listContainer) return;
+
   const allSignals = [..._allRunning, ..._allClosed];
   let techSignals = allSignals.filter((s) => s.signalType === "TECHNICAL");
 
   if (!techSignals.length) {
-    container.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal teknikal.</p></div>`;
+    listContainer.innerHTML = `<div class="loading-state"><p>Belum ada data sinyal teknikal.</p></div>`;
     technicalListRendered = false;
     return;
   }
@@ -3672,28 +3690,16 @@ async function showTechnicalSignalList() {
       });
     }
 
-    const searchBarHtml = `
-      <div class="trader-search-container" style="padding: 0 0.25rem;">
-        <div class="trader-search-box">
-          <i class="fas fa-search search-icon"></i>
-          <input type="text" id="techSearchInput" class="trader-search-input" placeholder="Cari sinyal teknikal (kode, nama, setup)..." value="${escapeHtml(_technicalSearchQuery)}" oninput="handleTechSearch(this)">
-          <button class="search-clear-btn ${_technicalSearchQuery ? "visible" : ""}" id="techSearchClear" onclick="clearTechSearch()"><i class="fas fa-times"></i></button>
-        </div>
-      </div>
-    `;
-
     if (!techSignals.length) {
       const msg = _technicalSearchQuery
-        ? `Tidak ada sinyal teknikal ditemukan untuk "${escapeHtml(_technicalSearchQuery)}"`
+        ? `Tidak ada sinyal teknikal ditemukan untuk "<strong>${escapeHtml(_technicalSearchQuery)}</strong>"`
         : currentTechnicalFilter === "today"
           ? "Tidak ada sinyal teknikal hari ini."
           : currentTechnicalFilter === "running"
             ? "Tidak ada posisi teknikal running."
             : "Tidak ada sinyal teknikal waiting.";
 
-      container.innerHTML =
-        searchBarHtml +
-        `<div class="search-no-result"><i class="fas fa-search"></i>${msg}</div>`;
+      listContainer.innerHTML = `<div class="search-no-result"><i class="fas fa-search"></i>${msg}</div>`;
       technicalListRendered = false;
       return;
     }
@@ -3737,9 +3743,7 @@ async function showTechnicalSignalList() {
       arrowIconTotal = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
     }
 
-    let html =
-      searchBarHtml +
-      `
+    let html = `
       <div class="sig-list-header" style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:0.5rem;">
         <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary);">
           TECHNICAL TRACKER LIST
@@ -3754,10 +3758,10 @@ async function showTechnicalSignalList() {
       </div>
     `;
 
-    container.innerHTML = html;
+    listContainer.innerHTML = html;
     technicalListRendered = true;
 
-    container.querySelectorAll(".sig-list-row").forEach((row) => {
+    listContainer.querySelectorAll(".sig-list-row").forEach((row) => {
       row.addEventListener("click", function () {
         const stock = this.dataset.stock;
         const date = this.dataset.date;
@@ -3774,7 +3778,7 @@ async function showTechnicalSignalList() {
     container._techPriceMap = priceMap;
   } catch (err) {
     console.error("Gagal memuat daftar teknikal:", err);
-    container.innerHTML = `<div style="color:#ef4444; padding:1.5rem; text-align:center;">Gagal memuat sinyal teknikal. Silakan coba lagi.</div>`;
+    listContainer.innerHTML = `<div style="color:#ef4444; padding:1.5rem; text-align:center;">Gagal memuat sinyal teknikal. Silakan coba lagi.</div>`;
   }
 }
 
