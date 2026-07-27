@@ -1,5 +1,3 @@
-TOLONG PERBAIKI KDOE INI DIA UNTUK NOTIF TAKE PROFIT DAN NOTIF NEW SIGNLAS NYA DUPLIKAT SEND 2X BUAT AGAR ANTI DUPLIKAT GIMANA APAKAH BISA? BUAT ANTI DUPLIKAT
-
 const axios = require("axios");
 const moment = require("moment-timezone");
 const express = require("express");
