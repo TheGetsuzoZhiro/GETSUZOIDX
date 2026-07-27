@@ -4963,3 +4963,38 @@ body::-webkit-scrollbar {
     margin-top: 0 !important;
   }
 }
+
+/* ===== KHUSUS DESKTOP (TIDAK MENGANGGU TAMPILAN MOBILE) ===== */
+@media (min-width: 1025px) {
+  /* Pastikan area pembungkus konten utama menjadi acuan posisi */
+  .content-wrapper, main, .main-content {
+    position: relative;
+  }
+
+  /* Ubah sticky-header agar mengambang di pojok kanan atas */
+  .sticky-header {
+    position: absolute !important;
+    top: 24px; /* Sesuaikan nilai ini agar pas sejajar dengan teks "Sinyal Hari Ini" */
+    right: 30px; /* Jarak dari tepi kanan */
+    background: transparent !important;
+    border: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    width: auto !important;
+    z-index: 10;
+  }
+
+  /* Sembunyikan elemen kiri mobile jika ada */
+  .sticky-header .mobile-header-left {
+    display: none !important;
+  }
+
+  /* Pastikan market status dan tombol notifikasi berjajar kesamping */
+  .sticky-header .header-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
