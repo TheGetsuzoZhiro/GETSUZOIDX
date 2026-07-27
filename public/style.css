@@ -5031,3 +5031,40 @@ body::-webkit-scrollbar {
     display: block !important;
   }
 }
+
+@media (max-width: 1024px) {
+  /* ===== ATURAN TATA LETAK (TETAP) ===== */
+  .top-navbar, header { 
+    display: flex !important;
+    flex-wrap: wrap !important;
+  }
+
+  .page-header {
+    display: block !important;
+    flex-basis: 100% !important;
+    order: 3 !important;
+    margin-top: 15px !important;
+    padding: 0 10px !important;
+    text-align: left !important;
+  }
+
+  /* ===== PERBAIKAN STICKY HEADER & KONTEN ===== */
+  /* 1. Sticky header menyesuaikan safe area (notch) */
+  .sticky-header {
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px)) !important;
+    padding-left: calc(1rem + env(safe-area-inset-left, 0px)) !important;
+    padding-right: calc(1rem + env(safe-area-inset-right, 0px)) !important;
+    min-height: calc(52px + env(safe-area-inset-top, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 2. Konten utama diberi jarak agar tidak tertutup */
+  .content-wrapper {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 60px + 1.5rem) !important;
+  }
+
+  /* 3. (Opsional) scroll-header juga aman */
+  .scroll-header {
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px)) !important;
+  }
+}
