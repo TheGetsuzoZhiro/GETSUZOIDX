@@ -4991,26 +4991,20 @@ body::-webkit-scrollbar {
   color: #ffffff;
 }
 
-
-/* ======================================================= */
-/* CLEAN & SIMPLE MOBILE HEADER FIX                        */
-/* ======================================================= */
-
-@media (max-width: 768px) {
-  /* Pastikan judul halaman berdiri sendiri di bawah navbar */
-  .page-title {
-    display: block !important;
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-    margin: 0.75rem 0 0.2rem 0 !important;
+@media (max-width: 1024px) {
+  /* Paksa navbar menjadi pembungkus flex dengan baris baru (wrap) */
+  .top-navbar, header { 
+    display: flex !important;
+    flex-wrap: wrap !important;
   }
 
-  /* Subtitle muncul rapi di bawah judul */
-  .page-subtitle {
+  /* Paksa header judul turun penuh 1 baris ke bawah logo */
+  .page-header {
     display: block !important;
-    font-size: 0.75rem !important;
-    color: #71717a !important;
-    margin-bottom: 1rem !important;
+    flex-basis: 100% !important; /* Mengambil 100% lebar layar */
+    order: 3 !important;         /* Posisi ditaruh di urutan paling bawah navbar */
+    margin-top: 15px !important;
+    padding: 0 10px !important;
+    text-align: left !important;  /* Bikin rata kiri */
   }
 }
