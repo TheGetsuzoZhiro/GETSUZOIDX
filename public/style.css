@@ -4870,118 +4870,103 @@ body::-webkit-scrollbar {
   margin-top: 4px !important;
 }
 
-/* ===== SEARCH BAR SUPER MODERN ===== */
-.search-wrapper {
+/* ======================================================= */
+/* WEB TRADER MODERN SMART SEARCH BAR STYLES               */
+/* ======================================================= */
+.trader-search-container {
+  margin: 0.5rem 0 0.75rem 0;
+  width: 100%;
+}
+
+.trader-search-box {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.25rem;
-  padding: 0.25rem 0.1rem;
-  flex-wrap: wrap;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  padding-bottom: 0.75rem;
+  width: 100%;
 }
 
-.search-wrapper .search-icon {
+.trader-search-box .search-icon {
+  position: absolute;
+  left: 0.85rem;
   color: var(--text-secondary);
-  opacity: 0.3;
-  font-size: 0.9rem;
-  transition: opacity 0.3s;
-}
-
-.search-wrapper:focus-within .search-icon {
-  opacity: 0.8;
-  color: #8b5cf6;
-}
-
-.search-input {
-  flex: 1;
-  min-width: 200px;
-  background: transparent !important; /* biar transparan dan menyatu */
-  border: none !important;
-  border-radius: 0 !important;
-  padding: 0.5rem 0.5rem 0.5rem 0.2rem;
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  font-weight: 500;
-  font-family: "Space Grotesk", sans-serif;
-  outline: none;
-  background-image: none !important; /* hapus icon bawaan, kita pakai icon terpisah */
-  letter-spacing: 0.3px;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.06) !important;
-  transition: border-color 0.3s ease, background 0.3s ease;
-}
-
-.search-input::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.3;
-  font-weight: 400;
-  letter-spacing: 0px;
-}
-
-.search-input:focus {
-  border-bottom-color: #8b5cf6 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* Search Clear Button yang lebih elegan */
-.search-clear {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 0.7rem;
-  padding: 0.3rem 0.7rem;
-  border-radius: 20px;
-  transition: all 0.25s ease;
-  opacity: 0;
+  font-size: 0.75rem;
   pointer-events: none;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-weight: 500;
+  transition: color 0.25s ease;
+  z-index: 2;
 }
 
-.search-clear.visible {
-  opacity: 1;
-  pointer-events: auto;
+.trader-search-input {
+  width: 100%;
+  padding: 0.55rem 2.2rem 0.55rem 2.3rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  outline: none;
+  backdrop-filter: blur(8px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.search-clear:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #ef4444;
-}
-
-/* Counter hasil pencarian */
-.search-result-count {
-  font-size: 0.7rem;
+.trader-search-input::placeholder {
   color: var(--text-secondary);
   opacity: 0.5;
-  font-family: "JetBrains Mono", monospace;
-  padding-left: 0.3rem;
-  white-space: nowrap;
-  transition: opacity 0.3s;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
-.search-result-count.active {
-  opacity: 0.9;
+.trader-search-input:focus {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #8b5cf6;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+}
+
+.trader-search-box:focus-within .search-icon {
   color: #8b5cf6;
 }
 
-/* Mobile */
-@media (max-width: 480px) {
-  .search-wrapper {
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
-  .search-input {
-    font-size: 0.85rem;
-    min-width: 100%;
-    padding: 0.4rem 0.2rem;
-  }
-  .search-result-count {
-    font-size: 0.6rem;
-  }
+.search-clear-btn {
+  position: absolute;
+  right: 0.6rem;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  padding: 0.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.search-clear-btn.visible {
+  opacity: 0.8;
+  visibility: visible;
+}
+
+.search-clear-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}
+
+.search-no-result {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  font-size: 0.8rem;
+  width: 100%;
+}
+
+.search-no-result i {
+  font-size: 1.8rem;
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #8b5cf6;
 }
