@@ -4871,30 +4871,27 @@ body::-webkit-scrollbar {
 }
 
 @media (max-width: 1024px) {
-  /* ==============================================
-     1. TATA LETAK DASAR
-     ============================================== */
-  .top-navbar,
-  header {
+  /* ===== TATA LETAK NAVBAR & JUDUL ===== */
+  .top-navbar, header { 
     display: flex !important;
     flex-wrap: wrap !important;
   }
 
-  /* ==============================================
-     2. STICKY HEADER (bagian atas yang tetap)
-     - Logo, menu toggle di kiri
-     - Market status & notif button di kanan
-     ============================================== */
+  .page-header {
+    display: block !important;
+    flex-basis: 100% !important;
+    order: 3 !important;
+    margin-top: 15px !important;
+    padding: 0 10px !important;
+    text-align: left !important;
+  }
+
   .sticky-header {
     display: flex !important;
     align-items: center;
     justify-content: space-between;
-    width: 100% !important;
-    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px)) !important;
-    padding-left: calc(1rem + env(safe-area-inset-left, 0px)) !important;
-    padding-right: calc(1rem + env(safe-area-inset-right, 0px)) !important;
-    min-height: calc(52px + env(safe-area-inset-top, 0px)) !important;
-    box-sizing: border-box !important;
+    /* Menambahkan jarak safe-area di bagian atas */
+    padding: calc(env(safe-area-inset-top, 0px) + 0.5rem) 0.75rem 0.5rem 0.75rem !important;
     background: rgba(5, 5, 5, 0.95);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -4902,134 +4899,67 @@ body::-webkit-scrollbar {
     position: sticky;
     top: 0;
     z-index: 100;
+    min-height: 52px;
+    box-sizing: border-box;
+    gap: 1rem;
   }
 
-  /* Elemen kiri: menu toggle + logo */
   .sticky-header .mobile-header-left {
-    display: flex !important;
+    display: flex;
     align-items: center;
     gap: 0.75rem;
-    flex-shrink: 0;
   }
 
-  /* Elemen kanan: market status + notif button */
   .sticky-header .header-actions {
-    display: flex !important;
+    display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-left: auto !important; /* <-- ini yang mendorong ke kanan */
-    flex-shrink: 0;
+    margin-left: auto;
   }
 
-  /* ==============================================
-     3. SCROLL HEADER (bagian judul yang ikut scroll)
-     - Ukuran judul lebih kecil
-     - Ada space di kanan
-     ============================================== */
+  /* Sembunyikan header-actions di dalam top-bar (lama) */
+  .top-bar .header-actions {
+    display: none !important;
+  }
+
+  /* Buat top-bar ikut scroll (relative) */
+  .top-bar {
+    position: relative !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* ===== SCROLL HEADER (IKUT SCROLL) ===== */
   .scroll-header {
-    padding: 0.25rem 0.75rem !important;
-    margin-top: 0 !important;
-    background: transparent !important;
+    position: relative !important;
+    padding: 0.5rem 0.75rem 0.75rem 0.75rem;
+    background: transparent;
   }
 
   .scroll-header .page-header {
     display: block !important;
     text-align: left !important;
-    padding-right: 1rem !important; /* space ke kanan */
     margin-top: 0 !important;
     padding-top: 0 !important;
   }
 
-  /* Perkecil ukuran judul "Dashboard Overview" */
   .scroll-header .page-title {
-    font-size: 1rem !important; /* dari 1.25rem jadi 1rem */
-    font-weight: 700 !important;
+    font-size: 1.25rem !important;
     margin-top: 0 !important;
-    margin-bottom: 0.1rem !important;
   }
 
   .scroll-header .page-subtitle {
-    font-size: 0.7rem !important; /* dari 0.75rem jadi 0.7rem */
+    font-size: 0.75rem !important;
     margin-top: 0 !important;
   }
 
-  /* ==============================================
-     4. KONTEN UTAMA (beri ruang agar tidak tertutup)
-     ============================================== */
+  /* ===== PADDING KONTEN UTAMA (JARAK DENGAN STICKY HEADER) ===== */
   .content-wrapper {
-    padding-top: calc(
-      env(safe-area-inset-top, 0px) + 56px + 0.5rem
-    ) !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 52px + 0.5rem) !important;
+    /* Ubah 0.5rem sesuai keinginan: 0.25rem (dekat), 0.5rem (sedang), 0.75rem (lega) */
   }
 
-  /* ==============================================
-     5. HILANGKAN header-actions di TOP-BAR (agar tidak dobel)
-     ============================================== */
-  .top-bar {
-    position: relative !important;
-    padding-top: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
-  }
-  .top-bar .header-actions {
-    display: none !important;
-  }
-
-  /* ==============================================
-     6. JUDUL LAMA DI TOP-BAR (sembunyikan)
-     ============================================== */
-  .top-bar .page-header {
-    display: none !important;
-  }
-
-  /* ==============================================
-     7. SIDEBAR (jika ada overlay)
-     ============================================== */
-  .sidebar {
-    transform: translateX(-100%);
-  }
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  .content-area {
-    margin-left: 0;
-  }
-  .menu-toggle {
-    display: flex;
-  }
-  .mobile-header-left {
-    display: flex;
-  }
-  .mobile-brand {
-    display: flex;
-  }
-  .desktop-only {
-    display: none;
-  }
-  .overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(4px);
-    z-index: 999;
-  }
-  .overlay.active {
-    display: block;
-  }
-  .top-bar {
-    padding: 0.8rem 1rem;
-  }
-  .content-wrapper {
-    padding: 1rem;
-  }
-  .market-text {
-    display: none;
-  }
-  .market-status {
-    padding: 0.5rem;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    justify-content: center;
+  /* ===== SISANYA: pastikan elemen lain tidak menambah jarak ===== */
+  .hero-banner {
+    margin-top: 0 !important;
   }
 }
