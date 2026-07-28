@@ -4998,3 +4998,12 @@ body::-webkit-scrollbar {
     gap: 0.75rem;
   }
 }
+
+/* ===== KHUSUS DESKTOP: FOTO BERITA CAROUSEL TAMPIL UTUH TANPA TER-CROP ===== */
+@media (min-width: 1025px) {
+  .detail-news-carousel-container .news-card-image img,
+  .detail-news-carousel-container .carousel-slide-card img:not(.news-stock-logo) {
+    object-fit: contain !important;
+    background: #0a0a0a !important;
+  }
+}
