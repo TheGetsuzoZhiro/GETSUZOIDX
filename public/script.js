@@ -1,15 +1,21 @@
 const apiBase = "/api";
 
 let sseConnection = null;
+let sseReconnectTimer = null;
 const localPrices = new Map();
 
 function connectPriceSSE() {
+  if (sseReconnectTimer) {
+    clearTimeout(sseReconnectTimer);
+    sseReconnectTimer = null;
+  }
+
   if (sseConnection) {
     sseConnection.close();
     sseConnection = null;
   }
 
-  sseConnection = new EventSource("/api/sse/prices");renderTechnicalSignalDetail
+  sseConnection = new EventSource("/api/sse/prices");
 
   sseConnection.onmessage = function (event) {
     try {
@@ -31,7 +37,7 @@ function connectPriceSSE() {
     console.warn("SSE connection lost, reconnecting in 3s...");
     sseConnection.close();
     sseConnection = null;
-    setTimeout(connectPriceSSE, 3000);
+    sseReconnectTimer = setTimeout(connectPriceSSE, 3000);
   };
 
   console.log("✅ SSE price stream connected");
@@ -76,7 +82,7 @@ function isNewNews(publishedAt) {
   const pubDate = new Date(publishedAt);
   const now = new Date();
   const diffInHours = (now - pubDate) / (1000 * 60 * 60);
-  return diffInHours <= 48; // 48 Jam = 2 Hari
+  return diffInHours <= 48;
 }
 
 function getCategoryIconHtml(category) {
@@ -84,48 +90,50 @@ function getCategoryIconHtml(category) {
 
   const c = category.trim().toUpperCase();
 
-  // 1. Buy Back & Backdoor
-  if (c.includes("BUY BACK") || c.includes("BUYBACK") || c.includes("BACKDOOR")) {
+  if (
+    c.includes("BUY BACK") ||
+    c.includes("BUYBACK") ||
+    c.includes("BACKDOOR")
+  ) {
     return `<i class="fas fa-rotate-left" style="color:#3b82f6; font-size:0.65rem;"></i>`;
   }
-  // 2. Akuisisi & Merger
+
   if (c.includes("AKUISISI") || c.includes("MERGER")) {
     return `<i class="fas fa-handshake" style="color:#ec4899; font-size:0.65rem;"></i>`;
   }
-  // 3. Private Placement
+
   if (c.includes("PRIVATE") || c.includes("PLACEMENT")) {
     return `<i class="fas fa-user-plus" style="color:#6366f1; font-size:0.65rem;"></i>`;
   }
-  // 4. Right Issue (KHUSUS PAKAI SVG STOCKBIT)
+
   if (c.includes("RIGHT") || c.includes("RIGHTS")) {
     return `<img src="https://assets.stockbit.com/images/corp_action_event_icon.svg" class="cat-icon-img" alt="Right Issue">`;
   }
-  // 5. Dividen
+
   if (c.includes("DIVIDEN") || c.includes("DIVIDEND")) {
     return `<i class="fas fa-coins" style="color:#f59e0b; font-size:0.65rem;"></i>`;
   }
-  // 6. Laba Rugi
+
   if (c.includes("LABA") || c.includes("RUGI") || c.includes("FINANCIAL")) {
     return `<i class="fas fa-chart-pie" style="color:#10b981; font-size:0.65rem;"></i>`;
   }
-  // 7. Tender Offer
+
   if (c.includes("TENDER") || c.includes("OFFER")) {
     return `<i class="fas fa-gavel" style="color:#eab308; font-size:0.65rem;"></i>`;
   }
-  // 8. Net Sell / Buy Asing
+
   if (c.includes("ASING") || c.includes("NET SELL") || c.includes("NET BUY")) {
     return `<i class="fas fa-chart-line" style="color:#06b6d4; font-size:0.65rem;"></i>`;
   }
-  // 9. Konglomerasi
+
   if (c.includes("KONGLOMERASI") || c.includes("GROUP")) {
     return `<i class="fas fa-building" style="color:#8b5cf6; font-size:0.65rem;"></i>`;
   }
-  // 10. Sentimen Lainnya
+
   if (c.includes("SENTIMEN") || c.includes("LAINNYA")) {
     return `<i class="fas fa-comment-dots" style="color:#9ca3af; font-size:0.65rem;"></i>`;
   }
 
-  // Default untuk kategori di luar daftar di atas
   return `<i class="fas fa-tag" style="font-size:0.6rem; color:#a78bfa;"></i>`;
 }
 
@@ -238,7 +246,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ====== NEWS FUNCTIONS ======
 const CATEGORY_MAP = {
   buyback: "BUY BACK AND BACKDOOR",
   akuisisi: "AKUISISI AND MERGER",
@@ -337,24 +344,20 @@ async function loadNews(category, page = 1) {
 }
 
 function handleImageError(imgElement, newsUrl) {
-  // Jika belum pernah mencoba Microlink
   if (!imgElement.dataset.triedMicrolink) {
     imgElement.dataset.triedMicrolink = "true";
-    
-    // Minta Microlink mengambil Open Graph Image dari halaman berita
+
     imgElement.src = `https://api.microlink.io/?url=${encodeURIComponent(newsUrl)}&embed=image.url`;
   } else {
-    // Jika Microlink juga gagal, ganti elemen <img> dengan placeholder HTML
     const placeholder = document.createElement("div");
     placeholder.className = "news-image-placeholder";
-    
-    // Pertahankan height jika ada (untuk carousel)
+
     if (imgElement.style.height) {
       placeholder.style.height = imgElement.style.height;
     }
-    
+
     placeholder.innerHTML = '<i class="fas fa-newspaper"></i>';
-    
+
     if (imgElement.parentNode) {
       imgElement.parentNode.replaceChild(placeholder, imgElement);
     }
@@ -377,12 +380,11 @@ function renderNewsCard(news) {
   const newRibbonHtml = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
   const stockTags = renderStockTagsHtml(news.stockCodes);
 
-  // MENGGUNAKAN FALLBACK MICROLINK
   const imageHtml = news.imageUrl
     ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="handleImageError(this, '${escapeHtml(news.link)}')">`
     : `<div class="news-image-placeholder"><i class="fas fa-newspaper"></i></div>`;
 
-  const categoryBadgeHtml = news.category 
+  const categoryBadgeHtml = news.category
     ? `<div class="news-category-badge">
          ${getCategoryIconHtml(news.category)}
          <span>${escapeHtml(news.category)}</span>
@@ -426,11 +428,13 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
   `;
 
   try {
-    const res = await fetch(`/api/news?stockCode=${encodeURIComponent(stockCode)}&limit=10`);
+    const res = await fetch(
+      `/api/news?stockCode=${encodeURIComponent(stockCode)}&limit=10`,
+    );
     if (!res.ok) throw new Error("Gagal mengambil berita");
-    
+
     const newsList = await res.json();
-    const data = Array.isArray(newsList) ? newsList : (newsList.data || []);
+    const data = Array.isArray(newsList) ? newsList : newsList.data || [];
 
     if (!data || data.length === 0) {
       container.innerHTML = `
@@ -447,7 +451,7 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
       const news = data[index];
       const isNew = isNewNews(news.publishedAt);
       const newRibbon = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
-      
+
       const published = news.publishedAt ? new Date(news.publishedAt) : null;
       const timeStr = published
         ? published.toLocaleDateString("id-ID", {
@@ -459,7 +463,7 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
           })
         : "";
 
-      const categoryBadge = news.category 
+      const categoryBadge = news.category
         ? `<div class="news-category-badge">
              ${getCategoryIconHtml(news.category)}
              <span>${escapeHtml(news.category)}</span>
@@ -469,8 +473,8 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
       const stockTags = renderStockTagsHtml(news.stockCodes);
 
       const imgHtml = news.imageUrl
-  ? `<img src="${news.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px 6px 0 0;" onerror="handleImageError(this, '${escapeHtml(news.link)}')">`
-  : `<div class="news-image-placeholder" style="height:140px;"><i class="fas fa-newspaper"></i></div>`;
+        ? `<img src="${news.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px 6px 0 0;" onerror="handleImageError(this, '${escapeHtml(news.link)}')">`
+        : `<div class="news-image-placeholder" style="height:140px;"><i class="fas fa-newspaper"></i></div>`;
 
       return `
         <div class="detail-news-carousel-container">
@@ -512,7 +516,7 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
 
     function updateCarousel() {
       container.innerHTML = renderSlide(currentIndex);
-      
+
       const prevBtn = container.querySelector("#carouselPrevBtn");
       const nextBtn = container.querySelector("#carouselNextBtn");
 
@@ -536,14 +540,11 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
     }
 
     updateCarousel();
-
   } catch (err) {
     console.warn("Gagal memuat carousel berita emiten:", err);
     container.innerHTML = "";
   }
 }
-
-// ====== END NEWS FUNCTIONS ======
 
 function buildTagItems(s) {
   const items = [];
@@ -1539,8 +1540,10 @@ function renderStrategyFlowForSignal(s) {
   if (entry > 0 && tp > 0) {
     tpPercent = ((tp - entry) / entry) * 100;
   }
-  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
-  const tpLabel = tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
+  const slLabel =
+    slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tpLabel =
+    tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
 
   const step1Active = true;
   let step1State = "default";
@@ -1619,13 +1622,14 @@ function renderStrategyFlowForSignal(s) {
       <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
         <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
         <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Strategy Flow</span>
-        ${s.status === "RUNNING"
-          ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-          : s.status === "TRAILING"
-            ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-            : s.status === "WAITING_ENTRY"
-              ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
-              : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+        ${
+          s.status === "RUNNING"
+            ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+            : s.status === "TRAILING"
+              ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+              : s.status === "WAITING_ENTRY"
+                ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>`
+                : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
         }
       </div>
       
@@ -1955,11 +1959,12 @@ function renderBsjpDetailContent(
             <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
               <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
               <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">BSJP Strategy Flow</span>
-              ${s.status === "RUNNING"
-                ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
-                : s.status === "TRAILING"
-                  ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
-                  : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
+              ${
+                s.status === "RUNNING"
+                  ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>`
+                  : s.status === "TRAILING"
+                    ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>`
+                    : `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`
               }
             </div>
             ${strategyVisual}
@@ -2434,9 +2439,6 @@ async function renderSignalDetailToContainer(signal, container, onBack) {
 
   container.innerHTML = html;
 
-  // =======================================================
-  // [LANGKAH 2] PANGGIL FUNGSI CAROUSEL
-  // =======================================================
   mountStockNewsCarousel(s.stockCode, "dailyNewsContainer");
 
   const backBtn = container.querySelector("#dailyBackBtn");
@@ -2824,6 +2826,10 @@ function renderSignalRows(signals, priceMap, infoMap) {
 }
 
 function closeAllDropdowns() {
+  if (bsjpRefreshInterval) {
+    clearInterval(bsjpRefreshInterval);
+    bsjpRefreshInterval = null;
+  }
   const signalSub = document.getElementById("signalSubMenu");
   const signalParent = document.getElementById("signalsParent");
   if (signalSub) {
@@ -2861,7 +2867,6 @@ function closeAllDropdowns() {
   }
 }
 
-// ====== NEWS SELECTION ======
 let _isUpdatingNewsHash = false;
 
 function selectNewsCategory(category) {
@@ -2871,8 +2876,14 @@ function selectNewsCategory(category) {
   const pageSubtitle = document.querySelector(".page-subtitle");
   const titleKey = `news-${category}`;
   const titles = {
-    "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
-    "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
+    "news-buyback": {
+      t: "Buy Back & Backdoor",
+      s: "Berita buy back dan backdoor",
+    },
+    "news-akuisisi": {
+      t: "Akuisisi & Merger",
+      s: "Berita akuisisi dan merger",
+    },
     "news-private": { t: "Private Placement", s: "Berita private placement" },
     "news-rightissue": { t: "Right Issue", s: "Berita right issue" },
     "news-dividen": { t: "Dividen", s: "Berita dividen" },
@@ -2891,7 +2902,9 @@ function selectNewsCategory(category) {
     pageSubtitle.innerText = "Kategori berita";
   }
 
-  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document
+    .querySelectorAll(".view")
+    .forEach((v) => v.classList.remove("active"));
   document.getElementById("news").classList.add("active");
   currentTab = "news";
 
@@ -2899,7 +2912,6 @@ function selectNewsCategory(category) {
   window.location.hash = `#${titleKey}`;
   _isUpdatingNewsHash = false;
 
-  // Buka dropdown News
   const parent = document.getElementById("newsParent");
   const sub = document.getElementById("newsSubMenu");
   if (parent && sub) {
@@ -2910,15 +2922,12 @@ function selectNewsCategory(category) {
     if (arrow) arrow.classList.add("open");
   }
 
-  // Muat berita
   const realCategory = CATEGORY_MAP[category] || category.toUpperCase();
   loadNews(realCategory);
 
   document.querySelector(".sidebar")?.classList.remove("open");
   document.querySelector(".overlay")?.classList.remove("active");
 }
-
-// ====== END NEWS SELECTION ======
 
 async function showSignalList() {
   isDetailView = false;
@@ -3142,16 +3151,6 @@ async function showSignalList() {
 
   container.innerHTML = html;
   signalListRendered = true;
-
-  container.querySelectorAll(".sig-list-row").forEach((row) => {
-    row.addEventListener("click", function (e) {
-      const stock = this.dataset.stock;
-      const date = this.dataset.date;
-      if (stock && date) {
-        showSignalDetailByStock(stock, date);
-      }
-    });
-  });
 }
 
 async function updateSignalList() {
@@ -3570,20 +3569,6 @@ async function showTechnicalSignalList() {
 
     container.innerHTML = html;
     technicalListRendered = true;
-
-    container.querySelectorAll(".sig-list-row").forEach((row) => {
-      row.addEventListener("click", function () {
-        const stock = this.dataset.stock;
-        const date = this.dataset.date;
-        const matchSig = allSignals.find(
-          (s) => s.stockCode === stock && s.signalDate === date,
-        );
-        if (matchSig) {
-          isDetailView = true;
-          renderTechnicalSignalDetail(matchSig, container);
-        }
-      });
-    });
 
     container._techPriceMap = priceMap;
   } catch (err) {
@@ -4202,9 +4187,6 @@ function renderTechnicalSignalDetail(s, container) {
 
   container.innerHTML = html;
 
-  // =======================================================
-  // [LANGKAH 2] PANGGIL FUNGSI CAROUSEL
-  // =======================================================
   mountStockNewsCarousel(s.stockCode, "techNewsContainer");
 
   const backBtn = container.querySelector("#techBackBtn");
@@ -4379,9 +4361,9 @@ function renderBrokerFlow(
 }
 
 function renderPatternVisual(patternText, container = document) {
-  const containerEl =
-    container.getElementById("patternVisualContainer") ||
-    container.querySelector("#patternVisualContainer");
+  const containerEl = container.querySelector
+    ? container.querySelector("#patternVisualContainer")
+    : document.getElementById("patternVisualContainer");
   if (!containerEl) return;
   const patterns = {
     "Recovery Uptrend dari Bottom": {
@@ -4622,7 +4604,6 @@ async function fetchSignals(showLoadingIndicator = true) {
       _allClosed = data.closed || [];
       updateTotalSignals(_allRunning, _allClosed);
       updateChartsFromSignals({ running: _allRunning, closed: _allClosed });
-      checkSignalChanges(_allRunning, _allClosed);
     } catch (err) {
       console.warn("Background fetch error:", err);
     } finally {
@@ -4675,7 +4656,6 @@ async function fetchSignals(showLoadingIndicator = true) {
 
     updateTotalSignals(running, closed);
     updateChartsFromSignals({ running, closed });
-    checkSignalChanges(running, closed);
   } catch (err) {
     console.error(err);
 
@@ -4725,227 +4705,6 @@ function updateTotalSignals(running, closed) {
   const total = (running ? running.length : 0) + (closed ? closed.length : 0);
   const el = document.getElementById("totalSignals");
   if (el) el.innerText = total;
-}
-
-function checkSignalChanges(running, closed) {
-  const prevRunningIds = localStorage.getItem("lastRunningIds") || "";
-  const prevClosedIds = localStorage.getItem("lastClosedIds") || "";
-
-  const currentRunningIds = running
-    .map((s) => `${s.stockCode}-${s.signalDate}`)
-    .sort()
-    .join(",");
-  const currentClosedIds = closed
-    .map((s) => `${s.stockCode}-${s.signalDate}`)
-    .sort()
-    .join(",");
-
-  const prevRunningArr = prevRunningIds ? prevRunningIds.split(",") : [];
-  const currentRunningArr = currentRunningIds
-    ? currentRunningIds.split(",")
-    : [];
-
-  const newRunning = currentRunningArr.filter(
-    (id) => !prevRunningArr.includes(id),
-  );
-
-  const today = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
-  }).format(new Date());
-
-  if (newRunning.length > 0) {
-    const newSignals = running.filter((s) =>
-      newRunning.includes(`${s.stockCode}-${s.signalDate}`),
-    );
-
-    const groups = { session1: [], session2: [], bsjp: [], other: [] };
-    newSignals.forEach((s) => {
-      if (s.signalType === "BSJP") {
-        groups.bsjp.push(s);
-      } else {
-        const session = getSessionFromDate(s.signalDate);
-        if (session === 1) groups.session1.push(s);
-        else if (session === 2) groups.session2.push(s);
-        else groups.other.push(s);
-      }
-    });
-
-    function handleGroupNotification(groupName, signals, cacheKey) {
-      if (!signals || signals.length === 0) return;
-      const title = `NEW SIGNALS ${groupName}`;
-      const body = `${signals.length} sinyal saham baru terdeteksi untuk ${groupName}.`;
-      addNotification(title, body, "signal");
-    }
-
-    handleGroupNotification("SESI 1", groups.session1, "sesi1");
-    handleGroupNotification("SESI 2", groups.session2, "sesi2");
-    handleGroupNotification("BSJP", groups.bsjp, "bsjp");
-    handleGroupNotification("LAINNYA", groups.other, "other");
-  }
-
-  const prevClosedArr = prevClosedIds ? prevClosedIds.split(",") : [];
-  const currentClosedArr = currentClosedIds ? currentClosedIds.split(",") : [];
-  const newClosed = currentClosedArr.filter(
-    (id) => !prevClosedArr.includes(id),
-  );
-
-  if (newClosed.length > 0) {
-    const closedSignals = closed.filter((s) =>
-      newClosed.includes(`${s.stockCode}-${s.signalDate}`),
-    );
-
-    closedSignals.forEach((s) => {
-      const status = s.status;
-      const ret = s.returnPercent || 0;
-      const sign = ret >= 0 ? "+" : "";
-      const emoji = status === "TP" ? "✅" : "❌";
-      addNotification(
-        "Signal Closed",
-        `${emoji} ${s.stockCode} Selesai ${sign}${ret.toFixed(2)}%`,
-        "closed",
-      );
-    });
-
-    closedSignals.forEach((s) => {
-      if (s.status === "TP") {
-        const ret = s.returnPercent || 0;
-        const sign = ret >= 0 ? "+" : "";
-        const entry = s.entryPrice || 0;
-        const exit = s.exitPrice || s.tp1 || 0;
-        const title = `✅ TP: ${s.stockCode}`;
-        const body = `${s.stockCode} Take Profit ${sign}${ret.toFixed(2)}% (Entry ${fmtPriceNoRp(entry)} ➔ Exit ${fmtPriceNoRp(exit)})`;
-      }
-    });
-  }
-
-  localStorage.setItem("lastRunningIds", currentRunningIds);
-  localStorage.setItem("lastClosedIds", currentClosedIds);
-}
-
-function renderNotificationModal() {
-  const oldModal = document.getElementById("notificationModal");
-  if (oldModal) oldModal.remove();
-
-  const modal = document.createElement("div");
-  modal.id = "notificationModal";
-  modal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    animation: fadeIn 0.2s ease;
-  `;
-
-  const modalContent = document.createElement("div");
-  modalContent.style.cssText = `
-    background: rgba(30, 30, 40, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    max-width: 500px;
-    width: 100%;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-    overflow: hidden;
-  `;
-
-  const header = document.createElement("div");
-  header.style.cssText = `
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-    flex-shrink: 0;
-  `;
-  header.innerHTML = `
-    <span style="font-weight:600; font-size:1rem; color:var(--text-primary);">
-      <i class="fas fa-bell" style="color:#8b5cf6; margin-right:0.4rem;"></i> Notifications
-      <span style="font-size:0.7rem; color:var(--text-secondary); opacity:0.5;">(${notificationHistory.length})</span>
-    </span>
-    <div style="display:flex; gap:0.5rem;">
-      <button id="markAllReadBtn" style="background:rgba(255,255,255,0.05); border:none; color:var(--text-secondary); cursor:pointer; font-size:0.7rem; padding:0.2rem 0.6rem; border-radius:6px; transition:0.2s;">
-        <i class="fas fa-check-double"></i> Read All
-      </button>
-      <button id="clearNotifBtn" style="background:rgba(239,68,68,0.1); border:none; color:#ef4444; cursor:pointer; font-size:0.7rem; padding:0.2rem 0.6rem; border-radius:6px; transition:0.2s;">
-        <i class="fas fa-trash"></i> Clear
-      </button>
-      <button id="closeNotifModal" style="background:rgba(255,255,255,0.05); border:none; color:var(--text-secondary); cursor:pointer; font-size:0.9rem; padding:0.2rem 0.6rem; border-radius:6px; transition:0.2s;">
-        ✕
-      </button>
-    </div>
-  `;
-
-  const body = document.createElement("div");
-  body.style.cssText = `
-    padding: 0.5rem 1.25rem 1.25rem;
-    overflow-y: auto;
-    flex: 1;
-  `;
-
-  if (notificationHistory.length === 0) {
-    body.innerHTML = `
-      <div style="text-align:center; color:var(--text-secondary); opacity:0.4; padding:2rem 0;">
-        <i class="fas fa-bell-slash" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>
-        No notifications yet
-      </div>
-    `;
-  } else {
-    let listHtml = "";
-    notificationHistory.forEach((n) => {
-      const isRead = n.read ? "opacity:0.5;" : "";
-      listHtml += `
-        <div style="padding:0.6rem 0; border-bottom:1px solid rgba(255,255,255,0.04); ${isRead}">
-          <div style="display:flex; align-items:center; gap:0.4rem;">
-            <span style="font-size:0.7rem; color:${n.type === "closed" ? "#ef4444" : "#8b5cf6"};">${n.type === "closed" ? "💹" : "🔔"}</span>
-            <span style="font-weight:600; font-size:0.8rem; color:var(--text-primary);">${escapeHtml(n.title)}</span>
-          </div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.1rem;">${escapeHtml(n.body)}</div>
-          <div style="font-size:0.55rem; color:var(--text-secondary); opacity:0.4; margin-top:0.2rem;">${n.timestamp}</div>
-        </div>
-      `;
-    });
-    body.innerHTML = listHtml;
-  }
-
-  modalContent.appendChild(header);
-  modalContent.appendChild(body);
-  modal.appendChild(modalContent);
-  document.body.appendChild(modal);
-
-  document.getElementById("closeNotifModal").addEventListener("click", () => {
-    modal.remove();
-    markAllAsRead();
-  });
-
-  document.getElementById("markAllReadBtn").addEventListener("click", () => {
-    markAllAsRead();
-    renderNotificationModal();
-  });
-
-  document.getElementById("clearNotifBtn").addEventListener("click", () => {
-    if (confirm("Clear all notifications?")) {
-      clearAllNotifications();
-      renderNotificationModal();
-    }
-  });
-
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      modal.remove();
-      markAllAsRead();
-    }
-  });
 }
 
 function updateChartsFromSignals(data) {
@@ -5138,8 +4897,6 @@ function updateSignalChart(data) {
   });
 }
 
-// ==================== FUNGSI sendNotification TELAH DIHAPUS ====================
-
 function startPolling() {
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(() => {
@@ -5190,6 +4947,10 @@ function updateClock() {
 }
 
 function initTabs() {
+  if (bsjpRefreshInterval) {
+    clearInterval(bsjpRefreshInterval);
+    bsjpRefreshInterval = null;
+  }
   const btns = document.querySelectorAll(".nav-link, .nav-sub-link");
   const views = document.querySelectorAll(".view");
   const pageTitle = document.querySelector(".page-title");
@@ -5215,10 +4976,16 @@ function initTabs() {
       t: "Technical: Waiting",
       s: "Pending execution setups",
     },
-    // NEWS TITLES
-    "news": { t: "Berita", s: "Kategori berita" },
-    "news-buyback": { t: "Buy Back & Backdoor", s: "Berita buy back dan backdoor" },
-    "news-akuisisi": { t: "Akuisisi & Merger", s: "Berita akuisisi dan merger" },
+
+    news: { t: "Berita", s: "Kategori berita" },
+    "news-buyback": {
+      t: "Buy Back & Backdoor",
+      s: "Berita buy back dan backdoor",
+    },
+    "news-akuisisi": {
+      t: "Akuisisi & Merger",
+      s: "Berita akuisisi dan merger",
+    },
     "news-private": { t: "Private Placement", s: "Berita private placement" },
     "news-rightissue": { t: "Right Issue", s: "Berita right issue" },
     "news-dividen": { t: "Dividen", s: "Berita dividen" },
@@ -5230,7 +4997,12 @@ function initTabs() {
   };
 
   btns.forEach((btn) => {
-    if (btn.id === "signalsParent" || btn.id === "technicalParent" || btn.id === "newsParent") return;
+    if (
+      btn.id === "signalsParent" ||
+      btn.id === "technicalParent" ||
+      btn.id === "newsParent"
+    )
+      return;
 
     btn.addEventListener("click", function (e) {
       e.preventDefault();
@@ -5264,7 +5036,9 @@ function initTabs() {
           selectNewsCategory(category);
           btns.forEach((b) => b.classList.remove("active"));
           this.classList.add("active");
-          document.querySelector('.nav-link[data-tab="news"]')?.classList.add("active");
+          document
+            .querySelector('.nav-link[data-tab="news"]')
+            ?.classList.add("active");
           document.querySelector(".sidebar")?.classList.remove("open");
           document.querySelector(".overlay")?.classList.remove("active");
           return;
@@ -5307,7 +5081,6 @@ function initTabs() {
         fetchSignals(true);
       }
       if (tabId === "news") {
-        // beri placeholder
         const container = document.getElementById("news");
         container.innerHTML = `
           <div class="loading-state" style="text-align:center; padding:2rem;">
@@ -5592,11 +5365,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ============ DROPDOWN NEWS ============
   const newsParent = document.getElementById("newsParent");
   const newsSubMenu = document.getElementById("newsSubMenu");
   if (newsParent && newsSubMenu) {
-    // Pastikan default tertutup
     newsSubMenu.classList.remove("open");
     newsSubMenu.style.display = "none";
     newsParent.classList.remove("open");
@@ -5613,6 +5384,33 @@ document.addEventListener("DOMContentLoaded", () => {
       if (arrow) arrow.classList.toggle("open");
     });
   }
+
+  document
+    .getElementById("technical-signals")
+    ?.addEventListener("click", (e) => {
+      const row = e.target.closest(".sig-list-row");
+      if (!row) return;
+      const { stock, date } = row.dataset;
+      const matchSig = [..._allRunning, ..._allClosed].find(
+        (s) => s.stockCode === stock && s.signalDate === date,
+      );
+      if (matchSig) {
+        isDetailView = true;
+        renderTechnicalSignalDetail(
+          matchSig,
+          document.getElementById("technical-signals"),
+        );
+      }
+    });
+
+  document.getElementById("signals")?.addEventListener("click", (e) => {
+    const row = e.target.closest(".sig-list-row");
+    if (!row) return;
+    const { stock, date } = row.dataset;
+    if (stock && date) {
+      showDailySignalDetail(stock, date);
+    }
+  });
 
   initMobileMenu();
   initPullToRefresh();
