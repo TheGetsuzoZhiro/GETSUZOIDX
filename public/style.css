@@ -5000,63 +5000,32 @@ body::-webkit-scrollbar {
 }
 
 
-/* ===== KHUSUS DESKTOP: FIX CAROUSEL DETAIL (PRESISI 100% SEPERTI MENU NEWS) ===== */
 @media (min-width: 1025px) {
-  /* 1. Container Utama Kartu Carousel */
+  /* 1. Atur lebar kartu carousel agar proporsional */
   .detail-news-carousel-container .carousel-slide-card {
     display: flex !important;
     flex-direction: column !important;
-    max-width: 380px !important;       /* Ukuran pas presisi seperti kartu Menu News */
+    max-width: 380px !important;
     width: 100% !important;
     margin: 0 auto !important;
-    background: var(--glass-bg) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid var(--glass-border) !important;
     border-radius: 16px !important;
-    overflow: hidden !important;        /* Kunci agar pita NEW tidak meluap keluar */
-    position: relative !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    overflow: hidden !important;
   }
 
-  /* 2. Container Foto Berita (Anak Pertama) */
+  /* 2. Kunci area foto (180px) & potong pita meluap dengan overflow: hidden */
+  .detail-news-carousel-container .carousel-slide-card .news-card-image,
   .detail-news-carousel-container .carousel-slide-card > div:first-child {
     width: 100% !important;
-    height: 180px !important;          /* Tinggi standar foto berita */
+    height: 180px !important;
     position: relative !important;
-    overflow: hidden !important;
+    overflow: hidden !important; /* PENTING: Mengunci pita & gambar agar tidak meluap */
     flex-shrink: 0 !important;
-    background: #0a0a0a !important;   /* Menutup area jika foto ber-background putih */
   }
 
-  .detail-news-carousel-container .carousel-slide-card > div:first-child img {
+  /* 3. Atur foto agar pas mengisi box tanpa gepeng/tertarik */
+  .detail-news-carousel-container .carousel-slide-card img {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    border-radius: 0 !important;
-  }
-
-  /* 3. Rapikan Pita "NEW" Agar Kecil & Pas Di Pojok Kanan Atas */
-  .detail-news-carousel-container .ribbon-new-green {
-    position: absolute !important;
-    top: 12px !important;
-    right: -28px !important;
-    transform: rotate(45deg) !important;
-    font-size: 0.55rem !important;
-    padding: 2px 28px !important;
-    z-index: 10 !important;
-  }
-
-  /* 4. Area Teks Berita (Anak Kedua) */
-  .detail-news-carousel-container .carousel-slide-card > div:nth-child(2) {
-    padding: 1.25rem !important;
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-  }
-
-  /* 5. Sembunyikan Box Widget Logo Kedua yang Numpuk di Bawah (Anak Ke-3) */
-  .detail-news-carousel-container .carousel-slide-card > div:nth-child(3),
-  .detail-news-carousel-container .carousel-slide-card > div:last-child:not(:nth-child(2)) {
-    display: none !important;
   }
 }
