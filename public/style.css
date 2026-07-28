@@ -4998,34 +4998,3 @@ body::-webkit-scrollbar {
     gap: 0.75rem;
   }
 }
-
-
-@media (min-width: 1025px) {
-  /* 1. Atur lebar kartu carousel agar proporsional */
-  .detail-news-carousel-container .carousel-slide-card {
-    display: flex !important;
-    flex-direction: column !important;
-    max-width: 380px !important;
-    width: 100% !important;
-    margin: 0 auto !important;
-    border-radius: 16px !important;
-    overflow: hidden !important;
-  }
-
-  /* 2. Kunci area foto (180px) & potong pita meluap dengan overflow: hidden */
-  .detail-news-carousel-container .carousel-slide-card .news-card-image,
-  .detail-news-carousel-container .carousel-slide-card > div:first-child {
-    width: 100% !important;
-    height: 180px !important;
-    position: relative !important;
-    overflow: hidden !important; /* PENTING: Mengunci pita & gambar agar tidak meluap */
-    flex-shrink: 0 !important;
-  }
-
-  /* 3. Atur foto agar pas mengisi box tanpa gepeng/tertarik */
-  .detail-news-carousel-container .carousel-slide-card img {
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important;
-  }
-}
