@@ -5409,7 +5409,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!row) return;
     const { stock, date } = row.dataset;
     if (stock && date) {
-      showDailySignalDetail(stock, date);
+      showSignalDetailByStock(stock, date);
     }
   });
 
