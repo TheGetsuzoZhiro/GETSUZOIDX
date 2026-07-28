@@ -321,7 +321,7 @@ async function loadNews(category, page = 1) {
         <span class="news-count">${pagination.totalItems || data.length} Berita</span>
       </div>
       <div class="news-grid">
-        ${data.map((news) => renderNewsCard(news)).join("")}
+        ${data.map((news) => (news)).join("")}
       </div>
       ${paginationHtml}
     `;
@@ -333,6 +333,31 @@ async function loadNews(category, page = 1) {
         <p>Gagal memuat berita.</p>
       </div>
     `;
+  }
+}
+
+function handleImageError(imgElement, newsUrl) {
+  // Jika belum pernah mencoba Microlink
+  if (!imgElement.dataset.triedMicrolink) {
+    imgElement.dataset.triedMicrolink = "true";
+    
+    // Minta Microlink mengambil Open Graph Image dari halaman berita
+    imgElement.src = `https://api.microlink.io/?url=${encodeURIComponent(newsUrl)}&embed=image.url`;
+  } else {
+    // Jika Microlink juga gagal, ganti elemen <img> dengan placeholder HTML
+    const placeholder = document.createElement("div");
+    placeholder.className = "news-image-placeholder";
+    
+    // Pertahankan height jika ada (untuk carousel)
+    if (imgElement.style.height) {
+      placeholder.style.height = imgElement.style.height;
+    }
+    
+    placeholder.innerHTML = '<i class="fas fa-newspaper"></i>';
+    
+    if (imgElement.parentNode) {
+      imgElement.parentNode.replaceChild(placeholder, imgElement);
+    }
   }
 }
 
@@ -350,11 +375,11 @@ function renderNewsCard(news) {
 
   const isNew = isNewNews(news.publishedAt);
   const newRibbonHtml = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
-
   const stockTags = renderStockTagsHtml(news.stockCodes);
 
+  // MENGGUNAKAN FALLBACK MICROLINK
   const imageHtml = news.imageUrl
-    ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="this.style.display='none'">`
+    ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="handleImageError(this, '${escapeHtml(news.link)}')">`
     : `<div class="news-image-placeholder"><i class="fas fa-newspaper"></i></div>`;
 
   const categoryBadgeHtml = news.category 
@@ -444,8 +469,8 @@ async function mountStockNewsCarousel(stockCode, targetContainerId) {
       const stockTags = renderStockTagsHtml(news.stockCodes);
 
       const imgHtml = news.imageUrl
-        ? `<img src="${news.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px 6px 0 0;" onerror="this.style.display='none'">`
-        : "";
+  ? `<img src="${news.imageUrl}" style="width:100%; height:140px; object-fit:cover; border-radius:6px 6px 0 0;" onerror="handleImageError(this, '${escapeHtml(news.link)}')">`
+  : `<div class="news-image-placeholder" style="height:140px;"><i class="fas fa-newspaper"></i></div>`;
 
       return `
         <div class="detail-news-carousel-container">
