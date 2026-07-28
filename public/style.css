@@ -4998,21 +4998,3 @@ body::-webkit-scrollbar {
     gap: 0.75rem;
   }
 }
-
-/* ===== KHUSUS DESKTOP: FOTO MELEBAR FULL KIRI-KANAN TANPA TER-CROP ===== */
-@media (min-width: 1025px) {
-  /* 1. Kunci container foto agar pita "NEW" tidak meluap */
-  .detail-news-carousel-container .carousel-slide-card .news-card-image,
-  .detail-news-carousel-container .carousel-slide-card > div:first-child {
-    position: relative !important;
-    overflow: hidden !important;
-    height: 180px !important;
-  }
-
-  /* 2. Tarik foto melar penuh (fill) tanpa terpotong/ter-crop */
-  .detail-news-carousel-container .carousel-slide-card img:not(.news-stock-logo) {
-    width: 100% !important;
-    height: 180px !important;
-    object-fit: fill !important; /* Paksa foto melar mengisi penuh area tanpa ada yang ter-crop */
-  }
-}
