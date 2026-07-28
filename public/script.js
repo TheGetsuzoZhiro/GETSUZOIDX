@@ -321,8 +321,8 @@ async function loadNews(category, page = 1) {
         <span class="news-count">${pagination.totalItems || data.length} Berita</span>
       </div>
       <div class="news-grid">
-        ${data.map((news) => (news)).join("")}
-      </div>
+  ${data.map((news) => renderNewsCard(news)).join("")}
+</div>
       ${paginationHtml}
     `;
   } catch (error) {
