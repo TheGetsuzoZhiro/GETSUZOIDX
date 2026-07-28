@@ -4999,11 +4999,23 @@ body::-webkit-scrollbar {
   }
 }
 
-/* ===== KHUSUS DESKTOP: FOTO BERITA CAROUSEL TAMPIL UTUH TANPA TER-CROP ===== */
+/* ===== KHUSUS DESKTOP: FOTO BERITA CAROUSEL FULL LEBAR (KIRI - KANAN) ===== */
 @media (min-width: 1025px) {
+  /* 1. Atur tinggi area wadah foto desktop agar pas & proporsional */
+  .detail-news-carousel-container .news-card-image,
+  .detail-news-carousel-container .carousel-slide-card > div:first-child {
+    width: 100% !important;
+    height: 240px !important; 
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  /* 2. Buat foto memenuhi 100% area dari ujung kiri sampai kanan */
   .detail-news-carousel-container .news-card-image img,
   .detail-news-carousel-container .carousel-slide-card img:not(.news-stock-logo) {
-    object-fit: contain !important;
-    background: #0a0a0a !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important; /* Mengisi penuh area kiri-kanan */
+    object-position: center !important;
   }
 }
