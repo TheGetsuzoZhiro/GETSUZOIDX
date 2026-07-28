@@ -4999,20 +4999,20 @@ body::-webkit-scrollbar {
   }
 }
 
-/* ===== KHUSUS DESKTOP: FOTO FULL KIRI-KANAN TANPA MENGUBAH UKURAN BORDER ===== */
+/* ===== KHUSUS DESKTOP: FOTO MELEBAR FULL KIRI-KANAN TANPA TER-CROP ===== */
 @media (min-width: 1025px) {
-  /* 1. Kunci wadah agar pita hijau tidak meluap keluar */
-  .detail-news-carousel-container .carousel-slide-card,
-  .detail-news-carousel-container .news-card-image {
+  /* 1. Kunci container foto agar pita "NEW" tidak meluap */
+  .detail-news-carousel-container .carousel-slide-card .news-card-image,
+  .detail-news-carousel-container .carousel-slide-card > div:first-child {
     position: relative !important;
     overflow: hidden !important;
+    height: 180px !important;
   }
 
-  /* 2. Tarik foto full kiri-kanan & kunci tingginya agar border kartu tetap di ukuran asli */
+  /* 2. Tarik foto melar penuh (fill) tanpa terpotong/ter-crop */
   .detail-news-carousel-container .carousel-slide-card img:not(.news-stock-logo) {
     width: 100% !important;
-    height: 180px !important;     /* Mengunci tinggi agar border kartu tidak ikut membesar */
-    object-fit: cover !important;  /* Memenuhi area kiri sampai kanan secara presisi */
-    object-position: center !important;
+    height: 180px !important;
+    object-fit: fill !important; /* Paksa foto melar mengisi penuh area tanpa ada yang ter-crop */
   }
 }
