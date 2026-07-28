@@ -4999,23 +4999,20 @@ body::-webkit-scrollbar {
   }
 }
 
-/* ===== KHUSUS DESKTOP: FOTO BERITA CAROUSEL FULL LEBAR (KIRI - KANAN) ===== */
+/* ===== KHUSUS DESKTOP: FOTO FULL KIRI-KANAN TANPA MENGUBAH UKURAN BORDER ===== */
 @media (min-width: 1025px) {
-  /* 1. Atur tinggi area wadah foto desktop agar pas & proporsional */
-  .detail-news-carousel-container .news-card-image,
-  .detail-news-carousel-container .carousel-slide-card > div:first-child {
-    width: 100% !important;
-    height: 240px !important; 
+  /* 1. Kunci wadah agar pita hijau tidak meluap keluar */
+  .detail-news-carousel-container .carousel-slide-card,
+  .detail-news-carousel-container .news-card-image {
     position: relative !important;
     overflow: hidden !important;
   }
 
-  /* 2. Buat foto memenuhi 100% area dari ujung kiri sampai kanan */
-  .detail-news-carousel-container .news-card-image img,
+  /* 2. Tarik foto full kiri-kanan & kunci tingginya agar border kartu tetap di ukuran asli */
   .detail-news-carousel-container .carousel-slide-card img:not(.news-stock-logo) {
     width: 100% !important;
-    height: 100% !important;
-    object-fit: cover !important; /* Mengisi penuh area kiri-kanan */
+    height: 180px !important;     /* Mengunci tinggi agar border kartu tidak ikut membesar */
+    object-fit: cover !important;  /* Memenuhi area kiri sampai kanan secara presisi */
     object-position: center !important;
   }
 }
