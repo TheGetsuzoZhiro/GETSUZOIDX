@@ -380,9 +380,10 @@ function renderNewsCard(news) {
   const newRibbonHtml = isNew ? `<div class="ribbon-new-green">NEW</div>` : "";
   const stockTags = renderStockTagsHtml(news.stockCodes);
 
-  const imageHtml = news.imageUrl
-    ? `<img src="${news.imageUrl}" alt="${escapeHtml(news.title)}" class="news-image" onerror="handleImageError(this, '${escapeHtml(news.link)}')">`
-    : `<div class="news-image-placeholder"><i class="fas fa-newspaper"></i></div>`;
+  const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(news.link)}&embed=image.url`;
+const imgSrc = news.imageUrl || microlinkUrl;
+
+const imageHtml = `<img src="${imgSrc}" alt="${escapeHtml(news.title)}" class="news-image" loading="lazy" onerror="handleImageError(this, '${escapeHtml(news.link)}')">`;
 
   const categoryBadgeHtml = news.category
     ? `<div class="news-category-badge">
