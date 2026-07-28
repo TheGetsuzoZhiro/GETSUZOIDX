@@ -303,7 +303,17 @@ async function loadNews(category, page = 1) {
         </button>
       `;
 
-      for (let i = 1; i <= pagination.totalPages; i++) {
+      // Hitung range 5 angka dinamis
+      const maxVisible = 5;
+      let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+      let endPage = startPage + maxVisible - 1;
+
+      if (endPage > pagination.totalPages) {
+        endPage = pagination.totalPages;
+        startPage = Math.max(1, endPage - maxVisible + 1);
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
         paginationHtml += `
           <button class="page-btn ${i === page ? "active" : ""}" onclick="loadNews('${category}', ${i})">
             ${i}
@@ -328,8 +338,8 @@ async function loadNews(category, page = 1) {
         <span class="news-count">${pagination.totalItems || data.length} Berita</span>
       </div>
       <div class="news-grid">
-  ${data.map((news) => renderNewsCard(news)).join("")}
-</div>
+        ${data.map((news) => renderNewsCard(news)).join("")}
+      </div>
       ${paginationHtml}
     `;
   } catch (error) {
