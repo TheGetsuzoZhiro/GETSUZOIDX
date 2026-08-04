@@ -1,4 +1,14 @@
-import { HIT_SVG, MISSED_SVG, HIT_SVG_ROW, MISSED_SVG_ROW } from "./config.js";
+// js/signals.js
+// ============================================================
+// MODULE SIGNALS - Semua logika terkait sinyal trading
+// ============================================================
+
+import {
+  HIT_SVG,
+  MISSED_SVG,
+  HIT_SVG_ROW,
+  MISSED_SVG_ROW,
+} from "./config.js";
 import {
   escapeHtml,
   fmtPrice,
@@ -8,13 +18,26 @@ import {
   getColorFromCode,
   getSessionFromDate,
   getDateRangeText,
+  triggerHaptic,
+  showLoading,
 } from "./utils.js";
-import { fetchSignalsFromAPI, fetchStockPrice, fetchStockInfo } from "./api.js";
-import { localPrices } from "./sse.js";
+import {
+  fetchSignalsFromAPI,
+  fetchStockPrice,
+  fetchStockInfo,
+} from "./api.js";
+import { localPrices, onPriceUpdate } from "./sse.js";
 import { mountStockNewsCarousel } from "./news.js";
-import { renderDailyReturnChart, renderDailyWinRateChart, renderDailySignalChart, renderDetailCharts } from "./charts.js";
+import {
+  renderDailyReturnChart,
+  renderDailyWinRateChart,
+  renderDailySignalChart,
+  renderDetailCharts,
+} from "./charts.js";
 
-// ===== SIGNALS STATE =====
+// ============================
+// STATE
+// ============================
 
 export let _allRunning = [];
 export let _allClosed = [];
@@ -34,8 +57,12 @@ export let currentFilterState = {
 };
 export let currentDateRange = null;
 let _fetchingSignals = false;
+let returnChartInstance = null;
+const infoCache = new Map(); // untuk cache longName
 
-// ===== SIGNAL UTILITIES =====
+// ============================
+// UTILITY FUNCTIONS (khusus sinyal)
+// ============================
 
 export function getSortedSignals() {
   const allSignals = [
@@ -54,8 +81,10 @@ export function getSortedSignals() {
     const pa = priority[a.signalType] || 99;
     const pb = priority[b.signalType] || 99;
     if (pa !== pb) return pa - pb;
-    if (b.confidenceScore !== a.confidenceScore) return (b.confidenceScore || 0) - (a.confidenceScore || 0);
-    if (a.signalDate && b.signalDate) return b.signalDate.localeCompare(a.signalDate);
+    if (b.confidenceScore !== a.confidenceScore)
+      return (b.confidenceScore || 0) - (a.confidenceScore || 0);
+    if (a.signalDate && b.signalDate)
+      return b.signalDate.localeCompare(a.signalDate);
     return (a.stockCode || "").localeCompare(b.stockCode || "");
   });
   return allSignals;
@@ -66,8 +95,6 @@ export function buildTagItems(s) {
   const chart = (s.patternChart || "").toLowerCase();
   const candle = (s.patternCandle || "").toLowerCase();
   const signalType = (s.signalType || "").toUpperCase();
-  const isBuy = signalType.includes("BUY");
-  const isSell = signalType.includes("SELL");
 
   if (chart.includes("breakout")) items.push({ label: "Breakout", icon: "fa-arrow-right-to-bracket" });
   else if (chart.includes("pullback")) items.push({ label: "Pullback", icon: "fa-arrow-turn-down" });
@@ -123,7 +150,10 @@ export function renderTagHtml(s, inline = false) {
   const cls = inline ? "emit-tag-group inline" : "emit-tag-group";
   return items.length
     ? `<div class="${cls}">${items
-        .map((t) => `<span class="emit-tag"><i class="fa-solid ${t.icon}" style="margin-right:3px; font-size:0.65rem;"></i>${t.label}</span>`)
+        .map(
+          (t) =>
+            `<span class="emit-tag"><i class="fa-solid ${t.icon}" style="margin-right:3px; font-size:0.65rem;"></i>${t.label}</span>`,
+        )
         .join("")}</div>`
     : "";
 }
@@ -171,8 +201,12 @@ export function aggregateSignals(signals) {
     positions: [],
   };
 
-  const closed = signals.filter((s) => s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS");
-  const runningSignals = signals.filter((s) => s.status === "RUNNING" || s.status === "TRAILING");
+  const closed = signals.filter(
+    (s) => s.status === "TP" || s.status === "SL" || s.status === "STOP LOSS"
+  );
+  const runningSignals = signals.filter(
+    (s) => s.status === "RUNNING" || s.status === "TRAILING"
+  );
 
   result.tp = closed.filter((s) => s.status === "TP").length;
   result.sl = closed.filter((s) => s.status === "SL" || s.status === "STOP LOSS").length;
@@ -243,7 +277,9 @@ export function getDateRangeFromFilterState() {
   return { start: startStr, end: endStr };
 }
 
-// ===== SIGNAL RENDER FUNCTIONS =====
+// ============================
+// RENDER SIGNAL ROWS (digunakan di list)
+// ============================
 
 export function renderSignalRows(signals, priceMap, infoMap) {
   let rows = "";
@@ -365,6 +401,20 @@ export function renderSignalRows(signals, priceMap, infoMap) {
       ${signalType.replace("STRONG ", "S.")}
     </span>`;
 
+    // Confidence score badge (diperkecil)
+    const confidence = s.confidenceScore || 0;
+    const hasDetails = s.confidenceDetails && s.confidenceDetails.length > 0;
+    const isNoData = confidence === 0 && !hasDetails;
+    let confDisplay = "";
+    if (!isNoData) {
+      let scoreClass = "normal";
+      if (confidence >= 8) scoreClass = "high";
+      else if (confidence >= 5) scoreClass = "normal";
+      else if (confidence >= 3) scoreClass = "low";
+      else scoreClass = "skip";
+      confDisplay = `<span class="conf-score-badge" data-score="${scoreClass}">${confidence}/10</span>`;
+    }
+
     rows += `<div class="sig-list-row" data-stock="${s.stockCode}" data-date="${s.signalDate}">
       ${logoHtml}
       <div class="sig-list-name">
@@ -373,6 +423,7 @@ export function renderSignalRows(signals, priceMap, infoMap) {
             <div class="sig-stock-top">
               <span class="sig-stock-code">${escapeHtml(s.stockCode)}</span>
               ${typeBadge}
+              ${confDisplay}
             </div>
             <div class="sig-stock-longname">${escapeHtml(info.longName)}</div>
           </div>
@@ -390,7 +441,9 @@ export function renderSignalRows(signals, priceMap, infoMap) {
   return rows;
 }
 
-// ===== MAIN SIGNAL FETCH =====
+// ============================
+// FETCH SIGNALS (utama)
+// ============================
 
 export async function fetchSignals(showLoadingIndicator = true) {
   if (_fetchingSignals) {
@@ -470,7 +523,7 @@ export async function fetchSignals(showLoadingIndicator = true) {
               <line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
             <p style="color:#ef4444; font-weight:500; margin:0;">Gagal memuat sinyal</p>
-            <button onclick="fetchSignals()" class="retry-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:0.6rem 1.2rem;border-radius:8px;color:var(--text-primary);cursor:pointer;display:flex;align-items:center;gap:0.5rem;transition:0.2s;">
+            <button onclick="window.dispatchEvent(new CustomEvent('retry-fetch'))" class="retry-btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:0.6rem 1.2rem;border-radius:8px;color:var(--text-primary);cursor:pointer;display:flex;align-items:center;gap:0.5rem;transition:0.2s;">
               Coba Lagi
             </button>
           </div>
@@ -490,7 +543,9 @@ function updateTotalSignals(running, closed) {
   if (el) el.innerText = total;
 }
 
-// ===== SIGNAL LIST =====
+// ============================
+// SIGNAL LIST (biasa)
+// ============================
 
 export async function showSignalList() {
   isDetailView = false;
@@ -734,7 +789,9 @@ export async function updateSignalList() {
   });
 }
 
-// ===== SIGNAL FILTER SELECTION =====
+// ============================
+// FILTER SELECTION
+// ============================
 
 export function selectSignalFilter(filter) {
   isDetailView = false;
@@ -772,7 +829,9 @@ export function selectSignalFilter(filter) {
   }
 }
 
-// ===== TECHNICAL SIGNALS =====
+// ============================
+// TECHNICAL SIGNALS
+// ============================
 
 export function selectTechnicalFilter(filter) {
   isDetailView = false;
@@ -1120,7 +1179,9 @@ export async function updateTechnicalSignalList() {
   }
 }
 
-// ===== SIGNAL DETAIL =====
+// ============================
+// TECHNICAL SIGNAL DETAIL
+// ============================
 
 export function renderTechnicalSignalDetail(s, container) {
   isDetailView = true;
@@ -1188,7 +1249,9 @@ export function renderTechnicalSignalDetail(s, container) {
   const logoHtml = `<span class="detail-logo-text"><img src="${logoUrl}" alt="${s.stockCode}" style="width:50px; height:64px; object-fit:contain; border:none; background:transparent; display:block;" onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"><span style="display:none; width:64px; height:64px; line-height:64px; text-align:center; background:${bgColor}; color:#fff; font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace;">${s.stockCode.substring(0, 2)}</span></span>`;
 
   let longName = s.stockCode;
-  // longName will be loaded later
+  if (infoCache.has(s.stockCode)) {
+    longName = infoCache.get(s.stockCode).data.longName || s.stockCode;
+  }
 
   const entry = s.entryPrice || 0;
   const sl = s.sl || 0;
@@ -1445,7 +1508,7 @@ export function renderTechnicalSignalDetail(s, container) {
           <div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;">
             <div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;">
               <span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary);">${escapeHtml(s.stockCode)}</span>
-              <span style="font-size:0.8rem; color:var(--text-secondary); opacity:0.7;" id="techStockLongName">${escapeHtml(s.stockCode)}</span>
+              <span style="font-size:0.8rem; color:var(--text-secondary); opacity:0.7;" id="techStockLongName">${escapeHtml(longName)}</span>
             </div>
             <div style="grid-column:1; grid-row:2; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
               <span style="font-family:'JetBrains Mono'; font-weight:600; font-size:1rem; color:var(--text-primary); display:flex; align-items:center;">${priceArrow} ${displayPrice}</span>
@@ -1479,11 +1542,13 @@ export function renderTechnicalSignalDetail(s, container) {
 
   container.innerHTML = html;
 
-  // Load long name
-  fetchStockInfo(s.stockCode).then(info => {
-    const nameEl = document.getElementById("techStockLongName");
-    if (nameEl && info) nameEl.textContent = info.longName || s.stockCode;
-  });
+  // Load long name if not cached
+  if (!infoCache.has(s.stockCode)) {
+    fetchStockInfo(s.stockCode).then(info => {
+      const nameEl = document.getElementById("techStockLongName");
+      if (nameEl && info) nameEl.textContent = info.longName || s.stockCode;
+    });
+  }
 
   mountStockNewsCarousel(s.stockCode, "techNewsContainer");
 
@@ -1498,7 +1563,9 @@ export function renderTechnicalSignalDetail(s, container) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ===== BSJP DETAIL =====
+// ============================
+// BSJP DETAIL
+// ============================
 
 export function renderBsjpDetail(s, container, onBack) {
   let stockInfo = { longName: s.stockCode, logoUrl: null };
@@ -1805,7 +1872,571 @@ function renderBsjpDetailContent(s, container, onBack, currentPrice, stockInfo) 
   }
 }
 
-// ===== DAILY =====
+// ============================
+// RENDER SIGNAL DETAIL (umum)
+// ============================
+
+export function renderSignalDetailToContainer(signal, container, onBack) {
+  const s = signal;
+
+  if (s.signalType === "BSJP") {
+    renderBsjpDetail(s, container, onBack);
+    return;
+  }
+
+  let stockInfo = { longName: s.stockCode, logoUrl: null };
+  let currentPrice = null;
+
+  Promise.all([
+    fetchStockInfo(s.stockCode).catch(() => ({ longName: s.stockCode })),
+    fetchStockPrice(s.stockCode).catch(() => null),
+  ]).then(([info, price]) => {
+    if (info) stockInfo = info;
+    currentPrice = price;
+    renderDetailContent(s, container, onBack, currentPrice, stockInfo);
+  }).catch(() => {
+    renderDetailContent(s, container, onBack, null, stockInfo);
+  });
+}
+
+function renderDetailContent(s, container, onBack, currentPrice, stockInfo) {
+  let gainAbs = 0, gainPct = 0, gainStr = "", gainColor = "", arrowIcon = "";
+  let isRunning = (s.status === "RUNNING" || s.status === "TRAILING") && s.entryPrice && currentPrice;
+  if (isRunning) {
+    gainAbs = currentPrice - s.entryPrice;
+    gainPct = (gainAbs / s.entryPrice) * 100;
+    const absGain = Math.abs(gainAbs).toFixed(0);
+    const absPct = Math.abs(gainPct).toFixed(2);
+    if (Math.abs(gainAbs) < 0.01) {
+      gainColor = "var(--text-secondary)";
+      gainStr = "0 (0.00%)";
+    } else if (gainAbs > 0) {
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+      gainColor = "#10b981";
+      gainStr = `${arrowIcon} ${absGain} (+${absPct}%)`;
+    } else {
+      arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+      gainColor = "#ef4444";
+      gainStr = `${arrowIcon} ${absGain} (-${absPct}%)`;
+    }
+  } else if ((s.status === "RUNNING" || s.status === "TRAILING") && !currentPrice) {
+    gainStr = "—";
+    gainColor = "var(--text-secondary)";
+  } else {
+    if (s.status === "TP" || s.status === "SL") {
+      const ret = s.returnPercent || 0;
+      const sign = ret >= 0 ? "+" : "";
+      gainStr = `${sign}${ret.toFixed(2)}%`;
+      gainColor = ret >= 0 ? "#10b981" : "#ef4444";
+      if (ret > 0.01) arrowIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:0.7rem; color:#10b981;"></i>`;
+      else if (ret < -0.01) arrowIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:0.7rem; color:#ef4444;"></i>`;
+    } else {
+      gainStr = "—";
+      gainColor = "var(--text-secondary)";
+    }
+  }
+
+  let displayPrice = "—", priceArrow = "";
+  if (s.status === "TP" && s.exitPrice) {
+    displayPrice = Number(s.exitPrice).toLocaleString("id-ID");
+    const ret = s.returnPercent || 0;
+    if (ret > 0) priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    else if (ret < 0) priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+  } else if (s.status === "SL" && s.exitPrice) {
+    displayPrice = Number(s.exitPrice).toLocaleString("id-ID");
+    const ret = s.returnPercent || 0;
+    if (ret > 0) priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    else if (ret < 0) priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+  } else if (currentPrice != null) {
+    displayPrice = Number(currentPrice).toLocaleString("id-ID");
+    if (gainAbs > 0) priceArrow = `<i class="fa-solid fa-arrow-up" style="color:#10b981; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+    else if (gainAbs < 0) priceArrow = `<i class="fa-solid fa-arrow-down" style="color:#ef4444; font-size:0.8rem; margin-right:0.2rem;"></i>`;
+  }
+
+  let statusStamp = "";
+  if (s.status === "TP") statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${HIT_SVG}</span>`;
+  else if (s.status === "SL" || s.status === "STOP LOSS") statusStamp = `<span class="sig-status-stamp" style="width:36px; height:36px; display:inline-block; flex-shrink:0;">${MISSED_SVG}</span>`;
+
+  const logoUrl = `https://assets.stockbit.com/logos/companies/${s.stockCode}.png`;
+  const parqetUrl = `https://assets.parqet.com/logos/symbol/${s.stockCode}.png`;
+  const bgColor = getColorFromCode(s.stockCode);
+  const logoHtml = `<span class="detail-logo-text"><img src="${logoUrl}" alt="${s.stockCode}" style="width:50px; height:64px; object-fit:contain; border:none; background:transparent; display:block;" onerror="this.onerror=null; this.src='${parqetUrl}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='inline-block'; }"><span style="display:none; width:64px; height:64px; line-height:64px; text-align:center; background:${bgColor}; color:#fff; font-size:1.1rem; font-weight:700; font-family:'JetBrains Mono',monospace;">${s.stockCode.substring(0, 2)}</span></span>`;
+  const tagHtml = renderTagHtml(s, false);
+
+  const signalLabel = s.signalType || "WATCHLIST";
+  const upperLabel = signalLabel.toUpperCase();
+  const isStrongBuy = upperLabel.includes("STRONG BUY");
+  const isStrongSell = upperLabel.includes("STRONG SELL");
+  const isBuy = upperLabel.includes("BUY") && !isStrongBuy;
+  const isSell = upperLabel.includes("SELL") && !isStrongSell;
+  let signalIcon, signalBg, signalBorder, signalLabelText, signalDesc;
+  if (isStrongBuy) {
+    signalIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:28px; color:#fbbf24;"></i>`;
+    signalBg = "linear-gradient(135deg, #fbbf2415, #fbbf2405)";
+    signalBorder = "#fbbf24";
+    signalLabelText = "STRONG BUY";
+    signalDesc = "Strong Bullish";
+  } else if (isStrongSell) {
+    signalIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:28px; color:#dc2626;"></i>`;
+    signalBg = "linear-gradient(135deg, #dc262615, #dc262605)";
+    signalBorder = "#dc2626";
+    signalLabelText = "STRONG SELL";
+    signalDesc = "Strong Bearish";
+  } else if (isBuy) {
+    signalIcon = `<i class="fa-solid fa-arrow-trend-up" style="font-size:28px;"></i>`;
+    signalBg = "linear-gradient(135deg, #10b98115, #10b98105)";
+    signalBorder = "#10b981";
+    signalLabelText = "BUY";
+    signalDesc = "Bullish";
+  } else if (isSell) {
+    signalIcon = `<i class="fa-solid fa-arrow-trend-down" style="font-size:28px;"></i>`;
+    signalBg = "linear-gradient(135deg, #ef444415, #ef444405)";
+    signalBorder = "#ef4444";
+    signalLabelText = "SELL";
+    signalDesc = "Bearish";
+  } else {
+    signalIcon = `<i class="fa-regular fa-eye" style="font-size:26px;"></i>`;
+    signalBg = "linear-gradient(135deg, #71717a15, #71717a05)";
+    signalBorder = "#71717a";
+    signalLabelText = "WATCH";
+    signalDesc = "Monitor";
+  }
+
+  const score = s.confidenceScore || 0;
+  const hasDetails = s.confidenceDetails && s.confidenceDetails.length > 0;
+  const isNoData = score === 0 && !hasDetails;
+  const maxScore = 10;
+  const pct = (score / maxScore) * 100;
+  const circumference = 2 * Math.PI * 40;
+  const offset = circumference - (pct / 100) * circumference;
+
+  let confColor, confLabel, confTier, confDesc, confIcon;
+  if (isNoData) {
+    confColor = "#71717a";
+    confLabel = "N/A";
+    confTier = "No Data";
+    confDesc = "Data confidence tidak tersedia.";
+    confIcon = `<i class="fa-regular fa-circle-question" style="color:#71717a; font-size:14px; margin-right:4px;"></i>`;
+  } else if (score >= 8) {
+    confColor = "#10b981";
+    confLabel = "HIGH";
+    confTier = "High Conviction";
+    confDesc = "Setup sangat kuat. Teknikal solid + institusi aktif akumulasi.";
+    confIcon = `<i class="fa-solid fa-star" style="color:#fbbf24; font-size:14px; margin-right:4px;"></i>`;
+  } else if (score >= 5) {
+    confColor = "#ffffff";
+    confLabel = "NORMAL";
+    confTier = "Normal";
+    confDesc = "Setup cukup baik dengan beberapa faktor pendukung.";
+    confIcon = `<i class="fa-regular fa-circle-check" style="color:#a1a1aa; font-size:14px; margin-right:4px;"></i>`;
+  } else if (score >= 3) {
+    confColor = "#f97316";
+    confLabel = "LOW";
+    confTier = "Low";
+    confDesc = "Faktor pendukung minim. Butuh konfirmasi tambahan.";
+    confIcon = `<i class="fa-regular fa-circle" style="color:#f97316; font-size:14px; margin-right:4px;"></i>`;
+  } else {
+    confColor = "#ef4444";
+    confLabel = "RISK";
+    confTier = "Risk";
+    confDesc = "Tidak memenuhi standar minimum — difilter otomatis oleh engine.";
+    confIcon = `<i class="fa-regular fa-circle-xmark" style="color:#ef4444; font-size:14px; margin-right:4px;"></i>`;
+  }
+
+  let breakdownList = "";
+  if (s.confidenceDetails && s.confidenceDetails.length > 0) {
+    breakdownList = `<div style="margin-top:0.75rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:0.75rem;">`;
+    s.confidenceDetails.forEach((d) => {
+      const isPos = d.trim().startsWith("+");
+      const icon = isPos ? `<i class="fa-solid fa-circle-check" style="color:#10b981; font-size:14px;"></i>` : `<i class="fa-solid fa-circle-xmark" style="color:#ef4444; font-size:14px;"></i>`;
+      breakdownList += `<div style="display:flex; align-items:center; font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.35rem; gap:0.5rem;"><span style="opacity:0.8; flex-shrink:0; width:18px; text-align:center;">${icon}</span><span>${escapeHtml(d.trim())}</span></div>`;
+    });
+    breakdownList += `</div>`;
+  }
+
+  const confVisual = `<div class="pro-card" style="position:relative;"><div class="pro-card-title"><i class="fa-solid fa-gauge-high" style="font-size:16px; margin-right:6px;"></i> AI Confidence</div><div style="display:flex; align-items:center; gap:1.5rem; padding:0.25rem 0 0.25rem 0;"><div style="position:relative; width:110px; height:110px; flex-shrink:0;"><svg viewBox="0 0 100 100" style="transform:rotate(-90deg); width:100%; height:100%;"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/><defs><linearGradient id="confGrad_${Date.now()}" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="${score >= 8 ? "#10b981" : score >= 5 ? "#a1a1aa" : score >= 3 ? "#f97316" : "#ef4444"}" /><stop offset="100%" stop-color="${score >= 8 ? "#34d399" : score >= 5 ? "#e4e4e7" : score >= 3 ? "#fb923c" : "#dc2626"}" /></linearGradient></defs><circle cx="50" cy="50" r="40" fill="none" stroke="url(#confGrad_${Date.now()})" stroke-width="8" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round" style="transition: stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);" /></svg><div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:'JetBrains Mono'; font-weight:700; font-size:1.6rem; color:${confColor}; text-align:center; line-height:1;">${score}<span style="font-size:0.5rem; color:var(--text-secondary); font-weight:400;">/10</span></div></div><div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;"><span style="font-family:'JetBrains Mono'; font-weight:600; font-size:1rem; color:${confColor}; display:flex; align-items:center;">${confIcon} ${confLabel}</span><span style="font-size:0.5rem; background:${confColor}15; color:${confColor}; padding:1px 8px; border-radius:12px; border:1px solid ${confColor}20; font-weight:500;">${confTier}</span></div><div style="font-size:0.65rem; color:var(--text-secondary); margin-top:0.3rem; opacity:0.75; line-height:1.3;">${confDesc}</div>${!isNoData && score < 3 ? `<div style="font-size:0.55rem; color:#ef4444; margin-top:0.2rem; opacity:0.6;"><i class="fa-solid fa-triangle-exclamation"></i> Sinyal tidak dikirim — difilter otomatis</div>` : ""}</div></div>${breakdownList}</div>`;
+
+  let betaVisual = "";
+  if (s.beta != null) {
+    const betaData = [
+      { range: "< 0.5 (Defensif)", wr: "50.0%", ev: "-0.09%" },
+      { range: "0.5-0.8 (Low)", wr: "73.6%", ev: "+2.02%" },
+      { range: "0.8-1.2 (Market)", wr: "75.4%", ev: "+1.83%" },
+      { range: "1.2-1.8 (High)", wr: "66.7%", ev: "+1.09%" },
+      { range: "> 1.8 (Very High)", wr: "81.8%", ev: "+4.85%" },
+    ];
+    let rangeIndex = 0, betaLabel = "";
+    if (s.beta < 0.5) { rangeIndex = 0; betaLabel = "Defensif"; }
+    else if (s.beta < 0.8) { rangeIndex = 1; betaLabel = "Low"; }
+    else if (s.beta < 1.2) { rangeIndex = 2; betaLabel = "Market"; }
+    else if (s.beta < 1.8) { rangeIndex = 3; betaLabel = "High"; }
+    else { rangeIndex = 4; betaLabel = "Very High"; }
+    const isHighVol = s.beta >= 1.8, isLowVol = s.beta < 0.5, isOptimal = s.beta >= 0.8 && s.beta <= 2.0;
+    let barColor = "#f59e0b";
+    if (isHighVol) barColor = "#10b981";
+    else if (isLowVol) barColor = "#ef4444";
+    else if (isOptimal) barColor = "#3b82f6";
+    let recommendation = "";
+    if (isHighVol) recommendation = "Beta > 1.8 → Volatilitas tinggi, pergerakan cepat ke target. Cocok untuk swing dengan partial take profit 50-70%.";
+    else if (isOptimal) recommendation = "Beta 0.8–2.0 → Range optimal untuk swing trade. Prioritaskan jika Confidence Score ≥ 8.";
+    else if (isLowVol) recommendation = "Beta < 0.5 → Terlalu lambat untuk swing. Lebih baik dijadikan watchlist jangka menengah atau skip.";
+    else recommendation = "Beta di luar sweet spot. Pertimbangkan risk-reward dengan cermat, atau tunggu konfirmasi tambahan.";
+    let tableRows = betaData.map((row, idx) =>
+      `<tr style="${idx === rangeIndex ? "background:rgba(16,185,129,0.08); border-left:2px solid #10b981;" : ""}"><td style="padding:2px 4px; font-size:0.6rem; color:var(--text-secondary);">${row.range}</td><td style="padding:2px 4px; font-size:0.6rem; text-align:center; font-weight:600; ${row.wr === "81.8%" ? "color:#10b981;" : ""}">${row.wr}</td><td style="padding:2px 4px; font-size:0.6rem; text-align:center; ${row.ev.includes("+") ? "color:#10b981;" : "color:#ef4444;"}">${row.ev}</td></tr>`
+    ).join("");
+    betaVisual = `<div class="pro-card"><div class="pro-card-title"><i class="fa-solid fa-chart-line" style="margin-right:6px;"></i> Beta & Risk Profile</div><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;"><span style="font-size:0.7rem; color:var(--text-secondary);">Beta: <strong style="color:${barColor};">${s.beta}</strong> (${betaLabel})</span><span style="font-size:0.6rem; color:var(--text-secondary);">Volatilitas: ${s.volatilitas}%</span></div><div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-bottom:0.5rem;"><div style="width:${Math.min(s.beta * 40, 100)}%; height:100%; background:${barColor};"></div></div><div style="font-size:0.65rem; color:var(--text-secondary); margin-bottom:0.2rem;">Detail per Beta Range:</div><div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.6rem;"><thead><tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><th style="text-align:left; padding:2px 4px; color:var(--text-secondary);">Range</th><th style="text-align:center; padding:2px 4px; color:var(--text-secondary);">Win Rate</th><th style="text-align:center; padding:2px 4px; color:var(--text-secondary);">EV/Trade</th></tr></thead><tbody>${tableRows}</tbody></table></div><div style="margin-top:0.5rem; padding:0.3rem 0.5rem; background:rgba(255,255,255,0.03); border-radius:4px; border-left:3px solid ${barColor};"><span style="font-size:0.6rem; font-weight:600; color:var(--text-secondary);">Rekomendasi:</span><span style="font-size:0.65rem; color:var(--text-primary);">${recommendation}</span></div></div>`;
+  }
+
+  const entry = s.entryPrice || 0;
+  const pctTp = s.tp1 && s.entryPrice ? (((s.tp1 - s.entryPrice) / s.entryPrice) * 100).toFixed(2) : "–";
+  const pctSl = s.sl && s.entryPrice ? (((s.sl - s.entryPrice) / s.entryPrice) * 100).toFixed(2) : "–";
+
+  const foreignNet = s.foreignNet || 0;
+  const foreignParticipation = s.foreignPartisipasi || 25;
+  const isForeignBuy = foreignNet > 0;
+  const foreignLabel = isForeignBuy ? "NET BUY ASING" : "NET SELL ASING";
+  const foreignClass = isForeignBuy ? "buy" : "sell";
+  const foreignAbs = Math.abs(foreignNet).toLocaleString();
+  const foreignPct = Math.min((Math.abs(foreignNet) / 1000) * 100, 100);
+
+  const getVolumeColor = (pct) => {
+    if (pct == null) return "var(--text-secondary)";
+    if (pct < 70) return "#ff6b6b";
+    if (pct < 130) return "#ffffff";
+    return "#69db7c";
+  };
+
+  const headerResetStyle = `<style>.emit-header-simple { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; padding:0.25rem 0; margin-bottom:0.75rem; gap:0.5rem; }.emit-header-simple .left { display:flex; flex-wrap:wrap; align-items:center; gap:0.4rem; flex:1 1 auto; }.emit-header-simple .left .stock-group { display:flex; align-items:center; gap:0.4rem; flex-shrink:0; }.emit-header-simple .left .stock-group .ticker { font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary); white-space:nowrap; }.emit-header-simple .left .emit-tag-group { display:flex; flex-wrap:wrap; align-items:center; gap:0.25rem 0.4rem; flex:0 1 auto; }.emit-header-simple .right { font-size:0.7rem; color:var(--text-secondary); opacity:0.6; flex-shrink:0; }.pro-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }.pro-grid-2 .col-left { border-right: 1px solid rgba(255,255,255,0.08); padding-right: 0.5rem; }.pro-grid-2 .col-right { padding-left: 0.5rem; }.price-ladder { display: flex; justify-content: space-around; align-items: center; gap: 0.5rem; padding: 0.2rem 0; margin: 0; }.price-item { display: flex; align-items: center; gap: 0.3rem; flex: 1; justify-content: center; }@media (max-width: 640px) { .pro-grid-2 { display: flex !important; flex-direction: column !important; gap: 0.75rem !important; } .pro-grid-2 .col-left { border-right: none !important; padding-right: 0 !important; } .pro-grid-2 .col-right { padding-left: 0 !important; } .pro-detail-container { padding: 0 !important; } .emit-header-simple .left .stock-group .ticker { font-size:1rem; } .emit-header-simple .left .emit-tag-group .emit-tag { font-size:0.55rem; } .emit-header-simple .left .emit-tag-group .emit-tag i { font-size:0.5rem; } .emit-header-simple .right { font-size:0.6rem; } .price-ladder { flex-wrap: nowrap !important; gap: 0.2rem !important; } .price-item { flex: 1 1 0 !important; justify-content: center !important; } }</style>`;
+
+  let html = `${headerResetStyle}<div class="pro-detail-container"><button class="sig-back-btn" id="dailyBackBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Kembali</button><div style="background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.08); overflow:hidden; margin-bottom:0.5rem;"><div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:grid; grid-template-columns: 1fr auto; gap:0.2rem 0.5rem; align-items:center;"><div style="grid-column:1; grid-row:1; display:flex; flex-direction:column; gap:0.1rem;"><span style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.2rem; color:var(--text-primary);">${escapeHtml(s.stockCode)}</span><span style="font-size:0.8rem; color:var(--text-secondary); opacity:0.7;">${escapeHtml(stockInfo.longName)}</span></div><div style="grid-column:1; grid-row:2; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;"><span style="font-family:'JetBrains Mono'; font-weight:600; font-size:1rem; color:var(--text-primary); display:flex; align-items:center;">${priceArrow} ${displayPrice}</span><span style="font-family:'JetBrains Mono'; font-size:0.75rem; color:${gainColor}; font-weight:600; display:flex; align-items:center; gap:0.2rem;">${gainStr}</span>${statusStamp}</div><div style="grid-column:2; grid-row:1 / 3; display:flex; align-items:center; justify-content:center;">${logoHtml}</div><div style="grid-column:1 / 3; grid-row:3; margin-top:0.1rem;">${tagHtml}</div><div style="grid-column:1 / 3; grid-row:4; font-size:0.7rem; color:var(--text-secondary); opacity:0.6; margin-top:0.1rem;">${s.signalDate ? formatFullDateTime(s.signalDate) : ""}</div></div></div><div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);"><div style="display:flex; align-items:center; gap:1rem; padding-bottom:0.4rem; border-bottom:1px solid rgba(255,255,255,0.05); margin-bottom:0.4rem;"><div style="width:48px; height:48px; border-radius:50%; background:${signalBorder}15; border:2px solid ${signalBorder}; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:${signalBorder};">${signalIcon}</div><div style="flex:1;"><div style="font-size:0.55rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-secondary);">Signal Type</div><div style="font-family:'JetBrains Mono'; font-weight:700; font-size:1.3rem; color:${signalBorder}; line-height:1.2;">${signalLabelText}<span style="font-size:0.7rem; font-weight:400; color:var(--text-secondary); margin-left:0.5rem;">${signalLabel}</span></div></div><div style="font-size:0.5rem; background:${signalBorder}15; color:${signalBorder}; padding:2px 10px; border-radius:20px; border:1px solid ${signalBorder}25; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;">${signalDesc}</div></div><div class="price-ladder" style="display:flex; justify-content:space-around; align-items:center; gap:0.5rem; padding:0.2rem 0; margin:0;"><div class="price-item" style="display:flex; align-items:center; gap:0.3rem; flex:1; justify-content:center;"><span class="label" style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Entry</span><span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--text-primary);">${fmtPrice(s.entryPrice)}</span><span class="change neutral" style="font-size:0.6rem; color:var(--text-secondary);">—</span></div><div class="price-item" style="display:flex; align-items:center; gap:0.3rem; flex:1; justify-content:center;"><span class="label" style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> TAKE PROFIT</span><span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--success);">${fmtPrice(s.tp1)}</span><span class="change positive" style="font-size:0.6rem; color:var(--success);">+${pctTp}%</span></div><div class="price-item" style="display:flex; align-items:center; gap:0.3rem; flex:1; justify-content:center;"><span class="label" style="font-size:0.6rem; color:var(--text-secondary); display:flex; align-items:center; gap:0.2rem;"><i class="fa-solid fa-triangle-exclamation"></i> STOP LOSS</span><span class="value" style="font-family:'JetBrains Mono'; font-weight:600; font-size:0.9rem; color:var(--danger);">${fmtPrice(s.sl)}</span><span class="change negative" style="font-size:0.6rem; color:var(--danger);">${pctSl}%</span></div></div></div>
+
+    <!-- STRATEGY FLOW UNTUK SINYAL BIASA -->
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      ${renderStrategyFlowForSignal(s)}
+    </div>
+
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      ${confVisual.replace(/<div class="pro-card" style="position:relative;">/, '<div style="position:relative;">')}
+    </div>
+
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div class="pro-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+        <div>
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> Broker Flow
+          </div>
+          <div id="brokerFlowContainer" class="broker-flow-container"></div>
+        </div>
+        <div>
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Foreign Flow
+          </div>
+          <div class="foreign-flow-container"><div class="foreign-row"><span class="foreign-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg> ${foreignLabel}</span><span class="foreign-value ${foreignClass}">${isForeignBuy ? "+" : ""}${foreignAbs} lot</span><div class="foreign-bar-track"><div class="foreign-bar-fill ${foreignClass}-fill" style="width:${Math.min(foreignPct, 100)}%;"></div></div><span class="foreign-participation">${foreignParticipation}%</span></div><div style="font-size:0.65rem; color:var(--text-secondary); display:flex; justify-content:space-between; margin-top:0.3rem;"><span>Partisipasi</span><span>${foreignParticipation}%</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div class="pro-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+        <div>
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> RSI (14)
+          </div>
+          <div class="pro-chart-wrap" style="height:120px;"><canvas id="proRsiChart"></canvas></div>
+          <div style="text-align:center; font-family:'JetBrains Mono'; font-weight:700; font-size:1.2rem; margin-top:-10px;">${s.rsi != null ? s.rsi.toFixed(2) : "–"}</div>
+        </div>
+        <div>
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> MACD
+          </div>
+          <div class="pro-chart-wrap" style="height:120px;"><canvas id="proMacdChart"></canvas></div>
+          <div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-secondary); margin-top:0.25rem;"><span>MACD: ${s.macd != null ? s.macd.toFixed(2) : "–"}</span><span>Signal: ${s.macdSignal != null ? s.macdSignal.toFixed(2) : "–"}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div class="pro-grid-2">
+        <div class="col-left">${betaVisual ? betaVisual.replace(/<div class="pro-card">/, '<div style="">') : `<div style="color:var(--text-secondary); opacity:0.5; font-size:0.8rem;">Tidak ada data Beta</div>`}</div>
+      </div>
+    </div>
+
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div class="pro-grid-2">
+        <div class="col-right" style="width:100%;">
+          <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Teknikal
+          </div>
+          <div class="pro-indicator-list">
+            <div class="pro-ind-row">
+              <span class="pro-ind-label">Volume</span>
+              <div class="pro-ind-track">
+                <div class="pro-ind-fill" style="width: ${Math.min(s.volumePercent ?? 0, 200)}%; background: ${getVolumeColor(s.volumePercent)};"></div>
+              </div>
+              <span class="pro-ind-val">${s.volumePercent != null ? s.volumePercent + "%" : "N/A"}</span>
+            </div>
+            ${renderIndRow("EMA 20", fmtPrice(s.ema20), s.ema20, s.entryPrice)}
+            ${renderIndRow("EMA 50", fmtPrice(s.ema50), s.ema50, s.entryPrice)}
+            ${renderIndRow("VWAP", fmtPrice(s.vwap), s.vwap, s.entryPrice)}
+            ${s.adx != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ADX</span><div class="pro-ind-track"><div class="pro-ind-fill bg-warning" style="width:${Math.min(s.adx, 100)}%;"></div></div><span class="pro-ind-val">${s.adx}</span></div>` : ""}
+            ${s.atr != null ? `<div class="pro-ind-row"><span class="pro-ind-label">ATR</span><div class="pro-ind-track"><div class="pro-ind-fill bg-neutral" style="width:${Math.min((s.atr / (s.entryPrice || 1)) * 100, 100)}%;"></div></div><span class="pro-ind-val">${fmtPrice(s.atr)}</span></div>` : ""}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      <div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Chart Pattern
+      </div>
+      <div id="patternVisualContainer"></div>
+      <div style="margin-top:0.5rem;">
+        <div style="font-size:0.75rem; color:var(--text-secondary);"><strong>Chart:</strong> ${s.patternChart || "–"}</div>
+        <div style="font-size:0.75rem; color:var(--text-secondary);"><strong>Candle:</strong> ${s.patternCandle || "–"}</div>
+      </div>
+    </div>
+
+    <div style="padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06);">
+      ${s.analystOpinion ? `<div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Analyst Opinion</div><div class="pro-text-box">${escapeHtml(s.analystOpinion)}</div>` : `<div style="display:flex; align-items:center; justify-content:center; color:var(--text-secondary); opacity:0.4; font-size:0.8rem;">Tidak ada opini analis</div>`}
+    </div>
+
+    ${s.relatedNews && s.relatedNews.length ? `<div style="padding:0.5rem 0.75rem;"><div style="display:flex; align-items:center; gap:0.3rem; margin-bottom:0.3rem; font-weight:600; font-size:0.8rem; color:var(--text-secondary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> Berita Terkait</div><ul class="pro-news-list">${s.relatedNews.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul></div>` : ""}
+
+    <div id="dailyNewsContainer" style="padding:0.5rem 0.75rem; border-top:1px solid rgba(255,255,255,0.06);"></div>
+
+  </div></div>`;
+
+  container.innerHTML = html;
+
+  mountStockNewsCarousel(s.stockCode, "dailyNewsContainer");
+
+  const backBtn = container.querySelector("#dailyBackBtn");
+  if (backBtn && onBack) backBtn.addEventListener("click", onBack);
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      if (!document.contains(container)) return;
+      renderDetailCharts(s, container);
+      renderBrokerFlow(s.topBuyers, s.topSellers, s.sinyalBandar, container);
+      renderPatternVisual(s.patternChart, container);
+    }, 50);
+  });
+}
+
+// ============================
+// HELPERS FOR DETAIL
+// ============================
+
+function renderStrategyFlowForSignal(s) {
+  const entry = s.entryPrice || 0;
+  const sl = s.sl || 0;
+  const tp = s.tp1 || 0;
+  let slPercent = 0, tpPercent = 0;
+  if (entry > 0 && sl > 0) slPercent = ((sl - entry) / entry) * 100;
+  if (entry > 0 && tp > 0) tpPercent = ((tp - entry) / entry) * 100;
+  const slLabel = slPercent < 0 ? `${slPercent.toFixed(1)}%` : `-${slPercent.toFixed(1)}%`;
+  const tpLabel = tpPercent > 0 ? `+${tpPercent.toFixed(1)}%` : `${tpPercent.toFixed(1)}%`;
+
+  const step1Active = true;
+  let step1State = "default";
+  if (s.status === "SL" && !s.breakEven) step1State = "failed";
+
+  const step2Active = s.breakEven === true || s.status === "TRAILING" || s.status === "TP";
+  const step2State = s.status === "SL" && s.breakEven ? "warning" : s.status === "TP" ? "success" : "default";
+
+  const step3Active = s.status === "TRAILING" || s.status === "TP";
+  let step3State = "default";
+  if (s.status === "SL" && s.breakEven) step3State = "warning";
+  else if (s.status === "TP") step3State = "success";
+
+  function stepCircle(active, label, desc, icon, state = "default") {
+    let bg, border, color, shadow;
+    if (state === "failed") {
+      bg = "#ef4444"; border = "#ef4444"; color = "#fff"; shadow = "0 0 0 4px rgba(239,68,68,0.2)";
+    } else if (state === "warning") {
+      bg = "#f59e0b"; border = "#f59e0b"; color = "#fff"; shadow = "0 0 0 4px rgba(245,158,11,0.2)";
+    } else if (state === "success" || active) {
+      bg = "#10b981"; border = "#10b981"; color = "#fff"; shadow = "0 0 0 4px rgba(16,185,129,0.2)";
+    } else {
+      bg = "#2a2a2a"; border = "rgba(255,255,255,0.1)"; color = "var(--text-secondary)"; shadow = "0 0 0 4px #121212";
+    }
+    let descColor = "var(--text-secondary)";
+    if (state === "failed") descColor = "#ef4444";
+    else if (state === "warning") descColor = "#f59e0b";
+    else if (state === "success" || active) descColor = "#10b981";
+
+    return `
+      <div style="flex:1; text-align:center; z-index:2; position:relative;">
+        <div style="width:34px; height:34px; background:${bg}; border:2px solid ${border}; color:${color}; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto; font-size:0.8rem; font-weight:700; box-shadow: ${shadow}; transition:all 0.3s ease;">
+          ${icon}
+        </div>
+        <div style="font-size:0.7rem; font-weight:600; color:${active || state !== "default" ? "var(--text-primary)" : "var(--text-secondary)"}; margin-top:0.4rem;">${label}</div>
+        <div style="font-size:0.5rem; color:${descColor}; margin-top:0.1rem; opacity:0.8;">${desc}</div>
+      </div>
+    `;
+  }
+
+  let progressWidth = "0%";
+  let progressGradient = "linear-gradient(90deg, #10b981, #10b981)";
+  if (step3Active && step3State !== "warning") {
+    progressWidth = "100%";
+  } else if (step2Active) {
+    progressWidth = "50%";
+  } else if (step1State === "failed") {
+    progressWidth = "10%";
+    progressGradient = "linear-gradient(90deg, #ef4444, #ef4444)";
+  }
+  if (step3State === "warning") {
+    progressWidth = "100%";
+    progressGradient = "linear-gradient(90deg, #10b981 50%, #f59e0b 50%)";
+  }
+
+  return `
+    <div style="background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.65rem 0.75rem; margin-top:0.5rem;">
+      <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.1rem;">
+        <i class="fa-solid fa-layer-group" style="color:var(--text-primary); font-size:1rem;"></i>
+        <span style="font-weight:600; font-size:0.85rem; color:var(--text-primary); letter-spacing: 0.3px;">Strategy Flow</span>
+        ${s.status === "RUNNING" ? `<span style="font-size:0.55rem; background:rgba(16,185,129,0.15); color:#10b981; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Active</span>` :
+          s.status === "TRAILING" ? `<span style="font-size:0.55rem; background:rgba(245,158,11,0.15); color:#f59e0b; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Trailing</span>` :
+          s.status === "WAITING_ENTRY" ? `<span style="font-size:0.55rem; background:rgba(59,130,246,0.15); color:#3b82f6; padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">Waiting</span>` :
+          `<span style="font-size:0.55rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); padding:0.1rem 0.5rem; border-radius:12px; margin-left:auto;">${s.status}</span>`}
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:0.8rem 0; position:relative; padding:0 0.5rem;">
+        <div style="position:absolute; top:17px; left:10%; right:10%; height:2px; background:rgba(255,255,255,0.08); z-index:1;">
+          <div style="height:100%; width:${progressWidth}; background:${progressGradient}; border-radius:2px; transition:width 0.8s ease;"></div>
+        </div>
+        ${stepCircle(step1Active, "Entry", `SL ${slLabel}`, "1", step1State)}
+        ${stepCircle(step2Active, "Take Profit", `TP ${tpLabel}`, "2", step2State)}
+        ${stepCircle(step3Active, "Trailing Stop", "TS 5%", "3", step3State)}
+      </div>
+      <div style="display:flex; justify-content:center; gap:0.5rem; font-size:0.55rem; color:var(--text-secondary); margin-top:0.2rem;">
+        <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Active</span>
+        <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Stop Loss</span>
+        <span style="display:flex; align-items:center; gap:0.2rem;"><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Trailing Hit</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderBrokerFlow(topBuyers, topSellers, sinyalBandar, container = document) {
+  let containerEl = container.querySelector ? container.querySelector("#brokerFlowContainer") : null;
+  if (!containerEl) containerEl = document.getElementById("brokerFlowContainer");
+  if (!containerEl) return;
+
+  containerEl.innerHTML = "";
+  if (!sinyalBandar || sinyalBandar.trim() === "") {
+    containerEl.innerHTML = '<div style="text-align:center;padding:0.5rem 0;color:var(--text-secondary);font-size:0.7rem;"><i class="fas fa-database" style="margin-right:0.3rem;"></i> Bandarmology: Data sedang maintenance</div>';
+    return;
+  }
+
+  const buyers = topBuyers || [];
+  const sellers = topSellers || [];
+  const normalized = (sinyalBandar || "").toUpperCase().replace(/_/g, " ");
+  let bandarSignal = "NEUTRAL";
+  let bandarClass = "neutral";
+  if (normalized.includes("STRONG BUY")) { bandarSignal = "STRONG BUY"; bandarClass = "strong-buy"; }
+  else if (normalized.includes("BUY") && !normalized.includes("STRONG")) { bandarSignal = "BUY"; bandarClass = "buy"; }
+  else if (normalized.includes("STRONG SELL")) { bandarSignal = "STRONG SELL"; bandarClass = "strong-sell"; }
+  else if (normalized.includes("SELL") && !normalized.includes("STRONG")) { bandarSignal = "SELL"; bandarClass = "sell"; }
+  else if (normalized.includes("NEUTRAL")) { bandarSignal = "NEUTRAL"; bandarClass = "neutral"; }
+
+  const topBuy = buyers.slice(0, 5);
+  const topSell = sellers.slice(0, 5);
+  const maxBuy = topBuy.length ? Math.max(...topBuy.map((b) => b.lot)) : 1;
+  const maxSell = topSell.length ? Math.max(...topSell.map((b) => b.lot)) : 1;
+
+  let html = `<div class="broker-flow-grid">`;
+  html += `<div class="broker-col"><div class="broker-col-title buy">▲ BUY</div>`;
+  if (topBuy.length) {
+    topBuy.forEach((b) => {
+      const pct = (b.lot / maxBuy) * 100;
+      html += `<div class="broker-item buy">
+        <span class="code">${b.code}</span>
+        <span class="vol">${b.lot.toLocaleString()}L</span>
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;">
+          <div style="width:${Math.min(pct, 100)}%;height:100%;background:var(--success);border-radius:2px;"></div>
+        </div>
+      </div>`;
+    });
+  } else {
+    html += `<div style="font-size:0.7rem;color:var(--text-secondary);padding:0.5rem 0;">—</div>`;
+  }
+  html += `</div>`;
+
+  html += `<div class="broker-center"><span class="broker-flow-arrow">⟷</span><span class="broker-signal ${bandarClass}">${bandarSignal}</span><span style="font-size:0.6rem;color:var(--text-secondary);">Smart Money</span></div>`;
+
+  html += `<div class="broker-col"><div class="broker-col-title sell">▼ SELL</div>`;
+  if (topSell.length) {
+    topSell.forEach((b) => {
+      const pct = (b.lot / maxSell) * 100;
+      html += `<div class="broker-item sell">
+        <div style="flex:1;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;">
+          <div style="width:${Math.min(pct, 100)}%;height:100%;background:var(--danger);border-radius:2px;margin-left:auto;"></div>
+        </div>
+        <span class="vol">${b.lot.toLocaleString()}L</span>
+        <span class="code">${b.code}</span>
+      </div>`;
+    });
+  } else {
+    html += `<div style="font-size:0.7rem;color:var(--text-secondary);text-align:right;padding:0.5rem 0;">—</div>`;
+  }
+  html += `</div>`;
+  html += `</div>`;
+  containerEl.innerHTML = html;
+}
+
+function renderPatternVisual(patternText, container = document) {
+  const containerEl = container.querySelector ? container.querySelector("#patternVisualContainer") : document.getElementById("patternVisualContainer");
+  if (!containerEl) return;
+  const patterns = {
+    "Recovery Uptrend dari Bottom": { path: "M10,70 Q40,80 60,40 Q80,10 100,20", color: "#10b981", label: "Recovery" },
+    "Breakout Bollinger Upper": { path: "M10,60 Q30,50 50,55 Q70,60 90,20 L100,10", color: "#f59e0b", label: "Breakout" },
+    "Bullish Momentum Candle": { path: "M10,80 Q30,70 50,50 Q70,30 90,20", color: "#3b82f6", label: "Momentum" },
+    "Strong Close Near High": { path: "M10,70 Q30,50 50,30 Q70,20 90,10 L100,10", color: "#8b5cf6", label: "Strong" },
+  };
+  let found = null;
+  if (patternText) {
+    const lower = patternText.toLowerCase();
+    for (const [key, val] of Object.entries(patterns)) {
+      if (lower.includes(key.toLowerCase())) { found = val; break; }
+    }
+  }
+  if (!found) found = { path: "M10,70 Q40,80 60,40 Q80,10 100,20", color: "#71717a", label: "Pattern" };
+
+  const svg = `<div class="pattern-visual"><svg viewBox="0 0 120 80" width="100%" height="80">
+    <line x1="10" y1="75" x2="110" y2="75" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+    <line x1="10" y1="55" x2="110" y2="55" stroke="rgba(255,255,255,0.03)" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <line x1="10" y1="35" x2="110" y2="35" stroke="rgba(255,255,255,0.03)" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <line x1="10" y1="15" x2="110" y2="15" stroke="rgba(255,255,255,0.03)" stroke-width="0.5" stroke-dasharray="2,2"/>
+    <rect x="20" y="60" width="6" height="15" fill="rgba(239,68,68,0.4)" rx="1"/>
+    <line x1="23" y1="55" x2="23" y2="75" stroke="rgba(239,68,68,0.3)" stroke-width="1"/>
+    <rect x="35" y="55" width="6" height="20" fill="rgba(239,68,68,0.5)" rx="1"/>
+    <line x1="38" y1="48" x2="38" y2="75" stroke="rgba(239,68,68,0.3)" stroke-width="1"/>
+    <rect x="50" y="45" width="6" height="25" fill="rgba(16,185,129,0.5)" rx="1"/>
+    <line x1="53" y1="40" x2="53" y2="70" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+    <rect x="65" y="35" width="6" height="30" fill="rgba(16,185,129,0.6)" rx="1"/>
+    <line x1="68" y1="30" x2="68" y2="65" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+    <rect x="80" y="20" width="6" height="40" fill="rgba(16,185,129,0.7)" rx="1"/>
+    <line x1="83" y1="15" x2="83" y2="60" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+    <path d="${found.path}" fill="none" stroke="${found.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4,2"/>
+    <path d="${found.path}" fill="none" stroke="${found.color}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.15"/>
+    <text x="110" y="12" font-size="6" fill="${found.color}" font-weight="700" text-anchor="end" font-family="'JetBrains Mono', monospace">${found.label}</text>
+  </svg></div>`;
+  containerEl.innerHTML = svg;
+}
+
+function renderIndRow(label, displayVal, compareVal, entryVal) {
+  let fillClass = "bg-neutral", width = "50%";
+  if (compareVal && entryVal) {
+    if (entryVal > compareVal) { fillClass = "bg-success"; width = "75%"; }
+    else { fillClass = "bg-danger"; width = "25%"; }
+  }
+  return `<div class="pro-ind-row"><span class="pro-ind-label">${label}</span><div class="pro-ind-track"><div class="pro-ind-fill ${fillClass}" style="width:${width};"></div></div><span class="pro-ind-val">${displayVal}</span></div>`;
+}
+
+// ============================
+// DAILY REPORT
+// ============================
 
 export async function renderDaily() {
   const c = document.getElementById("daily");
@@ -1832,10 +2463,7 @@ export async function renderDaily() {
   const agg = aggregateSignals(filtered);
   const dateRange = getDateRangeText(currentFilterState.type, currentFilterState.customStart, currentFilterState.customEnd);
 
-  // ... (render daily content - simplified for brevity, but full implementation should be here)
-  // For brevity, I'll show the key parts
-
-  const html = `
+  let html = `
     <div id="dailyContentWrapper">
       <div class="pro-detail-container">
         <div id="tradeSummaryContainer" style="margin-bottom:0.5rem;"></div>
@@ -1905,7 +2533,7 @@ export async function renderDaily() {
   c.innerHTML = html;
   dailyRendered = true;
 
-  // Setup event listeners for daily
+  // Setup toggle
   const listToggle = document.getElementById("signalListToggle");
   const listBody = document.getElementById("signalListBody");
   const chevron = document.getElementById("signalListChevron");
@@ -1923,6 +2551,7 @@ export async function renderDaily() {
     });
   }
 
+  // Filter buttons
   c.querySelectorAll(".perf-filter-btn").forEach((btn) => {
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
@@ -1940,7 +2569,7 @@ export async function renderDaily() {
     renderDailySignalChart(agg);
   }, 150);
 
-  // Initial render of signal list
+  // Initial signal list
   setTimeout(() => {
     const activeBtn = document.querySelector(".perf-filter-btn.active");
     if (activeBtn && listBody && listBody.style.display !== "none") {
@@ -1948,13 +2577,102 @@ export async function renderDaily() {
     }
   }, 300);
 
-  // Trade summary toggle
+  // Trade summary
   renderTradeSummary();
+
+  // Trade summary click events
+  const summaryContainer = document.getElementById("tradeSummaryContainer");
+  if (summaryContainer) {
+    summaryContainer.addEventListener("click", function (e) {
+      const toggle = e.target.closest("#tradeSummaryToggle");
+      if (toggle) {
+        e.stopPropagation();
+        currentFilterState.isOpen = !currentFilterState.isOpen;
+        renderTradeSummary();
+        return;
+      }
+      const filterBtn = e.target.closest(".filter-btn");
+      if (filterBtn) {
+        e.stopPropagation();
+        const filter = filterBtn.dataset.filter;
+        if (filter === "custom") {
+          currentFilterState.type = "custom";
+          currentFilterState.isOpen = false;
+          renderTradeSummary();
+          renderDaily();
+          return;
+        }
+        currentFilterState.type = filter;
+        currentFilterState.customStart = null;
+        currentFilterState.customEnd = null;
+        currentFilterState.isOpen = false;
+        renderTradeSummary();
+        renderDaily();
+        return;
+      }
+      const applyBtn = e.target.closest("#applyCustomFilter");
+      if (applyBtn) {
+        e.stopPropagation();
+        const start = document.getElementById("customStartDate")?.value;
+        const end = document.getElementById("customEndDate")?.value;
+        if (start && end) {
+          currentFilterState.type = "custom";
+          currentFilterState.customStart = start;
+          currentFilterState.customEnd = end;
+          currentFilterState.isOpen = false;
+          renderTradeSummary();
+          renderDaily();
+        } else {
+          alert("Pilih tanggal mulai dan akhir");
+        }
+      }
+    });
+  }
 }
 
 function renderTradeSummary() {
-  // ... (implement trade summary render)
-  // Simplified - full implementation in original code
+  const container = document.getElementById("tradeSummaryContainer");
+  if (!container) return;
+
+  const isOpen = currentFilterState.isOpen;
+  const filterLabel = currentFilterState.type === "today" ? "Today" :
+                      currentFilterState.type === "7days" ? "7 Hari" :
+                      currentFilterState.type === "1month" ? "1 Bulan" : "Custom";
+  const dateRange = getDateRangeText(currentFilterState.type, currentFilterState.customStart, currentFilterState.customEnd);
+
+  let html = `
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; cursor:pointer; padding:0.4rem 0.6rem; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.06);" id="tradeSummaryToggle">
+      <span style="font-weight:600; font-size:0.9rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap;">
+        <i class="fas fa-chart-simple" style="color:#8b5cf6;"></i> Trade Summary
+        <span id="filterLabel" style="font-size:0.6rem; color:var(--text-secondary); background:rgba(255,255,255,0.05); padding:0.1rem 0.4rem; border-radius:6px;">${filterLabel}</span>
+        <span id="filterDateRange" style="font-size:0.55rem; color:var(--text-secondary); opacity:0.5;">${dateRange}</span>
+        <i class="fas fa-chevron-${isOpen ? "up" : "down"}" style="font-size:0.6rem; opacity:0.5; transition:transform 0.2s;"></i>
+      </span>
+    </div>
+  `;
+
+  if (isOpen) {
+    html += `
+      <div style="display:flex; align-items:center; gap:0.3rem; flex-wrap:wrap; margin-top:0.3rem; padding:0.3rem 0.4rem; background:rgba(255,255,255,0.02); border-radius:6px;">
+        <button class="filter-btn" data-filter="today" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "today" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Today</button>
+        <button class="filter-btn" data-filter="7days" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "7days" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">7 Hari</button>
+        <button class="filter-btn" data-filter="1month" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "1month" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">1 Bulan</button>
+        <button class="filter-btn" data-filter="custom" style="padding:0.15rem 0.4rem; border-radius:4px; border:1px solid var(--glass-border); background:${currentFilterState.type === "custom" ? "rgba(255,255,255,0.1)" : "transparent"}; color:var(--text-primary); cursor:pointer; font-size:0.6rem; transition:0.2s;">Custom</button>
+    `;
+    if (currentFilterState.type === "custom") {
+      html += `
+        <div style="display:flex; gap:0.2rem; align-items:center; flex-wrap:wrap;">
+          <input type="date" id="customStartDate" value="${currentFilterState.customStart || ""}" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
+          <span style="color:var(--text-secondary); font-size:0.55rem;">s/d</span>
+          <input type="date" id="customEndDate" value="${currentFilterState.customEnd || ""}" style="background:rgba(255,255,255,0.05); border:1px solid var(--glass-border); border-radius:4px; padding:0.15rem 0.3rem; color:var(--text-primary); font-size:0.55rem; max-width:100px;">
+          <button id="applyCustomFilter" style="padding:0.15rem 0.4rem; border-radius:4px; background:rgba(59,130,246,0.2); border:1px solid #3b82f6; color:#3b82f6; cursor:pointer; font-size:0.55rem;">Terapkan</button>
+        </div>
+      `;
+    }
+    html += `</div>`;
+  }
+
+  container.innerHTML = html;
 }
 
 export async function renderPerformanceSignalList(status) {
@@ -2097,15 +2815,4 @@ function renderDailySignalDetail(signal) {
     detailContainer.scrollIntoView({ behavior: "smooth", block: "start" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-}
-
-// Export for use in main.js
-export function renderSignalDetailToContainer(signal, container, onBack) {
-  // This is the main detail render - full implementation from original
-  // For brevity, I'll show the key structure
-  // The full implementation from the original code should be placed here
-  // with imports from utils, charts, api, etc.
-  
-  // (Full implementation from original renderSignalDetailToContainer)
-  // ... 
 }
