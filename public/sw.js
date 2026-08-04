@@ -1,12 +1,24 @@
-const CACHE_NAME = "getsuzo-cache-v1";
+const CACHE_NAME = "getsuzo-cache-v2"; // versi baru agar cache lama dihapus
 
-const urlsToCache = ["/", "/index.html", "/style.css", "/script.js"];
+const urlsToCache = [
+  "/",
+  "/index.html",
+  "/style.css",
+  "/js/main.js",
+  "/js/config.js",
+  "/js/utils.js",
+  "/js/api.js",
+  "/js/sse.js",
+  "/js/notifications.js",
+  "/js/charts.js",
+  "/js/signals.js",
+  "/js/news.js",
+  "/js/ui.js",
+];
 
 self.addEventListener("install", (event) => {
   console.log("[SW] Installed");
-
   self.skipWaiting();
-
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log("[SW] Caching app shell");
@@ -17,9 +29,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   console.log("[SW] Activated");
-
   const cacheWhitelist = [CACHE_NAME];
-
   event.waitUntil(
     caches
       .keys()
@@ -38,11 +48,13 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+
+  // Tangani navigasi, CSS, dan semua file JS (termasuk di folder js/)
   if (
     event.request.mode === "navigate" ||
-    event.request.url.includes("style.css") ||
-    event.request.url.includes("script.js") ||
-    event.request.url.match(/\.(html|css|js)$/)
+    url.pathname.match(/\.(css|js)$/) ||
+    url.pathname.startsWith("/js/")
   ) {
     event.respondWith(
       fetch(event.request)
@@ -60,6 +72,7 @@ self.addEventListener("fetch", (event) => {
         }),
     );
   } else {
+    // Asset lain: cache-first
     event.respondWith(
       caches.match(event.request).then((response) => {
         return response || fetch(event.request);
@@ -68,9 +81,9 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+// Push dan notificationclick tetap sama (tidak perlu diubah)
 self.addEventListener("push", (event) => {
   let data = { title: "Notifikasi Baru", body: "Ada update." };
-
   try {
     if (event.data) {
       data = event.data.json();
@@ -78,7 +91,6 @@ self.addEventListener("push", (event) => {
   } catch (e) {
     data.body = event.data ? event.data.text() : "Ada update.";
   }
-
   const options = {
     body: data.body,
     icon: "/assets/favicon/web-app-manifest-192x192.png",
@@ -90,16 +102,13 @@ self.addEventListener("push", (event) => {
       url: "/",
     },
   };
-
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
   const relativeUrl = event.notification.data?.url || "/";
   const urlToOpen = new URL(relativeUrl, self.location.origin).href;
-
   event.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
