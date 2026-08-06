@@ -5328,7 +5328,181 @@ function updatePriceElement(symbol, price) {
   });
 }
 
+// ==========================================================================
+// DATA & LOGIC TABEL KOMODITAS (GETSUZO IDX)
+// ==========================================================================
+
+const commodityData = [
+  { symbol: "XAU", name: "GOLD", ticker: "TVC:GOLD", price: 4271.545, change: 24.02, changePct: 0.57, ret7d: 1.25, ret1m: 3.80, retYTD: 12.40, ret1y: 18.50 },
+  { symbol: "SILVER", name: "SILVER", ticker: "TVC:SILVER", price: 61.7961, change: -0.25, changePct: -0.41, ret7d: -0.80, ret1m: 2.10, retYTD: 8.50, ret1y: 14.10 },
+  { symbol: "OIL", name: "CRUDE OIL", ticker: "NYMEX:CL1!", price: 75.41, change: 0.19, changePct: 0.25, ret7d: 2.10, ret1m: -1.40, retYTD: 5.20, ret1y: -3.80 },
+  { symbol: "BRENT", name: "BRENT OIL", ticker: "NYMEX:BZ1!", price: 79.67, change: 0.22, changePct: 0.28, ret7d: 1.95, ret1m: -1.10, retYTD: 4.80, ret1y: -2.90 },
+  { symbol: "CPO", name: "PALM OIL", ticker: "CBOT:ZL1!", price: 67.09, change: -0.08, changePct: -0.12, ret7d: -0.50, ret1m: 4.20, retYTD: 15.30, ret1y: 22.00 },
+  { symbol: "COAL-NEWCASTLE", name: "COAL", ticker: "ICEEUR:NCF1!", price: 129.3, change: -3.05, changePct: -2.30, ret7d: -3.40, ret1m: -8.10, retYTD: -12.50, ret1y: -24.80 },
+  { symbol: "NICKEL", name: "NICKEL", ticker: "LME:NI1!", price: 16515, change: -434.82, changePct: -2.57, ret7d: -4.10, ret1m: -5.60, retYTD: -10.20, ret1y: -18.50 },
+  { symbol: "GAS", name: "NATURAL GAS", ticker: "NYMEX:NG1!", price: 2.679, change: -0.01, changePct: -0.33, ret7d: 3.20, ret1m: 12.40, retYTD: -5.10, ret1y: -15.20 },
+  { symbol: "ALUMINIUM", name: "ALUMINIUM", ticker: "LME:AH1!", price: 3263.5, change: 20.20, changePct: 0.62, ret7d: 1.80, ret1m: 6.50, retYTD: 14.20, ret1y: 19.80 },
+  { symbol: "COPPER", name: "COPPER", ticker: "COMEX:HG1!", price: 6.826, change: 0.10, changePct: 1.46, ret7d: 2.90, ret1m: 7.80, retYTD: 18.60, ret1y: 25.40 },
+  { symbol: "TIN", name: "TIN", ticker: "LME:SN1!", price: 56423, change: 668.00, changePct: 1.20, ret7d: 3.50, ret1m: 9.10, retYTD: 21.00, ret1y: 31.20 }
+];
+
+// Helper Sanitize HTML Aman
+function commodityEscapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Generate Baris-baris Tabel Komoditas
+function generateCommodityRowsHTML() {
+  return commodityData.map((item, index) => {
+    const isUp = item.change >= 0;
+    const statusClass = isUp ? "up" : "down";
+    const arrowIcon = isUp ? "fa-arrow-trend-up" : "fa-arrow-trend-down";
+    const sign = isUp ? "+" : "";
+
+    const stockbitLogo = `https://assets.stockbit.com/logos/companies/${item.symbol}.png`;
+    const parqetLogo = `https://assets.parqet.com/logos/symbol/${item.symbol}.png`;
+
+    return `
+      <div class="commodity-item" id="commodity-item-${index}">
+        <div class="commodity-row" onclick="toggleCommodityDetail(${index})">
+          
+          <div class="commodity-info">
+            <div class="commodity-logo-wrapper">
+              <img 
+                src="${stockbitLogo}" 
+                alt="${item.symbol}" 
+                class="commodity-logo"
+                onerror="this.onerror=null; this.src='${parqetLogo}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='flex'; }"
+              >
+              <div class="commodity-logo-fallback" style="display:none; background:#8b5cf6;">
+                ${item.symbol.substring(0, 2)}
+              </div>
+            </div>
+            <div class="commodity-names">
+              <span class="commodity-symbol">${commodityEscapeHtml(item.symbol)}</span>
+              <span class="commodity-ticker-code">${commodityEscapeHtml(item.name)}</span>
+            </div>
+          </div>
+
+          <div class="col-ticker desktop-only" style="font-family:'JetBrains Mono'; font-size:0.75rem; color:var(--terminal-dim, rgba(255,255,255,0.35));">
+            ${commodityEscapeHtml(item.ticker)}
+          </div>
+
+          <div class="commodity-price-val">
+            $${Number(item.price).toLocaleString("en-US", { minimumFractionDigits: item.price < 10 ? 3 : 2 })}
+          </div>
+
+          <div class="commodity-return-badge">
+            <span class="return-main-pct ${statusClass}">
+              <i class="fa-solid ${arrowIcon}"></i> ${sign}${item.changePct.toFixed(2)}%
+            </span>
+            <span class="return-sub-diff">
+              ${sign}${item.change.toFixed(2)}
+            </span>
+          </div>
+
+          <div class="commodity-expand-icon">
+            <i class="fa-solid fa-chevron-down"></i>
+          </div>
+
+        </div>
+
+        <div class="commodity-detail-panel">
+          <div style="font-size:0.7rem; color:var(--terminal-dim, rgba(255,255,255,0.35)); text-transform:uppercase; margin-bottom:0.75rem; font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+            <i class="fa-solid fa-chart-line" style="color:#8b5cf6;"></i> Break-down Histori Return (${item.symbol})
+          </div>
+          <div class="return-grid-cards">
+            
+            <div class="return-card">
+              <span class="return-card-label">7 Hari</span>
+              <span class="return-card-value ${item.ret7d >= 0 ? "up" : "down"}">
+                ${item.ret7d >= 0 ? "+" : ""}${item.ret7d.toFixed(2)}%
+              </span>
+            </div>
+
+            <div class="return-card">
+              <span class="return-card-label">1 Bulan</span>
+              <span class="return-card-value ${item.ret1m >= 0 ? "up" : "down"}">
+                ${item.ret1m >= 0 ? "+" : ""}${item.ret1m.toFixed(2)}%
+              </span>
+            </div>
+
+            <div class="return-card">
+              <span class="return-card-label">YTD</span>
+              <span class="return-card-value ${item.retYTD >= 0 ? "up" : "down"}">
+                ${item.retYTD >= 0 ? "+" : ""}${item.retYTD.toFixed(2)}%
+              </span>
+            </div>
+
+            <div class="return-card">
+              <span class="return-card-label">1 Tahun</span>
+              <span class="return-card-value ${item.ret1y >= 0 ? "up" : "down"}">
+                ${item.ret1y >= 0 ? "+" : ""}${item.ret1y.toFixed(2)}%
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Render Komponen Utama Widget Komoditas
+function renderCommodityWidget(containerId = "commodityWidgetContainer") {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="widget-card commodity-widget">
+      <div class="widget-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <i class="fa-solid fa-boxes-stacked" style="color: #8b5cf6; font-size: 1.2rem;"></i>
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color:#fff;">Pasar Komoditas</h3>
+            <span style="font-size: 0.75rem; color: var(--terminal-dim, rgba(255,255,255,0.35));">Harga realtime & histori return komoditas global</span>
+          </div>
+        </div>
+        <span class="system-badge" style="background:#8b5cf6; color:#fff;">LIVE MARKET</span>
+      </div>
+
+      <div class="commodity-table-header">
+        <div class="col-info">Komoditas</div>
+        <div class="col-ticker desktop-only">Ticker</div>
+        <div class="col-price">Harga</div>
+        <div class="col-change">Return Saat Ini</div>
+        <div class="col-action"></div>
+      </div>
+
+      <div id="commodityList" class="commodity-list">
+        ${generateCommodityRowsHTML()}
+      </div>
+    </div>
+  `;
+}
+
+// Toggle Accordion Detail Komoditas
+function toggleCommodityDetail(index) {
+  const targetItem = document.getElementById(`commodity-item-${index}`);
+  if (!targetItem) return;
+
+  document.querySelectorAll(".commodity-item").forEach((item) => {
+    if (item !== targetItem) {
+      item.classList.remove("expanded");
+    }
+  });
+
+  targetItem.classList.toggle("expanded");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  renderCommodityWidget();
   loadNotifications();
   updateNotifBadge();
   createParticles();
