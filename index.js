@@ -10,6 +10,7 @@ const compression = require("compression");
 const sentPushesCache = new Map();
 const infoCache = new Map();
 const lastPrices = new Map();
+let lastCommoditiesData = []; // Storage RAM untuk data komoditas terbaru
 const sseClients = [];
 
 moment.tz.setDefault("Asia/Jakarta");
@@ -264,7 +265,12 @@ app.use(
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-app.get("/api/sse/prices", (req, res) => {
+// ==========================================================================
+// SSE ENDPOINTS (SAHAM + KOMODITAS STREAMING)
+// ==========================================================================
+
+// Helper function untuk handle SSE Connection
+function handleSseConnection(req, res) {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
@@ -274,6 +280,7 @@ app.get("/api/sse/prices", (req, res) => {
   const client = { id: Date.now(), res };
   sseClients.push(client);
 
+  // 1. Kirim data harga saham terkini jika ada
   if (lastPrices.size > 0) {
     const updates = Array.from(lastPrices.values());
     const payload = JSON.stringify({ type: "price", updates });
@@ -283,12 +290,30 @@ app.get("/api/sse/prices", (req, res) => {
     } catch (e) {}
   }
 
+  // 2. Kirim data komoditas terkini jika ada
+  if (lastCommoditiesData.length > 0) {
+    const payload = JSON.stringify({
+      type: "commodity-update",
+      commodities: lastCommoditiesData,
+    });
+    try {
+      res.write(`event: commodity-update\ndata: ${payload}\n\n`);
+      res.write(`data: ${payload}\n\n`);
+      if (typeof res.flush === "function") res.flush();
+    } catch (e) {}
+  }
+
   req.on("close", () => {
     const idx = sseClients.indexOf(client);
     if (idx > -1) sseClients.splice(idx, 1);
   });
-});
+}
 
+// Endpoint SSE Utama (Mendukung EventSource('/api/sse') & EventSource('/api/sse/prices'))
+app.get("/api/sse", handleSseConnection);
+app.get("/api/sse/prices", handleSseConnection);
+
+// Endpoint POST untuk Push Harga Saham
 app.post("/api/sse/price-update", (req, res) => {
   const { updates } = req.body;
   if (!updates || !Array.isArray(updates)) {
@@ -325,6 +350,42 @@ app.post("/api/sse/price-update", (req, res) => {
 
   res.json({ success: true, clients: sseClients.length });
 });
+
+// Endpoint POST Baru untuk Push Data Komoditas
+app.post("/api/sse/commodity-update", (req, res) => {
+  const { commodities } = req.body;
+  if (!commodities || !Array.isArray(commodities)) {
+    return res.status(400).json({ error: "Invalid commodities data" });
+  }
+
+  // Simpan di RAM untuk dikirim ke client baru yang connect
+  lastCommoditiesData = commodities;
+
+  const payload = JSON.stringify({
+    type: "commodity-update",
+    commodities: lastCommoditiesData,
+  });
+
+  // Broadcast ke seluruh koneksi browser client
+  for (let i = sseClients.length - 1; i >= 0; i--) {
+    const client = sseClients[i];
+    try {
+      client.res.write(`event: commodity-update\ndata: ${payload}\n\n`);
+      client.res.write(`data: ${payload}\n\n`);
+      if (typeof client.res.flush === "function") {
+        client.res.flush();
+      }
+    } catch (e) {
+      sseClients.splice(i, 1);
+    }
+  }
+
+  res.json({ success: true, clients: sseClients.length });
+});
+
+// ==========================================================================
+// REST API ENDPOINTS LAINNYA
+// ==========================================================================
 
 app.get("/api/stock-info/:symbol", async (req, res) => {
   const symbol = req.params.symbol.toUpperCase();
@@ -743,13 +804,12 @@ function getSessionFromDate(signalDate) {
   return null;
 }
 
-// =============== FUNGSI TRIGGER INTERNAL PUSH (LOGI DENGAN DYNAMIC STOCK LOGO) ===============
+// =============== FUNGSI TRIGGER INTERNAL PUSH ===============
 async function triggerInternalPush(title, body, customPushKey = null, options = {}) {
   const { skipInsert = false, stockCode = null, icon = null, image = null, url = "/" } = options;
   const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
   const pushKey = customPushKey || `${title.toUpperCase().trim()}_${today}`;
 
-  // Jika tidak skipInsert, coba insert ke database untuk cegah spam
   if (!skipInsert) {
     try {
       await NotifLogModel.create({ key: pushKey });
@@ -759,7 +819,6 @@ async function triggerInternalPush(title, body, customPushKey = null, options = 
     }
   }
 
-  // Tentukan logo emiten dari CDN Stockbit
   let finalIcon = icon;
   if (!finalIcon && stockCode) {
     finalIcon = `https://assets.stockbit.com/logos/companies/${stockCode.toUpperCase()}.png`;
@@ -830,7 +889,6 @@ async function checkDatabaseForNewSignals() {
       if (prevStatus === undefined) {
         serverLastStatus.set(docId, s.status);
 
-        // -------------------- SINYAL BARU (belum pernah terlihat) --------------------
         if (s.signalType === "TECHNICAL") {
           const title = `NEW TECHNICAL: ${s.stockCode}`;
           const body = `Sinyal Technical baru untuk ${s.stockCode}`;
@@ -844,7 +902,6 @@ async function checkDatabaseForNewSignals() {
             await triggerInternalPush(title, body, customPushKey, { stockCode });
           }
         } else {
-          // SINYAL BIASA
           if (s.status === "RUNNING") {
             const session = getSessionFromDate(s.signalDate);
             if (session === 1 || session === 2) {
@@ -871,7 +928,6 @@ async function checkDatabaseForNewSignals() {
       } else if (prevStatus !== s.status) {
         serverLastStatus.set(docId, s.status);
 
-        // -------------------- PERUBAHAN STATUS (contoh: TP) --------------------
         if (s.status === "TP" && prevStatus !== "TP") {
           const ret = s.returnPercent || 0;
           const sign = ret >= 0 ? "+" : "";
