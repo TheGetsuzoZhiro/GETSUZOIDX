@@ -5510,9 +5510,6 @@ function fixPageHeaderTitle() {
 
 // Render Kontainer Utama Komoditas
 function renderCommodityWidget(containerId = "commodityWidgetContainer") {
-  // Ubah header utama halaman paling atas terlebih dahulu
-  fixPageHeaderTitle();
-
   const container = document.getElementById(containerId);
   if (!container) return;
 
