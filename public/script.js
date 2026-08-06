@@ -5365,7 +5365,7 @@ function generateCommodityRowsHTML(commodities) {
   if (!commodities || commodities.length === 0) {
     return `
       <div style="text-align:center; padding: 2rem; color: var(--terminal-dim); font-family: 'JetBrains Mono'; font-size: 0.85rem;">
-        <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;">
+        <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i>
         Menghubungkan ke Stream SSE Komoditas...
       </div>
     `;
@@ -5475,6 +5475,21 @@ function generateCommodityRowsHTML(commodities) {
     `;
     })
     .join("");
+}
+
+// Update DOM List tanpa mengganggu state UI
+function updateCommodityUI(newData) {
+  liveCommodityData = newData;
+  const listEl = document.getElementById("commodityList");
+  if (listEl) {
+    listEl.innerHTML = generateCommodityRowsHTML(liveCommodityData);
+  }
+
+  // Sembunyikan loader luar jika ada di HTML
+  const externalSpinner = document.getElementById("commodityLoadingSpinner");
+  if (externalSpinner) {
+    externalSpinner.style.display = "none";
+  }
 }
 
 // Render Kontainer Utama Komoditas
