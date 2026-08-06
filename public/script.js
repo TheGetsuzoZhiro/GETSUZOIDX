@@ -4973,6 +4973,7 @@ function initTabs() {
     weekly: { t: "Laporan Mingguan", s: "Weekly summary" },
     monthly: { t: "Laporan Bulanan", s: "Monthly analytics" },
     signals: { t: "Sinyal Aktif", s: "All signals" },
+    commodity: { t: "Pasar Komoditas", s: "Pantau pergerakan harga komoditas global secara real-time" },
     "signals-today": { t: "Sinyal Hari Ini", s: "Today's signals" },
     "signals-running": { t: "All Running", s: "Active positions" },
     "technical-today": {
@@ -5105,6 +5106,9 @@ function initTabs() {
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
         }, 100);
+      }
+      if (tabId === "commodity") {
+        renderCommodityWidget();
       }
 
       document.querySelector(".sidebar")?.classList.remove("open");
