@@ -5528,15 +5528,13 @@ function renderCommodityWidget(containerId = "commodityWidgetContainer") {
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <span class="status-dot live" style="background:#10b981; width:8px; height:8px; border-radius:50%; display:inline-block;"></span>
-          <span class="system-badge" style="background:#8b5cf6; color:#fff; font-size:0.65rem;">SSE STREAMING</span>
+          <span class="system-badge" style="background:#8b5cf6; color:#fff; font-size:0.65rem;">LIVE</span>
         </div>
       </div>
 
       <div class="commodity-table-header">
         <div class="col-info">Komoditas</div>
         <div class="col-ticker desktop-only">Ticker</div>
-        <div class="col-price">Harga Live</div>
-        <div class="col-change">Perubahan (24h)</div>
         <div class="col-action"></div>
       </div>
 
