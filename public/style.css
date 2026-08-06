@@ -5057,7 +5057,7 @@ body::-webkit-scrollbar {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  min-width: 0;
+  min-width: 0; /* Penting untuk truncate flex child */
 }
 
 .commodity-logo-wrapper {
@@ -5095,7 +5095,7 @@ body::-webkit-scrollbar {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  min-width: 0;
+  min-width: 0; /* Penting untuk truncate teks */
 }
 
 .commodity-symbol {
@@ -5200,33 +5200,99 @@ body::-webkit-scrollbar {
 .return-card-value.up { color: #10b981; }
 .return-card-value.down { color: #ef4444; }
 
-/* Responsive adjustments */
+
+/* ==========================================
+   📱 RESPONSIVE FIXES (Ponsel < 768px)
+   ========================================== */
 @media (max-width: 768px) {
+  .commodity-widget {
+    padding: 0.75rem 0.5rem; /* Kurangi padding container agar area tabel lebih luas */
+  }
+
   .commodity-table-header,
   .commodity-row {
-    grid-template-columns: 2fr 1.5fr 1.8fr 24px;
+    /* Gunakan minmax(0, Xfr) agar kolom tidak meluap jika teks panjang */
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 1.2fr) 20px;
     padding: 0.75rem 0.5rem;
+    gap: 0.35rem;
   }
 
   .desktop-only {
     display: none;
   }
 
-  .commodity-symbol {
-    font-size: 0.85rem;
+  .commodity-info {
+    gap: 0.4rem; /* Kurangi gap antara logo & teks */
   }
 
   .commodity-logo-wrapper {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
   }
 
   .commodity-logo {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Mencegah nama komoditas seperti COAL-NEWCASTLE menabrak harga */
+  .commodity-symbol {
+    font-size: 0.78rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Tambah titik-titik (...) jika nama sangat panjang */
+  }
+
+  .commodity-ticker-code {
+    font-size: 0.6rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Ratakan harga ke kanan agar terpisah rapi dari kolom nama */
+  .commodity-price-val {
+    font-size: 0.82rem;
+    text-align: right;
+  }
+
+  /* Sesuaikan posisi header agar sejajar dengan isi kolom */
+  .commodity-table-header span:nth-child(2) {
+    text-align: right;
+  }
+
+  .commodity-table-header span:nth-child(3) {
+    text-align: right;
+  }
+
+  .return-main-pct {
+    font-size: 0.78rem;
+  }
+
+  .return-sub-diff {
+    font-size: 0.6rem;
   }
 
   .return-grid-cards {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .commodity-detail-panel {
+    padding: 0.75rem;
+  }
+}
+
+/* 📲 Penyesuaian Ekstra untuk Layar Sangat Kecil (< 380px) */
+@media (max-width: 380px) {
+  .commodity-table-header,
+  .commodity-row {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1.1fr) 16px;
+    gap: 0.25rem;
+  }
+
+  .commodity-logo-wrapper {
+    display: none; /* Sembunyikan ikon di HP super mungil agar area teks makin lapang */
   }
 }
