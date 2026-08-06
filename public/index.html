@@ -930,6 +930,15 @@
             </div>
             <span class="nav-text">Beranda</span>
           </button>
+
+          <!-- MENU TERSENDIRI: KOMODITAS -->
+          <button class="nav-link" data-tab="commodity">
+            <div class="nav-icon">
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <span class="nav-text">Komoditas</span>
+          </button>
+
           <button class="nav-link" data-tab="daily">
             <div class="nav-icon">
               <svg
@@ -1265,6 +1274,7 @@
             </div>
           </div>
 
+          <!-- SECTION 1: HOME / BERANDA -->
           <section id="home" class="view active">
             <div class="hero-banner">
               <div class="hero-content">
@@ -1368,9 +1378,6 @@
               </div>
             </div>
 
-            <!-- ===== CONTAINER WIDGET PASAR KOMODITAS ===== -->
-            <div id="commodityWidgetContainer"></div>
-
             <div class="charts-grid">
               <div class="chart-card full-width">
                 <div class="chart-header-row">
@@ -1413,6 +1420,11 @@
                 </div>
               </div>
             </div>
+          </section>
+
+          <!-- SECTION 2: KHUSUS TAMPILAN KOMODITAS -->
+          <section id="commodity" class="view">
+            <div id="commodityWidgetContainer"></div>
           </section>
 
           <section id="daily" class="view">
