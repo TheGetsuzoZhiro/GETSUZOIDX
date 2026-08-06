@@ -5332,23 +5332,17 @@ function updatePriceElement(symbol, price) {
 // DATA & LOGIC TABEL KOMODITAS (GETSUZO IDX)
 // ==========================================================================
 
-const commodityData = [
-  { symbol: "XAU", name: "GOLD", ticker: "TVC:GOLD", price: 4271.545, change: 24.02, changePct: 0.57, ret7d: 1.25, ret1m: 3.80, retYTD: 12.40, ret1y: 18.50 },
-  { symbol: "SILVER", name: "SILVER", ticker: "TVC:SILVER", price: 61.7961, change: -0.25, changePct: -0.41, ret7d: -0.80, ret1m: 2.10, retYTD: 8.50, ret1y: 14.10 },
-  { symbol: "OIL", name: "CRUDE OIL", ticker: "NYMEX:CL1!", price: 75.41, change: 0.19, changePct: 0.25, ret7d: 2.10, ret1m: -1.40, retYTD: 5.20, ret1y: -3.80 },
-  { symbol: "BRENT", name: "BRENT OIL", ticker: "NYMEX:BZ1!", price: 79.67, change: 0.22, changePct: 0.28, ret7d: 1.95, ret1m: -1.10, retYTD: 4.80, ret1y: -2.90 },
-  { symbol: "CPO", name: "PALM OIL", ticker: "CBOT:ZL1!", price: 67.09, change: -0.08, changePct: -0.12, ret7d: -0.50, ret1m: 4.20, retYTD: 15.30, ret1y: 22.00 },
-  { symbol: "COAL-NEWCASTLE", name: "COAL", ticker: "ICEEUR:NCF1!", price: 129.3, change: -3.05, changePct: -2.30, ret7d: -3.40, ret1m: -8.10, retYTD: -12.50, ret1y: -24.80 },
-  { symbol: "NICKEL", name: "NICKEL", ticker: "LME:NI1!", price: 16515, change: -434.82, changePct: -2.57, ret7d: -4.10, ret1m: -5.60, retYTD: -10.20, ret1y: -18.50 },
-  { symbol: "GAS", name: "NATURAL GAS", ticker: "NYMEX:NG1!", price: 2.679, change: -0.01, changePct: -0.33, ret7d: 3.20, ret1m: 12.40, retYTD: -5.10, ret1y: -15.20 },
-  { symbol: "ALUMINIUM", name: "ALUMINIUM", ticker: "LME:AH1!", price: 3263.5, change: 20.20, changePct: 0.62, ret7d: 1.80, ret1m: 6.50, retYTD: 14.20, ret1y: 19.80 },
-  { symbol: "COPPER", name: "COPPER", ticker: "COMEX:HG1!", price: 6.826, change: 0.10, changePct: 1.46, ret7d: 2.90, ret1m: 7.80, retYTD: 18.60, ret1y: 25.40 },
-  { symbol: "TIN", name: "TIN", ticker: "LME:SN1!", price: 56423, change: 668.00, changePct: 1.20, ret7d: 3.50, ret1m: 9.10, retYTD: 21.00, ret1y: 31.20 }
-];
+// ==========================================================================
+// REAL-TIME COMMODITY MODULE (SSE INTEGRATION) - GETSUZO IDX
+// ==========================================================================
 
-// Helper Sanitize HTML Aman
+// Store global untuk menyimpan data komoditas terbaru dari SSE
+let liveCommodityData = [];
+let openAccordionIndex = null; // Menyimpan index accordion yang sedang dibuka user
+
+// Helper Sanitize HTML
 function commodityEscapeHtml(text) {
-  if (!text) return '';
+  if (!text) return "";
   return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -5357,36 +5351,64 @@ function commodityEscapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
-// Generate Baris-baris Tabel Komoditas
-function generateCommodityRowsHTML() {
-  return commodityData.map((item, index) => {
-    const isUp = item.change >= 0;
-    const statusClass = isUp ? "up" : "down";
-    const arrowIcon = isUp ? "fa-arrow-trend-up" : "fa-arrow-trend-down";
-    const sign = isUp ? "+" : "";
+// Format Angka Desimal
+function formatCommodityPrice(price) {
+  if (price === null || price === undefined || isNaN(price)) return "0.00";
+  return Number(price).toLocaleString("en-US", {
+    minimumFractionDigits: price < 10 ? 3 : 2,
+    maximumFractionDigits: price < 10 ? 3 : 2,
+  });
+}
 
-    const stockbitLogo = `https://assets.stockbit.com/logos/companies/${item.symbol}.png`;
-    const parqetLogo = `https://assets.parqet.com/logos/symbol/${item.symbol}.png`;
-
+// Generate HTML Baris Komoditas berdasarkan Data SSE Backend
+function generateCommodityRowsHTML(commodities) {
+  if (!commodities || commodities.length === 0) {
     return `
-      <div class="commodity-item" id="commodity-item-${index}">
+      <div style="text-align:center; padding: 2rem; color: var(--terminal-dim); font-family: 'JetBrains Mono'; font-size: 0.85rem;">
+        <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;">
+        Menghubungkan ke Stream SSE Komoditas...
+      </div>
+    `;
+  }
+
+  return commodities
+    .map((item, index) => {
+      const isUp = item.change >= 0;
+      const statusClass = isUp ? "up" : "down";
+      const arrowIcon = isUp ? "fa-arrow-trend-up" : "fa-arrow-trend-down";
+      const sign = isUp ? "+" : "";
+
+      // Extract data return historis dari kalkulasi backend
+      const returns = item.returns || {};
+      const ret1D = returns.return1D ?? 0;
+      const ret2D = returns.return2D ?? 0;
+      const ret3D = returns.return3D ?? 0;
+      const ret7D = returns.return7D ?? 0;
+
+      const isExpanded = openAccordionIndex === index ? "expanded" : "";
+
+      const stockbitLogo = `https://assets.stockbit.com/logos/companies/${item.name}.png`;
+      const parqetLogo = `https://assets.parqet.com/logos/symbol/${item.name}.png`;
+
+      return `
+      <div class="commodity-item ${isExpanded}" id="commodity-item-${index}">
         <div class="commodity-row" onclick="toggleCommodityDetail(${index})">
           
           <div class="commodity-info">
             <div class="commodity-logo-wrapper">
               <img 
                 src="${stockbitLogo}" 
-                alt="${item.symbol}" 
+                alt="${item.name}" 
                 class="commodity-logo"
                 onerror="this.onerror=null; this.src='${parqetLogo}'; this.onerror=function(){ this.style.display='none'; this.nextElementSibling.style.display='flex'; }"
               >
               <div class="commodity-logo-fallback" style="display:none; background:#8b5cf6;">
-                ${item.symbol.substring(0, 2)}
+                ${item.name.substring(0, 2)}
               </div>
             </div>
             <div class="commodity-names">
-              <span class="commodity-symbol">${commodityEscapeHtml(item.symbol)}</span>
-              <span class="commodity-ticker-code">${commodityEscapeHtml(item.name)}</span>
+              <span class="commodity-symbol">${commodityEscapeHtml(item.name)}</span>
+              <span class="commodity-ticker-code">${commodityEscapeHtml(item.ticker)}</span>
             </div>
           </div>
 
@@ -5394,16 +5416,16 @@ function generateCommodityRowsHTML() {
             ${commodityEscapeHtml(item.ticker)}
           </div>
 
-          <div class="commodity-price-val">
-            $${Number(item.price).toLocaleString("en-US", { minimumFractionDigits: item.price < 10 ? 3 : 2 })}
+          <div class="commodity-price-val" id="price-val-${index}">
+            $${formatCommodityPrice(item.price)}
           </div>
 
           <div class="commodity-return-badge">
             <span class="return-main-pct ${statusClass}">
-              <i class="fa-solid ${arrowIcon}"></i> ${sign}${item.changePct.toFixed(2)}%
+              <i class="fa-solid ${arrowIcon}"></i> ${sign}${(item.changePercent || 0).toFixed(2)}%
             </span>
             <span class="return-sub-diff">
-              ${sign}${item.change.toFixed(2)}
+              ${sign}${(item.change || 0).toFixed(2)}
             </span>
           </div>
 
@@ -5415,35 +5437,35 @@ function generateCommodityRowsHTML() {
 
         <div class="commodity-detail-panel">
           <div style="font-size:0.7rem; color:var(--terminal-dim, rgba(255,255,255,0.35)); text-transform:uppercase; margin-bottom:0.75rem; font-weight:600; display:flex; align-items:center; gap:0.4rem;">
-            <i class="fa-solid fa-chart-line" style="color:#8b5cf6;"></i> Break-down Histori Return (${item.symbol})
+            <i class="fa-solid fa-chart-line" style="color:#8b5cf6;"></i> Break-down Histori Return Snapshot (${item.name})
           </div>
           <div class="return-grid-cards">
             
             <div class="return-card">
+              <span class="return-card-label">1 Hari</span>
+              <span class="return-card-value ${ret1D >= 0 ? "up" : "down"}">
+                ${ret1D >= 0 ? "+" : ""}${ret1D.toFixed(2)}%
+              </span>
+            </div>
+
+            <div class="return-card">
+              <span class="return-card-label">2 Hari</span>
+              <span class="return-card-value ${ret2D >= 0 ? "up" : "down"}">
+                ${ret2D >= 0 ? "+" : ""}${ret2D.toFixed(2)}%
+              </span>
+            </div>
+
+            <div class="return-card">
+              <span class="return-card-label">3 Hari</span>
+              <span class="return-card-value ${ret3D >= 0 ? "up" : "down"}">
+                ${ret3D >= 0 ? "+" : ""}${ret3D.toFixed(2)}%
+              </span>
+            </div>
+
+            <div class="return-card">
               <span class="return-card-label">7 Hari</span>
-              <span class="return-card-value ${item.ret7d >= 0 ? "up" : "down"}">
-                ${item.ret7d >= 0 ? "+" : ""}${item.ret7d.toFixed(2)}%
-              </span>
-            </div>
-
-            <div class="return-card">
-              <span class="return-card-label">1 Bulan</span>
-              <span class="return-card-value ${item.ret1m >= 0 ? "up" : "down"}">
-                ${item.ret1m >= 0 ? "+" : ""}${item.ret1m.toFixed(2)}%
-              </span>
-            </div>
-
-            <div class="return-card">
-              <span class="return-card-label">YTD</span>
-              <span class="return-card-value ${item.retYTD >= 0 ? "up" : "down"}">
-                ${item.retYTD >= 0 ? "+" : ""}${item.retYTD.toFixed(2)}%
-              </span>
-            </div>
-
-            <div class="return-card">
-              <span class="return-card-label">1 Tahun</span>
-              <span class="return-card-value ${item.ret1y >= 0 ? "up" : "down"}">
-                ${item.ret1y >= 0 ? "+" : ""}${item.ret1y.toFixed(2)}%
+              <span class="return-card-value ${ret7D >= 0 ? "up" : "down"}">
+                ${ret7D >= 0 ? "+" : ""}${ret7D.toFixed(2)}%
               </span>
             </div>
 
@@ -5451,10 +5473,11 @@ function generateCommodityRowsHTML() {
         </div>
       </div>
     `;
-  }).join('');
+    })
+    .join("");
 }
 
-// Render Komponen Utama Widget Komoditas
+// Render Kontainer Utama Komoditas
 function renderCommodityWidget(containerId = "commodityWidgetContainer") {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -5466,43 +5489,98 @@ function renderCommodityWidget(containerId = "commodityWidgetContainer") {
           <i class="fa-solid fa-boxes-stacked" style="color: #8b5cf6; font-size: 1.2rem;"></i>
           <div>
             <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color:#fff;">Pasar Komoditas</h3>
-            <span style="font-size: 0.75rem; color: var(--terminal-dim, rgba(255,255,255,0.35));">Harga realtime & histori return komoditas global</span>
+            <span style="font-size: 0.75rem; color: var(--terminal-dim, rgba(255,255,255,0.35));">Harga realtime SSE & return histori snapshot</span>
           </div>
         </div>
-        <span class="system-badge" style="background:#8b5cf6; color:#fff;">LIVE MARKET</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="status-dot live" style="background:#10b981; width:8px; height:8px; border-radius:50%; display:inline-block;"></span>
+          <span class="system-badge" style="background:#8b5cf6; color:#fff; font-size:0.65rem;">SSE STREAMING</span>
+        </div>
       </div>
 
       <div class="commodity-table-header">
         <div class="col-info">Komoditas</div>
         <div class="col-ticker desktop-only">Ticker</div>
-        <div class="col-price">Harga</div>
-        <div class="col-change">Return Saat Ini</div>
+        <div class="col-price">Harga Live</div>
+        <div class="col-change">Perubahan (24h)</div>
         <div class="col-action"></div>
       </div>
 
       <div id="commodityList" class="commodity-list">
-        ${generateCommodityRowsHTML()}
+        ${generateCommodityRowsHTML(liveCommodityData)}
       </div>
     </div>
   `;
 }
 
-// Toggle Accordion Detail Komoditas
+// Update DOM List tanpa mengganggu state UI
+function updateCommodityUI(newData) {
+  liveCommodityData = newData;
+  const listEl = document.getElementById("commodityList");
+  if (listEl) {
+    listEl.innerHTML = generateCommodityRowsHTML(liveCommodityData);
+  }
+}
+
+// Toggle Detail Accordion
 function toggleCommodityDetail(index) {
   const targetItem = document.getElementById(`commodity-item-${index}`);
   if (!targetItem) return;
 
-  document.querySelectorAll(".commodity-item").forEach((item) => {
-    if (item !== targetItem) {
-      item.classList.remove("expanded");
+  if (openAccordionIndex === index) {
+    openAccordionIndex = null;
+    targetItem.classList.remove("expanded");
+  } else {
+    openAccordionIndex = index;
+    document.querySelectorAll(".commodity-item").forEach((item, idx) => {
+      if (idx === index) {
+        item.classList.add("expanded");
+      } else {
+        item.classList.remove("expanded");
+      }
+    });
+  }
+}
+
+// ==========================================================================
+// KONEKSI SSE (SERVER-SENT EVENTS) FRONTEND
+// ==========================================================================
+
+function initCommoditySSE() {
+  // Hubungkan ke endpoint SSE server Anda
+  const eventSource = new EventSource("/api/sse");
+
+  // Mendengarkan event custom 'commodity-update' dari Express backend
+  eventSource.addEventListener("commodity-update", (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data && (data.commodities || Array.isArray(data))) {
+        const commoditiesList = data.commodities || data;
+        updateCommodityUI(commoditiesList);
+      }
+    } catch (err) {
+      console.error("❌ [SSE PARSE ERROR]:", err);
     }
   });
 
-  targetItem.classList.toggle("expanded");
+  // Listener fallback jika backend mengirim via event standar message
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "commodity-update" && data.commodities) {
+        updateCommodityUI(data.commodities);
+      }
+    } catch (e) {}
+  };
+
+  eventSource.onerror = (err) => {
+    console.warn("⚠️ [SSE COMMODITY] Koneksi terputus, mencoba reconnect...", err);
+  };
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   renderCommodityWidget();
+  initCommoditySSE();
   loadNotifications();
   updateNotifBadge();
   createParticles();
