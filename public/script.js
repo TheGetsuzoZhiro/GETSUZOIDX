@@ -5387,8 +5387,10 @@ function generateCommodityRowsHTML(commodities) {
 
       const isExpanded = openAccordionIndex === index ? "expanded" : "";
 
-      const stockbitLogo = `https://assets.stockbit.com/logos/companies/${item.name}.png`;
-      const parqetLogo = `https://assets.parqet.com/logos/symbol/${item.name}.png`;
+      // 🛑 LOGO FIX: Khusus COAL-NEWCASTLE menggunakan logo ICE.png
+      const logoCode = item.name === "COAL-NEWCASTLE" ? "ICE" : item.name;
+      const stockbitLogo = `https://assets.stockbit.com/logos/companies/${logoCode}.png`;
+      const parqetLogo = `https://assets.parqet.com/logos/symbol/${logoCode}.png`;
 
       return `
       <div class="commodity-item ${isExpanded}" id="commodity-item-${index}">
@@ -5492,8 +5494,25 @@ function updateCommodityUI(newData) {
   }
 }
 
+// Auto Fix Header Utama Paling Atas Halaman
+function fixPageHeaderTitle() {
+  // Mencari elemen h1/h2 judul paling atas
+  const pageTitleEl = document.querySelector(".page-title, .main-header h1, .header-title, #pageTitle");
+  const pageSubtitleEl = document.querySelector(".page-subtitle, .main-header p, .header-subtitle, #pageSubtitle");
+
+  if (pageTitleEl) {
+    pageTitleEl.textContent = "Pasar Komoditas";
+  }
+  if (pageSubtitleEl) {
+    pageSubtitleEl.textContent = "Pantau pergerakan harga komoditas global secara real-time & histori return snapshot";
+  }
+}
+
 // Render Kontainer Utama Komoditas
 function renderCommodityWidget(containerId = "commodityWidgetContainer") {
+  // Ubah header utama halaman paling atas terlebih dahulu
+  fixPageHeaderTitle();
+
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -5528,15 +5547,6 @@ function renderCommodityWidget(containerId = "commodityWidgetContainer") {
   `;
 }
 
-// Update DOM List tanpa mengganggu state UI
-function updateCommodityUI(newData) {
-  liveCommodityData = newData;
-  const listEl = document.getElementById("commodityList");
-  if (listEl) {
-    listEl.innerHTML = generateCommodityRowsHTML(liveCommodityData);
-  }
-}
-
 // Toggle Detail Accordion
 function toggleCommodityDetail(index) {
   const targetItem = document.getElementById(`commodity-item-${index}`);
@@ -5562,10 +5572,8 @@ function toggleCommodityDetail(index) {
 // ==========================================================================
 
 function initCommoditySSE() {
-  // Hubungkan ke endpoint SSE server Anda
   const eventSource = new EventSource("/api/sse");
 
-  // Mendengarkan event custom 'commodity-update' dari Express backend
   eventSource.addEventListener("commodity-update", (event) => {
     try {
       const data = JSON.parse(event.data);
@@ -5578,7 +5586,6 @@ function initCommoditySSE() {
     }
   });
 
-  // Listener fallback jika backend mengirim via event standar message
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
