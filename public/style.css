@@ -5296,3 +5296,104 @@ body::-webkit-scrollbar {
     display: none; /* Sembunyikan ikon di HP super mungil agar area teks makin lapang */
   }
 }
+
+/* ==========================================================================
+   COMMODITY DAILY HISTORY TABLE (Getsuzo IDX Theme Extension)
+   ========================================================================== */
+
+.commodity-section-title {
+  font-size: 0.7rem;
+  color: var(--terminal-dim, rgba(255, 255, 255, 0.35));
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  letter-spacing: 0.5px;
+}
+
+.commodity-daily-table-wrapper {
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.commodity-daily-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.commodity-daily-table th {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--terminal-dim, rgba(255, 255, 255, 0.35));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.commodity-daily-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+}
+
+.commodity-daily-table tr:last-child td {
+  border-bottom: none;
+}
+
+.commodity-daily-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.commodity-daily-table .dh-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+}
+
+.commodity-daily-table .dh-price {
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.commodity-daily-table .dh-pct {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+.commodity-daily-table .dh-pct.up {
+  color: #10b981;
+}
+
+.commodity-daily-table .dh-pct.down {
+  color: #ef4444;
+}
+
+.commodity-daily-table .dh-empty {
+  text-align: center;
+  color: var(--terminal-dim, rgba(255, 255, 255, 0.35));
+  padding: 1rem;
+  font-style: italic;
+}
+
+/* 📱 RESPONSIVE ADJUSTMENTS FOR MOBILE */
+@media (max-width: 768px) {
+  .commodity-daily-table th,
+  .commodity-daily-table td {
+    padding: 0.45rem 0.5rem;
+    font-size: 0.7rem;
+  }
+  
+  .commodity-section-title {
+    font-size: 0.65rem;
+  }
+}
