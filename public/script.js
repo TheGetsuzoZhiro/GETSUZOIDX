@@ -5382,19 +5382,42 @@ function generateCommodityRowsHTML(commodities) {
       const arrowIcon = isUp ? "fa-arrow-trend-up" : "fa-arrow-trend-down";
       const sign = isUp ? "+" : "";
 
-      // Extract data return historis dari kalkulasi backend
+      // 1. Extract data return akumulasi
       const returns = item.returns || {};
       const ret1D = returns.return1D ?? 0;
       const ret2D = returns.return2D ?? 0;
       const ret3D = returns.return3D ?? 0;
       const ret7D = returns.return7D ?? 0;
 
+      // 2. Extract data histori harian per tanggal (maksimal 7 hari)
+      const dailyHistory = item.dailyHistory || [];
+
       const isExpanded = openAccordionIndex === index ? "expanded" : "";
 
-      // 🛑 LOGO FIX: Khusus COAL-NEWCASTLE menggunakan logo ICE.png
+      // Logo Fix
       const logoCode = item.name === "COAL-NEWCASTLE" ? "ICE" : item.name;
       const stockbitLogo = `https://assets.stockbit.com/logos/companies/${logoCode}.png`;
       const parqetLogo = `https://assets.parqet.com/logos/symbol/${logoCode}.png`;
+
+      // Render Baris Tabel Histori Harian (Jika data tersedia)
+      const dailyRowsHTML = dailyHistory.length > 0 
+        ? dailyHistory.map((dh) => {
+            const isDhUp = (dh.dailyChangePercent || 0) >= 0;
+            const isVsUp = (dh.returnVsCurrent || 0) >= 0;
+            return `
+              <tr>
+                <td class="dh-date">${dh.date}</td>
+                <td class="dh-price">$${formatCommodityPrice(dh.closePrice)}</td>
+                <td class="dh-pct ${isDhUp ? 'up' : 'down'}">
+                  ${isDhUp ? '+' : ''}${(dh.dailyChangePercent || 0).toFixed(2)}%
+                </td>
+                <td class="dh-pct ${isVsUp ? 'up' : 'down'}">
+                  ${isVsUp ? '+' : ''}${(dh.returnVsCurrent || 0).toFixed(2)}%
+                </td>
+              </tr>
+            `;
+          }).join("")
+        : `<tr><td colspan="4" class="dh-empty">Belum ada histori snapshot harian</td></tr>`;
 
       return `
       <div class="commodity-item ${isExpanded}" id="commodity-item-${index}">
@@ -5441,8 +5464,11 @@ function generateCommodityRowsHTML(commodities) {
 
         </div>
 
+        <!-- PANEL ACCORDION DETAIL -->
         <div class="commodity-detail-panel">
-          <div style="font-size:0.7rem; color:var(--terminal-dim, rgba(255,255,255,0.35)); text-transform:uppercase; margin-bottom:0.75rem; font-weight:600; display:flex; align-items:center; gap:0.4rem;">
+          
+          <!-- BAGIAN 1: KARTU AKUMULASI RETURN (EXISTING) -->
+          <div class="commodity-section-title">
             <i class="fa-solid fa-chart-line" style="color:#8b5cf6;"></i> Break-down Histori Return Snapshot (${item.name})
           </div>
           <div class="return-grid-cards">
@@ -5476,6 +5502,27 @@ function generateCommodityRowsHTML(commodities) {
             </div>
 
           </div>
+
+          <!-- BAGIAN 2: RINCIAN PENUTUPAN HARIAN PER TANGGAL (FITUR BARU) -->
+          <div class="commodity-section-title" style="margin-top: 1.25rem;">
+            <i class="fa-solid fa-calendar-days" style="color:#8b5cf6;"></i> Rincian Penutupan Harian (Maks. 7 Hari Bursa)
+          </div>
+          <div class="commodity-daily-table-wrapper">
+            <table class="commodity-daily-table">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Harga Tutup</th>
+                  <th>Return Penutupan</th>
+                  <th>Vs Live Current</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${dailyRowsHTML}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       </div>
     `;
