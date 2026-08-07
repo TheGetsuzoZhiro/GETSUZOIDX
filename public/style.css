@@ -5301,6 +5301,10 @@ body::-webkit-scrollbar {
    COMMODITY DAILY HISTORY TABLE (Getsuzo IDX Theme Extension)
    ========================================================================== */
 
+/* ==========================================
+   COMMODITY SECTION & TABLE STYLES
+   ========================================== */
+
 .commodity-section-title {
   font-size: 0.7rem;
   color: var(--terminal-dim, rgba(255, 255, 255, 0.35));
@@ -5314,15 +5318,19 @@ body::-webkit-scrollbar {
 }
 
 .commodity-daily-table-wrapper {
+  width: 100%;
+  max-width: 100%;
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .commodity-daily-table {
   width: 100%;
+  min-width: 320px; /* Mencegah tabel terlalu gepeng */
   border-collapse: collapse;
   text-align: left;
   font-size: 0.78rem;
@@ -5344,6 +5352,12 @@ body::-webkit-scrollbar {
   padding: 0.55rem 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   white-space: nowrap;
+}
+
+/* Rata Kanan Khusus Kolom Angka (Harga & % Return) agar Sejajar & Rapi */
+.commodity-daily-table th:not(:first-child),
+.commodity-daily-table td:not(:first-child) {
+  text-align: right;
 }
 
 .commodity-daily-table tr:last-child td {
@@ -5385,15 +5399,37 @@ body::-webkit-scrollbar {
   font-style: italic;
 }
 
-/* 📱 RESPONSIVE ADJUSTMENTS FOR MOBILE */
+/* ==========================================
+   📱 RESPONSIVE ADJUSTMENTS FOR MOBILE
+   ========================================== */
+
 @media (max-width: 768px) {
-  .commodity-daily-table th,
-  .commodity-daily-table td {
-    padding: 0.45rem 0.5rem;
-    font-size: 0.7rem;
-  }
-  
   .commodity-section-title {
     font-size: 0.65rem;
+  }
+
+  /* Perkecil padding & font header/isi tabel di HP standar */
+  .commodity-daily-table th {
+    padding: 0.45rem 0.35rem;
+    font-size: 0.58rem;
+    letter-spacing: 0px;
+  }
+
+  .commodity-daily-table td {
+    padding: 0.45rem 0.35rem;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Khusus HP dengan layar lebih sempit (misal: iPhone SE / Android 360px-390px) */
+  .commodity-daily-table th {
+    padding: 0.4rem 0.25rem;
+    font-size: 0.55rem;
+  }
+
+  .commodity-daily-table td {
+    padding: 0.4rem 0.25rem;
+    font-size: 0.62rem;
   }
 }
